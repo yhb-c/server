@@ -1,0 +1,54 @@
+# 服务端RTSP流配置文件
+# 保持与原单机版配置文件格式一致
+
+channel1:
+  name: 通道1
+  address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+  username: admin
+  password: cei345678
+  ip: 192.168.0.27
+  port: 8000
+  stream_path: stream1
+  enabled: true
+  retry_count: 3
+  timeout: 10
+  file_path: ''
+
+channel2:
+  name: 通道2
+  address: rtsp://admin:cei345678@192.168.0.28:8000/stream1
+  username: admin
+  password: cei345678
+  ip: 192.168.0.28
+  port: 8000
+  stream_path: stream1
+  enabled: false
+  retry_count: 3
+  timeout: 10
+  file_path: ''
+
+channel3:
+  name: 通道3
+  address: ''
+  username: ''
+  password: ''
+  ip: ''
+  port: 0
+  stream_path: ''
+  enabled: false
+  retry_count: 3
+  timeout: 10
+  file_path: ''
+
+channel4:
+  name: 通道4
+  address: ''
+  username: ''
+  password: ''
+  ip: ''
+  port: 0
+  stream_path: ''
+  enabled: false
+  retry_count: 3
+  timeout: 10
+  file_path: ''

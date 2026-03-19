@@ -1,0 +1,88 @@
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /health                   --> liquid-api/routes.RegisterRoutes.func1 (5 handlers)
+[GIN-debug] POST   /api/v1/auth/login        --> liquid-api/handlers.Login (5 handlers)
+[GIN-debug] POST   /api/v1/auth/logout       --> liquid-api/handlers.Logout (5 handlers)
+[GIN-debug] GET    /api/v1/models/           --> liquid-api/handlers.GetModels (5 handlers)
+[GIN-debug] GET    /api/v1/models/:id        --> liquid-api/handlers.GetModel (5 handlers)
+[GIN-debug] POST   /api/v1/models/           --> liquid-api/handlers.CreateModel (5 handlers)
+[GIN-debug] PUT    /api/v1/models/:id        --> liquid-api/handlers.UpdateModel (5 handlers)
+[GIN-debug] DELETE /api/v1/models/:id        --> liquid-api/handlers.DeleteModel (5 handlers)
+[GIN-debug] GET    /api/v1/channels/         --> liquid-api/handlers.GetChannels (5 handlers)
+[GIN-debug] GET    /api/v1/channels/:id      --> liquid-api/handlers.GetChannel (5 handlers)
+[GIN-debug] POST   /api/v1/channels/         --> liquid-api/handlers.CreateChannel (5 handlers)
+[GIN-debug] PUT    /api/v1/channels/:id      --> liquid-api/handlers.UpdateChannel (5 handlers)
+[GIN-debug] DELETE /api/v1/channels/:id      --> liquid-api/handlers.DeleteChannel (5 handlers)
+[GIN-debug] GET    /api/v1/config/           --> liquid-api/handlers.GetConfig (5 handlers)
+[GIN-debug] PUT    /api/v1/config/           --> liquid-api/handlers.UpdateConfig (5 handlers)
+2026/03/17 11:52:46 API服务启动在端口 8084
+[GIN] 2026/03/17 - 11:53:22 | 200 |       27.93µs |   192.168.0.107 | GET      "/health"
+[GIN] 2026/03/17 - 11:53:22 | 200 |      49.994µs |   192.168.0.107 | GET      "/health"
+[GIN] 2026/03/17 - 12:14:38 | 200 |      73.236µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:14:38 | 200 |     100.493µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:21:19 | 200 |      33.035µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:21:19 | 200 |      60.975µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:26:05 | 200 |      46.219µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:26:05 | 200 |      77.762µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:37:49 | 200 |      31.213µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:37:49 | 200 |      54.122µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:51:21 | 200 |      43.362µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:51:21 | 200 |      76.572µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:58:41 | 200 |      33.341µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:58:41 | 200 |      61.486µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:58:53 | 200 |      31.097µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 12:58:53 | 200 |      66.817µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:02:19 | 200 |      35.771µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:02:19 | 200 |   10.435276ms |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:06:24 | 200 |      36.419µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:06:24 | 200 |      63.035µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:07:55 | 200 |      36.601µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:07:55 | 200 |      60.243µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:11:13 | 200 |      34.108µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:11:13 | 200 |      60.545µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:13:10 | 200 |      37.185µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:13:10 | 200 |      63.274µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:16:39 | 200 |      51.862µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:16:39 | 200 |      85.249µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:19:07 | 200 |     132.616µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:19:07 | 200 |      161.18µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:25:34 | 200 |      31.233µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:25:34 | 200 |       56.81µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:50:34 | 200 |      34.998µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 13:50:34 | 200 |      58.868µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 14:02:34 | 200 |      47.964µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 14:02:34 | 200 |      71.309µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 14:27:05 | 200 |      31.899µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 14:27:05 | 200 |       56.47µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 14:37:15 | 200 |      37.285µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 14:37:15 | 200 |      62.485µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 14:57:21 | 200 |        52.6µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 14:57:21 | 200 |      81.079µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 15:02:05 | 200 |      33.659µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 15:02:05 | 200 |      57.737µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 15:14:45 | 200 |        33.5µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 15:14:45 | 200 |      55.011µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 15:16:52 | 200 |      33.747µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 15:16:52 | 200 |       55.63µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 15:52:33 | 200 |      58.107µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 15:52:33 | 200 |     104.346µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 15:57:30 | 200 |      34.942µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 15:57:30 | 200 |      59.862µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 19:41:00 | 200 |      36.073µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 19:41:00 | 200 |      85.691µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 20:16:54 | 200 |      35.894µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 20:16:54 | 200 |      59.645µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 20:36:04 | 200 |       32.95µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/17 - 20:36:04 | 200 |      55.799µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/18 - 12:07:37 | 200 |      32.194µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/18 - 12:07:37 | 200 |     4.44233ms |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/18 - 12:29:02 | 200 |      52.827µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/18 - 12:29:02 | 200 |      84.935µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/18 - 12:42:02 | 200 |       29.42µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/18 - 12:42:02 | 200 |      52.587µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/18 - 13:22:31 | 200 |      32.692µs |   192.168.0.107 | POST     "/api/v1/auth/login"
+[GIN] 2026/03/18 - 13:22:31 | 200 |      56.111µs |   192.168.0.107 | POST     "/api/v1/auth/login"

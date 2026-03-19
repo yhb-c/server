@@ -1,0 +1,226 @@
+# 通道配置文件
+
+channels:
+  channel1:
+    enabled: true
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel2:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel3:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel4:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel5:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel6:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel7:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel8:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel9:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel10:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel11:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel12:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel13:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel14:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel15:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724
+  
+  channel16:
+    enabled: false
+    rtsp_url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    detection_interval: 2
+    roi:
+      x: 936
+      y: 532
+      width: 192
+      height: 192
+    container:
+      height_mm: 200.0
+      top_y: 532
+      bottom_y: 724

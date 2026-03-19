@@ -1,0 +1,27 @@
+# 液位检测服务主配置文件
+
+# 服务配置
+server:
+  ws_host: 0.0.0.0
+  ws_port: 8085
+  max_channels: 16
+
+# 模型配置（所有通道共享）
+model:
+  type: yolov11
+  path: ./database/model/tensor.pt  # 使用相对路径
+  device: cuda
+
+# 日志配置
+log:
+  level: INFO
+  path: ./logs  # 使用相对路径
+
+# 检测配置
+detection:
+  interval: 2  # 默认检测间隔（秒）
+  
+# 性能配置
+performance:
+  queue_size: 10  # 结果队列大小
+  frame_skip: 1   # 帧跳过（1=不跳过）

@@ -1,0 +1,98 @@
+# 服务端通道配置文件
+# 保持与原单机版配置文件格式一致
+
+# 通道基本信息
+channels:
+  1:
+    address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+    channel_id: 1
+    name: 通道1
+  2:
+    address: rtsp://admin:cei345678@192.168.0.28:8000/stream1
+    channel_id: 2
+    name: 通道2
+  3:
+    address: ''
+    channel_id: 3
+    name: 通道3
+  4:
+    address: ''
+    channel_id: 4
+    name: 通道4
+
+# 通道详细配置
+channel1:
+  general:
+    task_id: '1'
+    task_name: '液位检测任务1'
+    area_count: 1
+    safe_low: 2.0mm
+    safe_high: 18.0mm
+    frequency: 25fps
+    video_format: AVI
+    push_address: ''
+    video_path: ''
+    save_liquid_data_path: /home/lqj/liquid/server/database/mission_result/1_1
+    areas:
+      area_1: 通道1_区域1
+    area_heights:
+      area_1: 20mm
+  model:
+    model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/tensor.pt
+
+channel2:
+  general:
+    task_id: '2'
+    task_name: '液位检测任务2'
+    area_count: 1
+    safe_low: 2.0mm
+    safe_high: 18.0mm
+    frequency: 25fps
+    video_format: AVI
+    push_address: ''
+    video_path: ''
+    save_liquid_data_path: /home/lqj/liquid/server/database/mission_result/2_2
+    areas:
+      area_1: 通道2_区域1
+    area_heights:
+      area_1: 20mm
+  model:
+    model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/tensor.pt
+
+channel3:
+  general:
+    task_id: '3'
+    task_name: '液位检测任务3'
+    area_count: 1
+    safe_low: 2.0mm
+    safe_high: 18.0mm
+    frequency: 25fps
+    video_format: AVI
+    push_address: ''
+    video_path: ''
+    save_liquid_data_path: /home/lqj/liquid/server/database/mission_result/3_3
+    areas:
+      area_1: 通道3_区域1
+    area_heights:
+      area_1: 20mm
+  model:
+    model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/tensor.pt
+
+channel4:
+  general:
+    task_id: '4'
+    task_name: '液位检测任务4'
+    area_count: 1
+    safe_low: 2.0mm
+    safe_high: 18.0mm
+    frequency: 25fps
+    video_format: AVI
+    push_address: ''
+    video_path: ''
+    save_liquid_data_path: /home/lqj/liquid/server/database/mission_result/4_4
+    areas:
+      area_1: 通道4_区域1
+    area_heights:
+      area_1: 20mm
+  model:
+    model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/tensor.pt

@@ -1,0 +1,55 @@
+2026-03-17 20:29:00,981 - websockets.server - INFO - server listening on 0.0.0.0:8085
+2026-03-17 20:29:00,981 - websocket.ws_server - INFO - WebSocket服务器启动: ws://0.0.0.0:8085
+2026-03-18 12:07:42,734 - websockets.server - INFO - connection open
+2026-03-18 12:07:42,745 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 53907)
+2026-03-18 12:08:01,695 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 53907)
+2026-03-18 12:25:01,701 - websockets.server - INFO - connection open
+2026-03-18 12:25:01,702 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 54539)
+2026-03-18 12:25:07,044 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 54539)
+2026-03-18 12:25:37,339 - websockets.server - INFO - connection open
+2026-03-18 12:25:37,339 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 54666)
+2026-03-18 12:25:41,454 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 54666)
+2026-03-18 12:25:59,961 - websockets.server - INFO - connection open
+2026-03-18 12:25:59,961 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 54751)
+2026-03-18 12:26:06,967 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 54751)
+2026-03-18 12:26:30,065 - websockets.server - INFO - connection open
+2026-03-18 12:26:30,065 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 54848)
+2026-03-18 12:26:33,062 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 54848)
+2026-03-18 12:27:35,507 - websockets.server - INFO - connection open
+2026-03-18 12:27:35,507 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 56369)
+2026-03-18 12:27:38,512 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 56369)
+2026-03-18 12:29:07,207 - websockets.server - INFO - connection open
+2026-03-18 12:29:07,207 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 58988)
+2026-03-18 12:31:39,982 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 58988)
+2026-03-18 12:34:08,817 - websockets.server - INFO - connection open
+2026-03-18 12:34:08,817 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 62257)
+2026-03-18 12:34:11,823 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 62257)
+2026-03-18 12:38:14,357 - websockets.server - INFO - connection open
+2026-03-18 12:38:14,357 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 50845)
+2026-03-18 12:38:17,347 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 50845)
+2026-03-18 12:42:07,672 - websockets.server - INFO - connection open
+2026-03-18 12:42:07,672 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 53290)
+2026-03-18 12:42:21,564 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 53290)
+2026-03-18 13:22:36,893 - websockets.server - INFO - connection open
+2026-03-18 13:22:36,893 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 51099)
+2026-03-18 13:22:58,319 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 51099)
+2026-03-18 13:27:46,770 - websockets.server - INFO - connection open
+2026-03-18 13:27:46,770 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 53311)
+2026-03-18 13:27:51,778 - websocket.ws_server - INFO - 客户端订阅通道: channel1
+2026-03-18 13:28:08,419 - websocket.ws_server - INFO - 客户端取消订阅通道: channel1
+2026-03-18 13:28:08,419 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 53311)
+2026-03-18 13:29:08,795 - websockets.server - INFO - connection open
+2026-03-18 13:29:08,796 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 49690)
+2026-03-18 13:29:13,801 - websocket.ws_server - INFO - 客户端订阅通道: channel1
+2026-03-18 13:29:44,823 - websocket.ws_server - INFO - 客户端取消订阅通道: channel1
+2026-03-18 13:29:44,823 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 49690)
+2026-03-18 13:44:20,099 - websockets.server - INFO - connection open
+2026-03-18 13:44:20,099 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 54649)
+2026-03-18 13:44:25,101 - websocket.ws_server - INFO - 客户端订阅通道: channel1
+2026-03-18 13:44:56,133 - websocket.ws_server - INFO - 客户端取消订阅通道: channel1
+2026-03-18 13:44:56,133 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 54649)
+2026-03-18 13:48:59,789 - websockets.server - INFO - connection open
+2026-03-18 13:48:59,789 - websocket.ws_server - INFO - 客户端连接: ('192.168.0.107', 58035)
+2026-03-18 13:49:09,805 - websocket.ws_server - INFO - 客户端订阅通道: channel1
+2026-03-18 13:49:14,822 - websocket.ws_server - INFO - 客户端取消订阅通道: channel1
+2026-03-18 13:49:14,822 - websocket.ws_server - INFO - 客户端断开: ('192.168.0.107', 58035)
