@@ -32,17 +32,61 @@ class DetectionService:
         """初始化检测服务"""
         self.logger = logging.getLogger(__name__)
         self.websocket_server = websocket_server
-        
+
+        # 保存主线程的事件循环引用
+        try:
+            self.event_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.event_loop = None
+            self.logger.warning("无法获取运行中的事件循环")
+
         # 配置管理器
         self.config_manager = ConfigManager()
-        
+
         # 检测任务管理器
         self.task_manager = DetectionTaskManager()
-        
+
         # 通道状态管理
         self.channel_status: Dict[str, Dict] = {}
-        
+
+        # 从配置文件初始化通道
+        self._initialize_channels_from_config()
+
         self.logger.info("检测服务初始化完成")
+
+    def _initialize_channels_from_config(self):
+        """从配置文件初始化通道状态"""
+        try:
+            # 从default_config.yaml读取通道配置
+            default_config = self.config_manager.system_config
+
+            # 遍历所有通道配置
+            for key in default_config:
+                if key.startswith('channel') and isinstance(default_config[key], dict):
+                    channel_id = key
+                    channel_config = default_config[key]
+
+                    # 初始化通道状态
+                    self.channel_status[channel_id] = {
+                        'model_loaded': False,
+                        'configured': False,
+                        'detecting': False,
+                        'model_path': None,
+                        'device': None,
+                        'rtsp_url': channel_config.get('address', ''),
+                        'name': channel_config.get('name', channel_id),
+                        'load_time': None,
+                        'error': None
+                    }
+
+                    self.logger.info(f"初始化通道: {channel_id} - {channel_config.get('name')}")
+
+            self.logger.info(f"从配置文件初始化了 {len(self.channel_status)} 个通道")
+
+        except Exception as e:
+            self.logger.error(f"从配置文件初始化通道失败: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
     
     def load_model(self, channel_id: str, model_path: str, device: str = 'cuda') -> bool:
         """
@@ -75,7 +119,25 @@ class DetectionService:
                     'load_time': None,
                     'error': None
                 }
-            
+
+            # 创建检测任务（如果不存在）
+            if channel_id not in self.task_manager.tasks:
+                self.logger.info(f"创建检测任务 - 通道: {channel_id}")
+
+                # 创建任务配置
+                task_config = {
+                    'rtsp_url': self.channel_status[channel_id].get('rtsp_url', ''),
+                    'model_path': model_path,
+                    'device': device
+                }
+
+                # 创建任务（使用lambda作为临时回调）
+                self.task_manager.create_task(
+                    channel_id,
+                    task_config,
+                    lambda channel, results: self._on_detection_result(channel, results)
+                )
+
             # 使用任务管理器加载模型
             success = self.task_manager.load_model(channel_id, model_path, device)
             
@@ -151,18 +213,8 @@ class DetectionService:
             if not self.channel_status[channel_id]['model_loaded']:
                 self.logger.error(f"模型未加载 - 通道: {channel_id}")
                 return False
-            
-            # 创建检测任务
-            success = self.task_manager.create_task(
-                channel_id=channel_id,
-                config=config,
-                result_callback=self._on_detection_result
-            )
-            
-            if not success:
-                self.logger.error(f"创建检测任务失败 - 通道: {channel_id}")
-                return False
-            
+
+            # 任务已在load_model时创建，这里只需配置检测参数
             # 配置检测参数
             detection_config = config.get('detection_config', {})
             if detection_config:
@@ -394,20 +446,24 @@ class DetectionService:
     def _send_detection_result(self, channel_id: str, result_data: dict):
         """
         发送检测结果到客户端
-        
+
         Args:
             channel_id: 通道ID
             result_data: 结果数据
         """
         try:
-            if self.websocket_server:
-                # 异步发送数据
-                asyncio.create_task(
-                    self.websocket_server.broadcast_to_channel(channel_id, result_data)
+            if self.websocket_server and self.event_loop:
+                # 从同步线程安全地调度到异步事件循环
+                asyncio.run_coroutine_threadsafe(
+                    self.websocket_server.broadcast_to_channel(channel_id, result_data),
+                    self.event_loop
                 )
             else:
-                self.logger.warning("WebSocket服务器未设置，无法发送检测结果")
-                
+                if not self.websocket_server:
+                    self.logger.warning("WebSocket服务器未设置，无法发送检测结果")
+                if not self.event_loop:
+                    self.logger.warning("事件循环未设置，无法发送检测结果")
+
         except Exception as e:
             self.logger.error(f"发送检测结果失败 - 通道: {channel_id}, 错误: {str(e)}")
     

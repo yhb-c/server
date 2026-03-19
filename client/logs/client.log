@@ -1,0 +1,596 @@
+2026-03-16 16:40:39,303 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 16:40:43,393 [ERROR] api.auth_api: 无法连接到服务器
+2026-03-16 17:03:49,033 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 17:05:23,197 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 17:06:12,782 [ERROR] api.auth_api: 无法连接到服务器
+2026-03-16 17:06:16,867 [ERROR] api.auth_api: 无法连接到服务器
+2026-03-16 19:06:47,160 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 19:15:27,024 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 19:15:42,808 [ERROR] api.auth_api: 无法连接到服务器
+2026-03-16 19:16:07,336 [ERROR] api.auth_api: 无法连接到服务器
+2026-03-16 19:33:15,315 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 19:34:35,765 [ERROR] api.auth_api: 无法连接到服务器
+2026-03-16 20:02:45,903 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 20:03:14,592 [ERROR] api.auth_api: 无法连接到服务器
+2026-03-16 20:19:40,503 [ERROR] api.auth_api: 无法连接到服务器
+2026-03-16 20:32:43,703 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 20:32:46,308 [WARNING] api.auth_api: 登录失败: Key: 'Password' Error:Field validation for 'Password' failed on the 'required' tag
+2026-03-16 20:32:52,004 [WARNING] api.auth_api: 登录失败: 用户名或密码错误
+2026-03-16 20:32:56,393 [WARNING] api.auth_api: 登录失败: 用户名或密码错误
+2026-03-16 20:33:00,686 [WARNING] api.auth_api: 登录失败: Key: 'Password' Error:Field validation for 'Password' failed on the 'required' tag
+2026-03-16 20:47:51,277 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 20:47:51,327 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:47:51,541 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:47:51,541 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:47:51,541 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:47:51,760 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:47:51,760 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:47:51,760 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 20:47:51,995 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1182144
+1182797)
+2026-03-16 20:47:52,235 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1182855)
+2026-03-16 20:47:52,235 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:47:52,467 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:47:52,467 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:47:55,468 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 20:47:55,704 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1182144
+1182967)
+2026-03-16 20:47:55,930 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1183022)
+2026-03-16 20:47:57,147 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:47:57,369 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:47:57,369 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:47:58,882 [WARNING] api.auth_api: 登录失败: Key: 'Password' Error:Field validation for 'Password' failed on the 'required' tag
+2026-03-16 20:48:38,694 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 20:48:38,744 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:48:38,973 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:48:38,973 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:48:38,973 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:48:39,188 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:48:39,189 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:48:39,189 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 20:48:39,422 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1182144
+1183249)
+2026-03-16 20:48:39,650 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1183304)
+2026-03-16 20:48:39,650 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:48:39,876 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:48:39,876 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:48:42,877 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 20:48:43,119 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1182144
+1183413)
+2026-03-16 20:48:43,361 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1183465)
+2026-03-16 20:48:44,053 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:48:44,271 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:48:44,271 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:48:45,770 [WARNING] api.auth_api: 登录失败: Key: 'Password' Error:Field validation for 'Password' failed on the 'required' tag
+2026-03-16 20:58:26,709 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 20:58:26,760 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:58:27,026 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:58:27,026 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:58:27,026 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:58:27,282 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:58:27,282 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:58:27,282 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 20:58:27,525 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1185082)
+2026-03-16 20:58:27,773 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1185137)
+2026-03-16 20:58:27,773 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:58:28,009 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:58:28,009 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:58:31,010 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 20:58:31,275 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1185244)
+2026-03-16 20:58:31,511 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1185302)
+2026-03-16 20:58:32,196 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 20:58:32,433 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 20:58:32,433 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 20:58:34,020 [INFO] api.auth_api: 登录成功: user
+2026-03-16 20:58:34,021 [INFO] ui.login: 登录成功: user
+2026-03-16 20:58:34,021 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-16 20:58:34,223 [ERROR] ui.login: 打开系统窗口失败: No module named 'pyqtgraph'
+Traceback (most recent call last):
+  File "F:\liquid_detect\system_client_sever\client\src\ui\system_window.py", line 143, in <module>
+    from .widgets import MenuBar
+ModuleNotFoundError: No module named 'ui.widgets'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "F:\liquid_detect\system_client_sever\client\src\ui\login.py", line 253, in _onLogin
+    from .system_window import SystemWindow
+  File "F:\liquid_detect\system_client_sever\client\src\ui\system_window.py", line 165, in <module>
+    from widgets import MenuBar
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\__init__.py", line 6, in <module>
+    from .videopage import (
+    ...<4 lines>...
+    )
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\videopage\__init__.py", line 10, in <module>
+    from .curvepanel import CurvePanel
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\videopage\curvepanel.py", line 15, in <module>
+    import pyqtgraph as pg
+ModuleNotFoundError: No module named 'pyqtgraph'
+2026-03-16 21:00:40,729 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 21:00:40,759 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:00:40,982 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:00:40,982 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:00:40,982 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:00:41,208 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:00:41,209 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:00:41,209 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 21:00:41,442 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1185602)
+2026-03-16 21:00:41,679 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1185656)
+2026-03-16 21:00:41,680 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:00:41,911 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:00:41,911 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:00:44,911 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 21:00:45,152 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1185768)
+2026-03-16 21:00:45,401 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1185820)
+2026-03-16 21:00:46,035 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:00:46,247 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:00:46,248 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:00:51,547 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 21:00:51,571 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:00:51,796 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:00:51,796 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:00:51,796 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:00:52,017 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:00:52,018 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:00:52,018 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 21:00:52,251 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1186050)
+2026-03-16 21:00:52,482 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1186105)
+2026-03-16 21:00:52,482 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:00:52,702 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:00:52,703 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:00:52,968 [INFO] api.auth_api: 登录成功: user
+2026-03-16 21:00:52,969 [INFO] ui.login: 登录成功: user
+2026-03-16 21:00:52,969 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-16 21:00:53,500 [ERROR] ui.login: 打开系统窗口失败: No module named 'cv2'
+Traceback (most recent call last):
+  File "F:\liquid_detect\system_client_sever\client\src\ui\system_window.py", line 143, in <module>
+    from ..widgets import MenuBar
+ImportError: attempted relative import beyond top-level package
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "F:\liquid_detect\system_client_sever\client\src\ui\login.py", line 253, in _onLogin
+    from .system_window import SystemWindow
+  File "F:\liquid_detect\system_client_sever\client\src\ui\system_window.py", line 173, in <module>
+    from widgets import MenuBar
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\__init__.py", line 6, in <module>
+    from .videopage import (
+    ...<4 lines>...
+    )
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\videopage\__init__.py", line 16, in <module>
+    from .general_set import GeneralSetPanel, GeneralSetDialog
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\videopage\general_set.py", line 11, in <module>
+    import cv2
+ModuleNotFoundError: No module named 'cv2'
+2026-03-16 21:00:55,704 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 21:00:55,937 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1186220)
+2026-03-16 21:00:56,172 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1186278)
+2026-03-16 21:00:56,286 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:00:56,519 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:00:56,519 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:01:28,315 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 21:01:28,339 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:01:28,559 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:01:28,559 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:01:28,559 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:01:28,783 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:01:28,783 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:01:28,783 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 21:01:29,028 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1186519)
+2026-03-16 21:01:29,287 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1186574)
+2026-03-16 21:01:29,287 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:01:29,527 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:01:29,528 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:01:32,535 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 21:01:32,816 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1186680)
+2026-03-16 21:01:33,045 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1186732)
+2026-03-16 21:01:33,672 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:01:33,779 [INFO] api.auth_api: 登录成功: user
+2026-03-16 21:01:33,779 [INFO] ui.login: 登录成功: user
+2026-03-16 21:01:33,779 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-16 21:01:33,902 [ERROR] ui.login: 打开系统窗口失败: No module named 'cv2'
+Traceback (most recent call last):
+  File "F:\liquid_detect\system_client_sever\client\src\ui\system_window.py", line 143, in <module>
+    from ..widgets import MenuBar
+ImportError: attempted relative import beyond top-level package
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "F:\liquid_detect\system_client_sever\client\src\ui\login.py", line 253, in _onLogin
+    from .system_window import SystemWindow
+  File "F:\liquid_detect\system_client_sever\client\src\ui\system_window.py", line 173, in <module>
+    from widgets import MenuBar
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\__init__.py", line 6, in <module>
+    from .videopage import (
+    ...<4 lines>...
+    )
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\videopage\__init__.py", line 16, in <module>
+    from .general_set import GeneralSetPanel, GeneralSetDialog
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\videopage\general_set.py", line 11, in <module>
+    import cv2
+ModuleNotFoundError: No module named 'cv2'
+2026-03-16 21:01:33,903 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:01:33,903 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:01:37,701 [INFO] api.auth_api: 登录成功: user
+2026-03-16 21:01:37,701 [INFO] ui.login: 登录成功: user
+2026-03-16 21:01:37,702 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-16 21:01:38,174 [INFO] ui.login: SystemWindow导入成功，准备创建窗口...
+2026-03-16 21:01:39,825 [INFO] ui.login: SystemWindow创建成功，准备显示...
+2026-03-16 21:01:46,032 [INFO] utils.ws_client: WebSocket客户端启动: ws://192.168.0.127:8085
+2026-03-16 21:01:46,035 [INFO] utils.ws_client: 正在连接WebSocket服务器: ws://192.168.0.127:8085
+2026-03-16 21:05:10,442 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 21:05:11,720 [INFO] api.auth_api: 登录成功: user
+2026-03-16 21:05:11,720 [INFO] ui.login: 登录成功: user
+2026-03-16 21:05:11,721 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-16 21:05:11,869 [INFO] ui.login: SystemWindow导入成功，准备创建窗口...
+2026-03-16 21:05:13,556 [INFO] ui.login: SystemWindow创建成功，准备显示...
+2026-03-16 21:05:17,927 [INFO] utils.ws_client: WebSocket客户端启动: ws://192.168.0.127:8085
+2026-03-16 21:05:17,928 [INFO] utils.ws_client: 正在连接WebSocket服务器: ws://192.168.0.127:8085
+2026-03-16 21:05:44,360 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 21:05:44,415 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:05:44,669 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:05:44,669 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:05:44,670 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:05:44,899 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:05:44,900 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:05:44,900 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 21:05:45,145 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1186988)
+2026-03-16 21:05:45,396 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1187040)
+2026-03-16 21:05:45,396 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:05:45,637 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:05:45,638 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:05:48,638 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 21:05:48,936 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1187155)
+2026-03-16 21:05:49,213 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1187208)
+2026-03-16 21:05:49,825 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:05:50,049 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:05:50,050 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:05:51,205 [INFO] api.auth_api: 登录成功: user
+2026-03-16 21:05:51,206 [INFO] ui.login: 登录成功: user
+2026-03-16 21:05:51,206 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-16 21:05:51,339 [ERROR] ui.login: 打开系统窗口失败: No module named 'cv2'
+Traceback (most recent call last):
+  File "F:\liquid_detect\system_client_sever\client\src\ui\system_window.py", line 143, in <module>
+    from ..widgets import MenuBar
+ImportError: attempted relative import beyond top-level package
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "F:\liquid_detect\system_client_sever\client\src\ui\login.py", line 253, in _onLogin
+    from .system_window import SystemWindow
+  File "F:\liquid_detect\system_client_sever\client\src\ui\system_window.py", line 173, in <module>
+    from widgets import MenuBar
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\__init__.py", line 6, in <module>
+    from .videopage import (
+    ...<4 lines>...
+    )
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\videopage\__init__.py", line 16, in <module>
+    from .general_set import GeneralSetPanel, GeneralSetDialog
+  File "F:\liquid_detect\system_client_sever\client\src\widgets\videopage\general_set.py", line 11, in <module>
+    import cv2
+ModuleNotFoundError: No module named 'cv2'
+2026-03-16 21:06:06,940 [INFO] utils.logger: 日志系统初始化完成
+2026-03-16 21:06:06,963 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:06:07,187 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:06:07,187 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:06:07,188 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:06:07,403 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:06:07,405 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:06:07,405 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 21:06:07,645 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1187434)
+2026-03-16 21:06:07,866 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1187492)
+2026-03-16 21:06:07,867 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:06:08,082 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:06:08,084 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:06:11,084 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-16 21:06:11,349 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1187602)
+2026-03-16 21:06:11,617 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1187658)
+2026-03-16 21:06:12,263 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-16 21:06:12,495 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-16 21:06:12,496 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-16 21:06:13,900 [INFO] api.auth_api: 登录成功: user
+2026-03-16 21:06:13,901 [INFO] ui.login: 登录成功: user
+2026-03-16 21:06:13,901 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-16 21:06:14,045 [INFO] ui.login: SystemWindow导入成功，准备创建窗口...
+2026-03-16 21:06:15,711 [INFO] ui.login: SystemWindow创建成功，准备显示...
+2026-03-17 11:21:59,435 [INFO] utils.logger: 日志系统初始化完成
+2026-03-17 11:21:59,461 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:22:14,524 [ERROR] ssh_connect.ssh_manager: SSH连接测试超时
+2026-03-17 11:22:14,525 [INFO] ssh_connect.ssh_manager: 开始设置SSH免密连接...
+2026-03-17 11:22:14,525 [INFO] ssh_connect.ssh_manager: 测试到 192.168.0.121 的网络连接...
+2026-03-17 11:22:17,604 [INFO] ssh_connect.ssh_manager: 到 192.168.0.121 的网络连接成功
+2026-03-17 11:22:17,605 [INFO] ssh_connect.ssh_manager: 检查必需的命令...
+2026-03-17 11:22:18,048 [INFO] ssh_connect.ssh_manager: 所有必需命令都已安装
+2026-03-17 11:22:18,048 [INFO] ssh_connect.ssh_manager: 创建SSH目录...
+2026-03-17 11:22:18,049 [INFO] ssh_connect.ssh_manager: SSH目录创建成功
+2026-03-17 11:22:18,049 [INFO] ssh_connect.ssh_manager: 生成SSH密钥对...
+2026-03-17 11:22:18,049 [WARNING] ssh_connect.ssh_manager: SSH密钥已存在
+2026-03-17 11:22:18,050 [INFO] ssh_connect.ssh_manager: 复制公钥到服务器（需要输入服务器密码）...
+2026-03-17 11:22:35,398 [INFO] utils.logger: 日志系统初始化完成
+2026-03-17 11:22:35,423 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:22:35,668 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:22:35,668 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:22:35,669 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:22:35,924 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:22:35,924 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:22:35,925 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:22:36,199 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1204494)
+2026-03-17 11:22:36,430 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1204549)
+2026-03-17 11:22:36,431 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:22:36,651 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:22:36,651 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:22:39,652 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:22:39,898 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1204658)
+2026-03-17 11:22:40,146 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1204711)
+2026-03-17 11:22:40,839 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:22:41,063 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:22:41,063 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:22:42,830 [INFO] api.auth_api: 登录成功: user
+2026-03-17 11:22:42,831 [INFO] ui.login: 登录成功: user
+2026-03-17 11:22:42,831 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-17 11:22:43,203 [INFO] ui.login: SystemWindow导入成功，准备创建窗口...
+2026-03-17 11:22:45,306 [INFO] ui.login: SystemWindow创建成功，准备显示...
+2026-03-17 11:24:10,050 [INFO] utils.logger: 日志系统初始化完成
+2026-03-17 11:24:10,075 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:24:10,295 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:24:10,295 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:24:10,296 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:24:10,514 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:24:10,515 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:24:10,515 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:24:10,745 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1204939)
+2026-03-17 11:24:10,980 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1205003)
+2026-03-17 11:24:10,980 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:24:11,200 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:24:11,200 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:24:14,209 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:24:14,445 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1205112)
+2026-03-17 11:24:14,678 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1205164)
+2026-03-17 11:24:15,323 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:24:15,557 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:24:15,557 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:24:19,288 [INFO] api.auth_api: 登录成功: user
+2026-03-17 11:24:19,289 [INFO] ui.login: 登录成功: user
+2026-03-17 11:24:19,289 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-17 11:24:19,437 [INFO] ui.login: SystemWindow导入成功，准备创建窗口...
+2026-03-17 11:24:21,263 [INFO] ui.login: SystemWindow创建成功，准备显示...
+2026-03-17 11:24:56,345 [ERROR] ssh_connect.ssh_manager: 复制公钥到服务器失败
+2026-03-17 11:24:56,345 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:24:56,591 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:24:56,591 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:24:56,591 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:24:56,884 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1205338)
+2026-03-17 11:24:57,116 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1205396)
+2026-03-17 11:24:57,117 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:24:57,336 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:24:57,336 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:25:00,350 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:25:01,100 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1205502)
+2026-03-17 11:25:01,772 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1205557)
+2026-03-17 11:25:02,742 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:25:02,964 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:25:02,964 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:33:15,581 [INFO] utils.logger: 日志系统初始化完成
+2026-03-17 11:33:15,604 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:33:15,842 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:33:15,842 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:33:15,842 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:33:16,090 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:33:16,091 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:33:16,091 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:33:16,357 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1206301)
+2026-03-17 11:33:16,619 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1206357)
+2026-03-17 11:33:16,619 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:33:16,884 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:33:16,885 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:33:19,885 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:33:20,151 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1206470)
+2026-03-17 11:33:20,400 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1206528)
+2026-03-17 11:33:21,035 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:33:21,267 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:33:21,267 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:33:22,651 [INFO] api.auth_api: 登录成功: user
+2026-03-17 11:33:22,651 [INFO] ui.login: 登录成功: user
+2026-03-17 11:33:22,651 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-17 11:33:22,651 [INFO] ui.login: SystemWindow导入成功，准备创建窗口...
+2026-03-17 11:33:24,423 [INFO] ui.login: SystemWindow创建成功，准备显示...
+2026-03-17 11:33:25,896 [INFO] utils.ws_client: WebSocket客户端启动: ws://192.168.0.127:8085
+2026-03-17 11:33:25,896 [INFO] utils.ws_client: 正在连接WebSocket服务器: ws://192.168.0.127:8085
+2026-03-17 11:33:35,916 [ERROR] utils.ws_client: WebSocket连接失败 (1/5): timed out during opening handshake
+2026-03-17 11:33:38,918 [INFO] utils.ws_client: 正在连接WebSocket服务器: ws://192.168.0.127:8085
+2026-03-17 11:36:07,678 [INFO] utils.logger: 日志系统初始化完成
+2026-03-17 11:36:07,704 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:36:07,939 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:36:07,939 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:36:07,939 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:36:08,154 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:36:08,154 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:36:08,154 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:36:08,388 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1206780)
+2026-03-17 11:36:08,621 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1206836)
+2026-03-17 11:36:08,621 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:36:08,858 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:36:08,858 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:36:11,871 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:36:12,124 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1206942)
+2026-03-17 11:36:12,387 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1206998)
+2026-03-17 11:36:13,047 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:36:13,273 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:36:13,274 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:36:14,646 [INFO] api.auth_api: 登录成功: user
+2026-03-17 11:36:14,646 [INFO] ui.login: 登录成功: user
+2026-03-17 11:36:14,646 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-17 11:36:14,647 [INFO] ui.login: SystemWindow导入成功，准备创建窗口...
+2026-03-17 11:36:16,425 [INFO] ui.login: SystemWindow创建成功，准备显示...
+2026-03-17 11:37:30,581 [INFO] utils.logger: 日志系统初始化完成
+2026-03-17 11:37:31,056 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:37:31,927 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:37:31,927 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:37:31,928 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:37:32,716 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:37:32,716 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:37:32,716 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:37:33,453 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1207249)
+2026-03-17 11:37:33,929 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1207304)
+2026-03-17 11:37:33,930 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:37:34,161 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:37:34,161 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:37:37,162 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:37:37,399 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1207416)
+2026-03-17 11:37:37,631 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1207471)
+2026-03-17 11:37:38,281 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:37:38,520 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:37:38,521 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:37:41,377 [INFO] api.auth_api: 登录成功: user
+2026-03-17 11:37:41,377 [INFO] ui.login: 登录成功: user
+2026-03-17 11:37:41,378 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-17 11:37:41,378 [INFO] ui.login: SystemWindow导入成功，准备创建窗口...
+2026-03-17 11:37:43,082 [INFO] ui.login: SystemWindow创建成功，准备显示...
+2026-03-17 11:44:49,456 [INFO] utils.logger: 日志系统初始化完成
+2026-03-17 11:44:49,513 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:44:49,761 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:44:49,761 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:44:49,762 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:44:49,994 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:44:49,994 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:44:49,994 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:44:50,259 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1208794)
+2026-03-17 11:44:50,508 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1208855)
+2026-03-17 11:44:50,508 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:44:50,752 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:44:50,752 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:44:53,758 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:44:54,011 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1208981)
+2026-03-17 11:44:54,245 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1209033)
+2026-03-17 11:44:54,393 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:44:54,619 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:44:54,620 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:44:55,785 [INFO] api.auth_api: 登录成功: user
+2026-03-17 11:44:55,785 [INFO] ui.login: 登录成功: user
+2026-03-17 11:44:55,785 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-17 11:44:55,785 [INFO] ui.login: SystemWindow导入成功，准备创建窗口...
+2026-03-17 11:44:57,712 [INFO] ui.login: SystemWindow创建成功，准备显示...
+2026-03-17 11:46:12,773 [INFO] utils.logger: 日志系统初始化完成
+2026-03-17 11:46:12,799 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:46:13,025 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:46:13,026 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:46:13,026 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:46:13,259 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:46:13,259 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:46:13,259 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:46:13,494 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1209478)
+2026-03-17 11:46:13,744 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1209530)
+2026-03-17 11:46:13,745 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:46:13,976 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:46:13,976 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:46:16,983 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:46:17,235 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1184215
+1184216
+1209660)
+2026-03-17 11:46:17,486 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1209715)
+2026-03-17 11:46:17,648 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:46:17,872 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:46:17,873 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:47:28,043 [INFO] api.auth_api: 登录成功: user
+2026-03-17 11:47:28,043 [INFO] ui.login: 登录成功: user
+2026-03-17 11:47:28,044 [INFO] ui.login: 准备导入SystemWindow...
+2026-03-17 11:47:28,044 [INFO] ui.login: SystemWindow导入成功，准备创建窗口...
+2026-03-17 11:47:30,115 [INFO] ui.login: SystemWindow创建成功，准备显示...
+2026-03-17 11:49:27,068 [INFO] utils.logger: 日志系统初始化完成
+2026-03-17 11:49:27,069 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:49:27,295 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:49:27,295 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:49:27,295 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:49:27,524 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:49:27,524 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:49:27,524 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:49:27,756 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1211065)
+2026-03-17 11:49:28,013 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1211174)
+2026-03-17 11:49:28,014 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:49:28,247 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:49:28,247 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:49:31,257 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:49:31,504 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1211292)
+2026-03-17 11:49:31,753 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1211350)
+2026-03-17 11:49:31,919 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:49:32,153 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:49:32,154 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:49:35,739 [ERROR] api.auth_api: 无法连接到服务器
+2026-03-17 11:52:02,641 [INFO] utils.logger: 日志系统初始化完成
+2026-03-17 11:52:02,642 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:52:02,864 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:52:02,864 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:52:02,864 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:52:03,095 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:52:03,095 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:52:03,095 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:52:03,369 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1213451)
+2026-03-17 11:52:03,607 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1213503)
+2026-03-17 11:52:03,608 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:52:03,829 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:52:03,829 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:52:06,835 [INFO] ssh_connect.ssh_manager: 检查远程服务状态...
+2026-03-17 11:52:07,076 [INFO] ssh_connect.ssh_manager: Go API服务 正在运行 (PID: 1213686)
+2026-03-17 11:52:07,321 [INFO] ssh_connect.ssh_manager: Python推理服务 正在运行 (PID: 1213741)
+2026-03-17 11:52:07,450 [INFO] ssh_connect.ssh_manager: 测试SSH连接...
+2026-03-17 11:52:07,677 [INFO] ssh_connect.ssh_manager: SSH免密连接测试成功: Connection test successful
+2026-03-17 11:52:07,677 [INFO] ssh_connect.ssh_manager: 配置完成！现在可以使用: ssh liquid
+2026-03-17 11:52:13,666 [ERROR] api.auth_api: 无法连接到服务器
+2026-03-17 11:52:18,853 [ERROR] api.auth_api: 无法连接到服务器

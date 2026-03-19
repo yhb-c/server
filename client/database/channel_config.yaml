@@ -1,0 +1,132 @@
+channels:
+  1:
+    address: rtsp://admin:cei345678@192.168.0.127:8000/stream1
+    channel_id: 1
+    name: 不后悔1
+  2:
+    address: rtsp://admin:cei345678@192.168.0.127:8000/stream1
+    channel_id: 2
+    name: '2'
+  3:
+    address: rtsp://admin:cei345678@192.168.0.127:8000/stream1
+    channel_id: 3
+    name: '3'
+  4:
+    address: rtsp://admin:cei345678@192.168.0.127:8000/stream1
+    channel_id: 4
+    name: '4'
+channel2:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel3:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel4:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel1:
+  general:
+    task_id: '1'
+    task_name: '1'
+    area_count: 0
+    safe_low: 2.0mm
+    safe_high: 10.0mm
+    frequency: 25fps
+    video_format: AVI
+    push_address: ''
+    video_path: ''
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+    areas:
+      area_1: 通道1_区域1
+      area_2: 通道1_区域2
+    area_heights:
+      area_1: 20mm
+      area_2: 20mm
+  model:
+    model_path: d:\restructure\liquid_level_line_detection_system\database\model\detection_model\5\best.dat
+channel_1:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: d:\restructure\liquid_level_line_detection_system\database\mission_result\1_1
+channel_2:
+  general:
+    task_id: '2'
+    task_name: '2'
+    save_liquid_data_path: d:\restructure\liquid_level_line_detection_system\database\mission_result\2_2
+channel_3:
+  general:
+    task_id: '3'
+    task_name: '3'
+    save_liquid_data_path: d:\restructure\liquid_level_line_detection_system\database\mission_result\3_3
+channel_4:
+  general:
+    task_id: '4'
+    task_name: '4'
+    save_liquid_data_path: d:\restructure\liquid_level_line_detection_system\database\mission_result\4_4
+channel5:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel6:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel7:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel8:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel9:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel10:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel11:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel12:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel13:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel14:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel15:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1
+channel16:
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: D:\restructure\liquid16\database\mission_result\1_1

@@ -20,8 +20,6 @@ sys.path.insert(0, server_dir)
 lib_dir = os.path.join(server_dir, 'lib')
 sys.path.insert(0, lib_dir)
 
-from .rtsp_capture import RTSPCapture
-
 # 导入lib文件夹中的HKcapture
 try:
     # 设置环境变量，确保动态库能被找到
@@ -131,40 +129,10 @@ class VideoCaptureFactory:
                     self.logger.warning(f"[{channel_id}] 海康SDK连接失败，回退到OpenCV")
                     
             except Exception as e:
-                self.logger.warning(f"[{channel_id}] 海康SDK创建失败: {e}，回退到OpenCV")
-        
-        # 使用OpenCV捕获器（Windows系统或海康SDK失败时的回退方案）
-        try:
-            self.logger.info(f"[{channel_id}] 使用OpenCV捕获器...")
-            rtsp_capture = RTSPCapture(rtsp_url, channel_id)
-            
-            if rtsp_capture.start():
-                self.logger.info(f"[{channel_id}] OpenCV捕获器创建成功")
-                
-                # 测试获取一帧
-                import time
-                start_time = time.time()
-                test_frame = None
-                while time.time() - start_time < 5:  # 等待最多5秒
-                    test_frame = rtsp_capture.get_frame()
-                    if test_frame is not None:
-                        break
-                    time.sleep(0.1)
-                
-                if test_frame is not None:
-                    self.logger.info(f"[{channel_id}] OpenCV帧获取测试成功: {test_frame.shape[1]}x{test_frame.shape[0]}")
-                    return rtsp_capture
-                else:
-                    self.logger.error(f"[{channel_id}] OpenCV帧获取测试失败")
-                    rtsp_capture.stop()
-            else:
-                self.logger.error(f"[{channel_id}] OpenCV捕获器启动失败")
-                
-        except Exception as e:
-            self.logger.error(f"[{channel_id}] OpenCV捕获器创建失败: {e}")
-        
-        # 所有方式都失败
-        self.logger.error(f"[{channel_id}] 所有视频捕获方式都失败")
+                self.logger.error(f"[{channel_id}] 海康SDK创建失败: {e}")
+
+        # 海康SDK失败
+        self.logger.error(f"[{channel_id}] 视频捕获失败")
         return None
     
     def get_frame_from_capture(self, capture, channel_id: str):

@@ -1,0 +1,10 @@
+#!/usr/bin/expect -f
+set timeout 300
+spawn scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null F:\liquid_detect\system_client_sever\server lqj@192.168.0.121:/home/lqj/liquid
+expect {
+    "*password*" { send "admin\r"; exp_continue }
+    "*Password*" { send "admin\r"; exp_continue }
+    "*(yes/no)*" { send "yes\r"; exp_continue }
+    "*Are you sure*" { send "yes\r"; exp_continue }
+    eof
+}

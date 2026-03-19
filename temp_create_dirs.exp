@@ -1,0 +1,10 @@
+#!/usr/bin/expect -f
+set timeout 300
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null lqj@192.168.0.121 mkdir -p /home/lqj/liquid/api /home/lqj/liquid/server /home/lqj/liquid/test
+expect {
+    "*password*" { send "admin\r"; exp_continue }
+    "*Password*" { send "admin\r"; exp_continue }
+    "*(yes/no)*" { send "yes\r"; exp_continue }
+    "*Are you sure*" { send "yes\r"; exp_continue }
+    eof
+}

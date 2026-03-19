@@ -121,25 +121,41 @@ class DetectionTaskManager:
             if channel_id not in self.tasks:
                 self.logger.error(f"任务不存在: {channel_id}")
                 return False
-                
+
             if channel_id in self.detection_threads and self.detection_threads[channel_id].is_alive():
                 self.logger.warning(f"任务已在运行: {channel_id}")
                 return False
-                
+
             # 获取任务配置
             task_config = self.tasks[channel_id]['config']
             rtsp_url = task_config.get('rtsp_url')
-            
+
             if not rtsp_url:
                 self.logger.error(f"RTSP地址未配置: {channel_id}")
                 return False
-                
+
+            # 如果模型未加载，尝试加载默认模型
+            if channel_id not in self.detection_engines:
+                default_config = self.config_manager.get_default_config()
+                model_key = f"{channel_id}_model_path"
+                model_path = default_config.get(model_key)
+
+                if model_path:
+                    self.logger.info(f"自动加载默认模型: {channel_id} -> {model_path}")
+                    if not self.load_model(channel_id, model_path, device='cpu'):
+                        self.logger.error(f"默认模型加载失败: {channel_id}")
+                        return False
+                else:
+                    self.logger.error(f"未找到默认模型配置: {model_key}")
+                    return False
+
             # 创建视频捕获
-            video_capture = VideoCaptureFactory.create_capture(rtsp_url)
+            factory = VideoCaptureFactory()
+            video_capture = factory.create_capture(rtsp_url, channel_id)
             if not video_capture:
                 self.logger.error(f"视频捕获创建失败: {channel_id}")
                 return False
-                
+
             self.video_captures[channel_id] = video_capture
             
             # 创建停止事件
@@ -217,26 +233,37 @@ class DetectionTaskManager:
             while not stop_event.is_set():
                 try:
                     # 获取视频帧
-                    frame = video_capture.read()
-                    if frame is None:
-                        self.logger.warning(f"获取视频帧失败: {channel_id}")
-                        time.sleep(0.1)
+                    ret, frame = video_capture.read()
+                    if not ret or frame is None:
+                        time.sleep(0.01)  # 没有新帧，短暂等待
                         continue
                         
                     # 执行检测
                     detection_result = detection_engine.detect(frame, channel_id=channel_id)
-                    
-                    if detection_result:
-                        # 构建结果数据
+
+                    if detection_result and detection_result.get('success'):
+                        # 提取液位高度数据
+                        liquid_positions = detection_result.get('liquid_line_positions', {})
+
+                        # 构建简化的结果数据：时间戳 + 高度数据
                         result_data = {
-                            'channel_id': channel_id,
-                            'frame_count': frame_count,
                             'timestamp': time.time(),
-                            'detection_result': detection_result
+                            'heights': {}
                         }
-                        
+
+                        # 提取每个ROI的高度数据
+                        for roi_id, position_data in liquid_positions.items():
+                            height_mm = position_data.get('height_mm', 0)
+                            is_full = position_data.get('is_full', False)
+                            result_data['heights'][roi_id] = {
+                                'height_mm': height_mm,
+                                'is_full': is_full
+                            }
+                            self.logger.info(f"[{channel_id}] ROI{roi_id} 检测结果: 高度={height_mm}mm, 满液={is_full}")
+
                         # 回调结果
                         result_callback(channel_id, result_data)
+                        self.logger.debug(f"[{channel_id}] 推送检测结果: {len(result_data['heights'])}个ROI")
                         
                     frame_count += 1
                     fps_counter += 1
@@ -271,21 +298,17 @@ class DetectionTaskManager:
                 if hasattr(video_capture, 'release'):
                     video_capture.release()
                 del self.video_captures[channel_id]
-                
-            # 清理检测引擎
-            if channel_id in self.detection_engines:
-                detection_engine = self.detection_engines[channel_id]
-                if hasattr(detection_engine, 'cleanup'):
-                    detection_engine.cleanup()
-                del self.detection_engines[channel_id]
-                
+
+            # 注意：不清理detection_engine，因为模型加载耗时，保留以便下次使用
+            # 只在任务完全删除时才清理detection_engine
+
             # 清理线程相关
             if channel_id in self.detection_threads:
                 del self.detection_threads[channel_id]
-                
+
             if channel_id in self.stop_events:
                 del self.stop_events[channel_id]
-                
+
         except Exception as e:
             self.logger.error(f"清理资源失败 {channel_id}: {e}")
     

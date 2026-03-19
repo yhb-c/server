@@ -73,12 +73,29 @@ def test_detection():
 
     # 初始化液位检测器
     print("\n初始化液位检测器...")
-    detector = LiquidDetectionEngine(
-        model_path='database/model/detection_model/bestmodel/tensor.pt',
-        device='cuda',
-        batch_size=1
-    )
-    print("✓ 检测器初始化完成")
+    try:
+        detector = LiquidDetectionEngine(
+            model_path='database/model/detection_model/bestmodel/tensor.pt',
+            device='cpu',
+            batch_size=1
+        )
+
+        # 显式加载模型
+        if not detector.load_model('database/model/detection_model/bestmodel/tensor.pt'):
+            print("❌ 模型加载失败")
+            cap.stop_capture()
+            cap.release()
+            return False
+
+        print(f"✓ 检测器初始化完成")
+        print(f"  模型状态: {'已加载' if detector.model is not None else '未加载'}")
+    except Exception as e:
+        print(f"❌ 检测器初始化失败: {e}")
+        import traceback
+        traceback.print_exc()
+        cap.stop_capture()
+        cap.release()
+        return False
 
     # 等待第一帧
     print("\n等待视频帧...")
@@ -109,11 +126,17 @@ def test_detection():
                 detection_count += 1
 
                 # 执行液位检测
-                result = detector.detect(
-                    frame_or_roi_frames=frame,
-                    annotation_config=annotation_config,
-                    channel_id=channel_id
-                )
+                try:
+                    result = detector.detect(
+                        frame_or_roi_frames=frame,
+                        annotation_config=annotation_config,
+                        channel_id=channel_id
+                    )
+                except Exception as detect_error:
+                    print(f"❌ 检测异常: {detect_error}")
+                    import traceback
+                    traceback.print_exc()
+                    result = None
 
                 if result and result.get('success'):
                     success_count += 1
@@ -122,14 +145,22 @@ def test_detection():
                     if detection_count <= 3:
                         print(f"\n帧 #{detection_count} 检测结果:")
                         liquid_positions = result.get('liquid_line_positions', {})
-                        for area_key, level_data in liquid_positions.items():
-                            print(f"  {area_key}:")
-                            print(f"    液位高度: {level_data} mm")
+                        for area_idx, level_data in liquid_positions.items():
+                            print(f"  区域 {area_idx}:")
+                            if isinstance(level_data, dict):
+                                print(f"    液位高度: {level_data.get('height_mm', 'N/A')} mm")
+                                print(f"    液位像素高度: {level_data.get('height_px', 'N/A')} px")
+                                print(f"    液位Y坐标: {level_data.get('y', 'N/A')}")
+                                print(f"    是否满液: {level_data.get('is_full', False)}")
+                                if level_data.get('error_flag'):
+                                    print(f"    错误标志: {level_data.get('error_flag')}")
+                            else:
+                                print(f"    数据: {level_data}")
                     elif detection_count % 5 == 0:
                         print(f"已检测 {detection_count} 帧...")
                 else:
                     if detection_count <= 3:
-                        print(f"⚠ 帧 #{detection_count} 检测失败")
+                        print(f"⚠ 帧 #{detection_count} 检测失败: {result}")
 
             time.sleep(0.2)  # 约5fps检测
 

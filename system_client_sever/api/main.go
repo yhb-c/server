@@ -1,0 +1,39 @@
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"liquid-api/config"
+	"liquid-api/routes"
+)
+
+func main() {
+	// 加载配置
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal("配置加载失败:", err)
+	}
+
+	// 设置Gin模式
+	if cfg.Server.Mode == "release" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	// 创建路由
+	router := gin.Default()
+
+	// 设置中间件
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+
+	// 注册路由
+	routes.RegisterRoutes(router)
+
+	// 启动服务器
+	log.Printf("API服务启动在端口 %s", cfg.Server.Port)
+	if err := http.ListenAndServe(":"+cfg.Server.Port, router); err != nil {
+		log.Fatal("服务器启动失败:", err)
+	}
+}

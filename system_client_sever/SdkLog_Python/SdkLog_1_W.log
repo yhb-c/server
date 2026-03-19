@@ -1,0 +1,27 @@
+[2026-03-18 13:22:39.780][DBG] CCoreGlobalCtrlBase::LoadDSo, HPR_LoadDSo Succ, Path[F:/liquid_detect/system_client_sever/client/handlers/videopage/HK_SDK/lib/zlib1.dll], hHandleRet[1541931008]
+[2026-03-18 13:22:39.780][INF] The COM:HCCoreBase ver is 6.1.4.15, 2020_03_05. Async:1.
+[2026-03-18 13:22:39.780][INF] The COM:Core ver is 6.1.9.48, 2023_04_10. Async:1.
+[2026-03-18 13:22:39.780][INF] This HCNetSDK ver is 6.1.9.48 Ver 2023_04_10.
+[2026-03-18 13:22:39.782][INF] Login dev 192.168.0.27:8000.
+[2026-03-18 13:22:39.782][INF] dwTotalNum[2048]
+[2026-03-18 13:22:39.783][INF] Private connect 192.168.0.27:8000 sock=6404 this=0x20721874 cmd=0x10000 port=51127
+[2026-03-18 13:22:39.783][INF] LogonDev1 in[192.168.0.27:8000]
+[2026-03-18 13:22:39.786][DBG] CCoreGlobalCtrlBase::LoadDSo, HPR_LoadDSo Succ, Path[F:/liquid_detect/system_client_sever/client/handlers/videopage/HK_SDK/lib/libcrypto-1_1-x64.dll], hHandleRet[1634664448]
+[2026-03-18 13:22:39.786][DBG] Load [libcrypto-1_1-x64.dll] SUCC, Real Path[F:\anaconda\envs\liquid\lib\site-packages\PyQt5\Qt5\bin\libcrypto-1_1-x64.dll]
+[2026-03-18 13:22:39.788][DBG] CCoreGlobalCtrlBase::LoadDSo, HPR_LoadDSo Succ, Path[F:/liquid_detect/system_client_sever/client/handlers/videopage/HK_SDK/lib/libssl-1_1-x64.dll], hHandleRet[2107768832]
+[2026-03-18 13:22:39.788][DBG] Load [libssl-1_1-x64.dll] SUCC, Real Path[F:\anaconda\envs\liquid\lib\site-packages\PyQt5\Qt5\bin\libssl-1_1-x64.dll]
+[2026-03-18 13:22:39.789][INF] SSLTRANSAPI::IsAllAPILoaded, SSL_library_init Unload
+[2026-03-18 13:22:39.789][INF] OpenSSL, Not All Function Loaded!
+[2026-03-18 13:22:39.790][INF] SSLTRANSAPI::PrintVersion, OpenSSL version info [OpenSSL 1.1.1l  24 Aug 2021]
+[2026-03-18 13:22:39.790][INF] CSSLTrans::SSLCtxInit, dwSSLVersion[6], m_fnTLSServerMethod
+[2026-03-18 13:22:39.791][ERR] CSSLTrans::SSLTrans_CTX_Load_CA, invalid path[F:/liquid_detect/system_client_sever/client/handlers/videopage/HK_SDK/lib/cert/\]
+[2026-03-18 13:22:40.924][DBG] CComBase::Load, Load szDllPath[F:/liquid_detect/system_client_sever/client/handlers/videopage/HK_SDK/lib/HCNetSDKCom/HCPreview.dll] SUCC
+[2026-03-18 13:22:40.924][INF] AbilityAnalyze---Init-- start
+[2026-03-18 13:22:40.926][ERR] AbilityAnalyze---open zip package error, package path F:/liquid_detect/system_client_sever/client/handlers/videopage/HK_SDK/lib/LocalXml.zip
+[2026-03-18 13:22:40.926][INF] The COM:Preview ver is 6.1.9.48, 2023_04_10.
+[2026-03-18 13:22:40.940][INF] Private connect 192.168.0.27:8000 sock=3184 this=0x20721874 cmd=0x30000 port=51129
+[2026-03-18 13:22:40.944][INF] ID-IP-CHAN[0-192.168.0.27-1] [CGetTCPStream::Start] Stream Head Data Callback Start
+[2026-03-18 13:22:40.944][INF] ID-IP-CHAN[0-192.168.0.27-1] [CGetTCPStream::Start] Stream Head Data Callback End
+[2026-03-18 13:22:40.944][INF] CCoreGlobalCtrl::LoadDSo, enumDllType[2], cTempPath[F:/liquid_detect/system_client_sever/client/handlers/videopage/HK_SDK/lib/HCNetSDKCom/]
+[2026-03-18 13:22:40.948][DBG] CCoreGlobalCtrl::LoadDSo, HPR_LoadDSo, hHandleRet[402980864], enumDllType[2], Path[SystemTransform.dll], syserror[0]
+[2026-03-18 13:22:40.948][INF] CStreamConvert::LoadConvertLib Load Succ, m_iInitCount = 1
