@@ -1,3 +1,0 @@
-server:
-  port: "8084"
-  mode: "debug"  # debug 或 release

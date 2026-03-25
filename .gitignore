@@ -1,0 +1,115 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.pyc
+venv/
+env/
+ENV/
+
+# Logs
+*.log
+logs/
+SdkLog_Python/
+utils_log/
+
+# Model files (large binary files)
+*.engine
+*.pt
+*.pth
+*.onnx
+*.weights
+*.bin
+*.pkl
+*.h5
+*.dat
+*.pb
+*.tflite
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Compiled executables
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Backup directories
+server_backup_*/
+*_backup/
+backup/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# CSV result files (mission results)
+database/mission_result/**/*.csv
+
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Config files with sensitive data (uncomment if needed)
+# config/*_secret.yaml
+# config/credentials.yaml
+
+# Go vendor directory
+api/vendor/
+
+# Go binary
+api/liquid-api
+api/liquid-api.exe
+
+# Test outputs
+test/logs/
+test/test/logs/
+
+# SDK logs
+sdk/logs/
+sdk/hikvision/SdkLog_Python/
+
+# Client logs
+client/logs/
+client/SdkLog_Python/
+
+# Large SDK demo files
+server/lib/lib/CH-HCNetSDKV6.1.9.48_build20230410_linux64_*/
+
+# Keep directory structure but ignore contents
+!.gitkeep

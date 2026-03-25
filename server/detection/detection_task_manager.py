@@ -242,28 +242,19 @@ class DetectionTaskManager:
                     detection_result = detection_engine.detect(frame, channel_id=channel_id)
 
                     if detection_result and detection_result.get('success'):
-                        # 提取液位高度数据
+                        # 添加时间戳到检测结果
+                        detection_result['timestamp'] = time.time()
+
+                        # 记录日志
                         liquid_positions = detection_result.get('liquid_line_positions', {})
-
-                        # 构建简化的结果数据：时间戳 + 高度数据
-                        result_data = {
-                            'timestamp': time.time(),
-                            'heights': {}
-                        }
-
-                        # 提取每个ROI的高度数据
                         for roi_id, position_data in liquid_positions.items():
                             height_mm = position_data.get('height_mm', 0)
                             is_full = position_data.get('is_full', False)
-                            result_data['heights'][roi_id] = {
-                                'height_mm': height_mm,
-                                'is_full': is_full
-                            }
                             self.logger.info(f"[{channel_id}] ROI{roi_id} 检测结果: 高度={height_mm}mm, 满液={is_full}")
 
-                        # 回调结果
-                        result_callback(channel_id, result_data)
-                        self.logger.debug(f"[{channel_id}] 推送检测结果: {len(result_data['heights'])}个ROI")
+                        # 直接回调完整的检测结果
+                        result_callback(channel_id, detection_result)
+                        self.logger.debug(f"[{channel_id}] 推送检测结果: {len(liquid_positions)}个ROI")
                         
                     frame_count += 1
                     fps_counter += 1

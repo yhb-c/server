@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "F:\liquid_detect\system_client_sever\main.py", line 14, in <module>
-    from qtpy import QtWidgets
-ModuleNotFoundError: No module named 'qtpy'

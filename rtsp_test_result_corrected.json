@@ -1,6 +1,0 @@
-{
-  "network_connectivity": true,
-  "opencv_rtsp": false,
-  "hikvision_sdk": false,
-  "video_capture_factory": false
-}

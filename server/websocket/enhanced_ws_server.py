@@ -341,17 +341,22 @@ class EnhancedWebSocketServer:
         """处理启动检测命令"""
         client_id = self.clients[websocket]['client_info']['id']
         self.logger.info(f"[{client_id}] 收到启动检测命令: 通道{channel_id}")
-        
+
         if not channel_id:
             self.logger.error(f"[{client_id}] 启动检测失败: 通道ID为空")
             await self._send_error_response(websocket, "启动检测失败", "通道ID不能为空")
             return
-        
+
+        # 检查客户端是否已订阅该通道，如果没有则自动订阅
+        if channel_id not in self.clients[websocket]['channels']:
+            self.logger.info(f"[{client_id}] 客户端未订阅通道{channel_id}，自动订阅")
+            self._subscribe_channel(websocket, channel_id)
+
         self.logger.info(f"[{client_id}] 开始执行启动检测: 通道{channel_id}")
-        
+
         # 执行启动检测
         success = self.detection_service.start_detection(channel_id)
-        
+
         self.logger.info(f"[{client_id}] 启动检测结果: 通道{channel_id}, 成功={success}")
         
         await websocket.send(json.dumps({
@@ -457,12 +462,23 @@ class EnhancedWebSocketServer:
         """取消订阅通道"""
         if channel_id in self.channel_subscribers:
             self.channel_subscribers[channel_id].discard(websocket)
-        
+
         if websocket in self.clients:
             self.clients[websocket]['channels'].discard(channel_id)
-        
+
         client_id = self.clients[websocket]['client_info']['id']
         self.logger.info(f"[{client_id}] 取消订阅通道: {channel_id}")
+
+        # 检查该通道是否还有订阅者，如果没有则自动停止检测
+        if channel_id in self.channel_subscribers and len(self.channel_subscribers[channel_id]) == 0:
+            self.logger.info(f"[{client_id}] 通道 {channel_id} 无订阅者，自动停止检测")
+            # 停止检测任务
+            if self.detection_service:
+                try:
+                    self.detection_service.stop_detection(channel_id)
+                    self.logger.info(f"[{client_id}] 通道 {channel_id} 检测已自动停止")
+                except Exception as e:
+                    self.logger.error(f"[{client_id}] 自动停止检测失败: {e}")
     
     def _unregister_client(self, websocket):
         """注销客户端"""
