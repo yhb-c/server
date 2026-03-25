@@ -275,10 +275,13 @@ func (dm *DataMigrator) insertConfig(configType, configName string, data map[str
 }
 
 func main() {
-	// 数据库连接配置
-	dsn := "username:password@tcp(localhost:3306)/liquid_db?parseTime=true&charset=utf8mb4"
+	// 加载配置文件
+	cfg, err := LoadConfig("config/database.yaml")
+	if err != nil {
+		log.Fatal("加载配置失败:", err)
+	}
 
-	migrator, err := NewDataMigrator(dsn)
+	migrator, err := NewDataMigrator(cfg.Database.GetDSN())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -286,19 +289,19 @@ func main() {
 
 	// 迁移任务数据
 	log.Println("开始迁移任务数据...")
-	if err := migrator.MigrateMissions("/home/lqj/liquid/server/database/config/mission"); err != nil {
+	if err := migrator.MigrateMissions(cfg.Migration.MissionYamlDir); err != nil {
 		log.Printf("任务迁移失败: %v", err)
 	}
 
 	// 迁移 CSV 结果数据
 	log.Println("开始迁移 CSV 结果数据...")
-	if err := migrator.MigrateCSVResults("/home/lqj/liquid/server/database/mission_result/1_1", "1"); err != nil {
+	if err := migrator.MigrateCSVResults(cfg.Migration.CSVResultDir+"/1_1", "1"); err != nil {
 		log.Printf("CSV 迁移失败: %v", err)
 	}
 
 	// 迁移配置数据
 	log.Println("开始迁移配置数据...")
-	if err := migrator.MigrateConfigs("/home/lqj/liquid/server/database/config", "system"); err != nil {
+	if err := migrator.MigrateConfigs(cfg.Migration.ConfigDir, "system"); err != nil {
 		log.Printf("配置迁移失败: %v", err)
 	}
 

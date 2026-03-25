@@ -36,7 +36,7 @@ services:
       DB_PASSWORD: liquid_password
       DB_NAME: liquid_db
     volumes:
-      - ./server/config:/app/config
+      - ./server/database/config:/app/database/config
       - ./server/database:/app/database
     networks:
       - liquid_network

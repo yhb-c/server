@@ -1,11 +1,23 @@
 # -*- coding: utf-8 -*-
 
 """
-配置管理模块
+数据库模块
 
-模仿labelme的配置系统，提供配置加载、验证和更新功能
+提供配置管理和数据库连接功能
 """
 
+# 导出数据库客户端
+from .db_client import DatabaseClient
+from .db_websocket import DatabaseWebSocketClient
+from .db_manager import DatabaseManager
+
+__all__ = [
+    'DatabaseClient',
+    'DatabaseWebSocketClient',
+    'DatabaseManager',
+]
+
+# 原有的配置管理功能
 import os
 import os.path as osp
 import shutil

@@ -9,7 +9,12 @@ server/
 ├── database/
 │   ├── schema.sql          # 数据库表结构
 │   ├── migrate.go          # 数据迁移工具
-│   └── db.go              # 数据库操作封装
+│   ├── db.go              # 数据库操作封装
+│   ├── config.go          # 配置加载器
+│   └── config/
+│       ├── database.yaml  # 数据库配置文件
+│       ├── mission/       # 任务 YAML 文件
+│       └── ...           # 其他配置文件
 └── api_server.go          # HTTP API 服务
 ```
 
@@ -54,19 +59,22 @@ go get gopkg.in/yaml.v2
 
 ## 4. 配置数据库连接
 
-修改以下文件中的数据库连接字符串（DSN）：
-
-### migrate.go
-```go
-dsn := "username:password@tcp(localhost:3306)/liquid_db?parseTime=true&charset=utf8mb4"
+编辑配置文件：
+```bash
+vim /home/lqj/liquid/server/database/config/database.yaml
 ```
 
-### api_server.go
-```go
-dsn := "username:password@tcp(localhost:3306)/liquid_db?parseTime=true&charset=utf8mb4"
+修改数据库连接信息：
+```yaml
+database:
+  host: localhost
+  port: 3306
+  username: root        # 修改为你的用户名
+  password: your_password  # 修改为你的密码
+  database: liquid_db
+  charset: utf8mb4
+  parseTime: true
 ```
-
-将 `username` 和 `password` 替换为你的 MySQL 用户名和密码。
 
 ## 5. 执行数据迁移
 

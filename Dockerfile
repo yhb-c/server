@@ -22,7 +22,7 @@ WORKDIR /app
 
 # 从构建阶段复制二进制文件
 COPY --from=builder /app/api_server .
-COPY --from=builder /app/server/config ./config
+COPY --from=builder /app/server/database/config ./database/config
 
 # 设置时区
 ENV TZ=Asia/Shanghai

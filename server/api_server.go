@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"liquid/server/config"
 	"liquid/server/database"
 )
 
@@ -15,7 +14,7 @@ var db *database.DB
 
 func main() {
 	// 加载配置文件
-	cfg, err := config.LoadConfig("config/database.yaml")
+	cfg, err := database.LoadConfig("database/config/database.yaml")
 	if err != nil {
 		log.Fatal("加载配置失败:", err)
 	}

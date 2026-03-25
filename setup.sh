@@ -60,7 +60,7 @@ echo -e "${GREEN}✓ 数据表创建成功${NC}"
 
 # 更新配置文件
 echo -e "\n${YELLOW}更新配置文件...${NC}"
-cat > server/config/database.yaml <<EOF
+cat > server/database/config/database.yaml <<EOF
 database:
   host: $DB_HOST
   port: $DB_PORT
