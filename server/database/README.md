@@ -290,3 +290,40 @@ mysql -u root -p liquid_db < liquid_db_backup.sql
 3. 添加数据统计和分析接口
 4. 实现实时数据推送（WebSocket）
 5. 添加数据导出功能
+1. 数据库设计
+创建用户表(users)：存储用户基本信息(user_id, username, password等)
+创建配置表(user_configs)：存储用户配置信息
+user_id: 关联用户
+config_key: 配置项名称
+config_value: 配置项值(JSON格式存储复杂配置)
+config_type: 配置类型(如camera_config, model_config, display_config等)
+updated_at: 最后更新时间
+2. 客户端实现流程
+用户登录时从服务器拉取该用户的所有配置
+本地缓存配置文件，用于离线使用
+用户修改配置时：
+立即更新本地配置文件
+通过WebSocket或HTTP API发送配置更新请求到服务器
+请求包含：user_id, config_key, config_value, config_type
+3. 服务端实现流程
+提供配置管理API接口：
+GET /api/config/:user_id - 获取用户所有配置
+POST /api/config - 创建/更新配置
+DELETE /api/config/:user_id/:config_key - 删除配置
+接收客户端配置更新请求后：
+验证用户身份
+更新MySQL数据库中对应用户的配置记录
+如果配置涉及服务端文件(如模型配置)，同步更新服务端对应的配置文件
+4. 配置同步策略
+实时同步：客户端修改立即推送到服务器
+冲突处理：采用"最后写入优胜"策略，以最新时间戳为准
+离线支持：客户端离线时修改本地配置，上线后批量同步到服务器
+5. 服务端文件管理
+为每个用户创建独立的配置文件目录：/home/lqj/liquid/user_configs/{user_id}/
+当数据库配置更新时，同步生成对应的配置文件
+推理服务根据user_id加载对应用户的配置文件
+6. 安全考虑
+配置更新需要用户身份验证
+敏感配置(如密码)需要加密存储
+限制配置文件大小和更新频率，防止滥用
+这个方案的核心是：数据库作为配置的唯一真实来源，客户端和服务端文件都是数据库的镜像。
