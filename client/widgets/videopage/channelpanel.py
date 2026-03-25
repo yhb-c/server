@@ -662,8 +662,12 @@ class ChannelPanel(QtWidgets.QWidget):
         if not channel_id:
             return
         if self._is_connected:
+            # 立即切换到断开状态
+            self.setConnected(False)
             self.channelDisconnected.emit(channel_id)
         else:
+            # 立即切换到连接状态
+            self.setConnected(True)
             self.channelConnected.emit(channel_id)
     
     def _onEditClicked(self):

@@ -2102,18 +2102,25 @@ class ChannelPanelHandler:
     def _getLiquidLinePositions(self, channel_id):
         """
         获取并清空液位线位置数据（供显示线程使用）
-        
+
         Args:
             channel_id: 通道ID
-            
+
         Returns:
             dict: 液位线位置数据，格式：{area_idx: position_data}
         """
         if channel_id not in self._liquid_line_locks:
+            print(f"[UI-Draw] Step 6: No lock for {channel_id}")
             return {}
-        
+
         with self._liquid_line_locks[channel_id]:
             positions = self._liquid_line_positions.get(channel_id, {})
+            if positions:
+                print(f"[UI-Draw] Step 7: Got {len(positions)} positions from _liquid_line_positions[{channel_id}]")
+                for idx, pos in positions.items():
+                    print(f"[UI-Draw]   ROI {idx}: y={pos.get('y')}, height={pos.get('height_mm')}mm")
+            else:
+                print(f"[UI-Draw] Step 7: No positions in _liquid_line_positions[{channel_id}]")
             # 复制后清空，确保每次只绘制最新的检测结果
             self._liquid_line_positions[channel_id] = {}
             return positions.copy()
@@ -2121,43 +2128,55 @@ class ChannelPanelHandler:
     def _drawLiquidLines(self, frame, liquid_positions):
         """
         在帧上绘制液位线
-        
+
         Args:
             frame: 输入帧
             liquid_positions: 液位线位置数据，格式：{area_idx: position_data}
-            
+
         Returns:
             绘制后的帧
         """
         import cv2
         import numpy as np
-        
+
         if not liquid_positions:
             return frame
-        
+
+        print(f"[UI-Draw] Step 8: Drawing {len(liquid_positions)} liquid lines on frame")
+
         # 复制帧以避免修改原始数据
         display_frame = frame.copy()
-        
+
         # 遍历每个ROI的液位线数据
         for area_idx, position_data in liquid_positions.items():
-            left = position_data.get('left', 0)
-            right = position_data.get('right', 0)
-            # 兼容两种字段名：'y' 和 'y_absolute'
-            y_absolute = position_data.get('y', position_data.get('y_absolute', 0))
-            height_mm = position_data.get('height_mm', 0)
-            
-            # 绘制红色液位线
-            cv2.line(display_frame, (int(left), int(y_absolute)), 
-                    (int(right), int(y_absolute)), (0, 0, 255), 2)
-            
-            # 四舍五入高度值
-            height_mm = int(np.round(height_mm, 0))
-            text = f"{height_mm}mm"
-            
-            # 绘制绿色高度文字
-            cv2.putText(display_frame, text, (int(left) + 5, int(y_absolute) - 10),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-        
+            try:
+                left = position_data.get('left', 0)
+                right = position_data.get('right', 0)
+                # 兼容两种字段名：'y' 和 'y_absolute'
+                y_absolute = position_data.get('y', position_data.get('y_absolute', 0))
+                height_mm = position_data.get('height_mm', 0)
+
+                print(f"[UI-Draw]   ROI {area_idx}: Drawing line from ({left},{y_absolute}) to ({right},{y_absolute}), height={height_mm}mm")
+
+                # 绘制红色液位线
+                cv2.line(display_frame, (int(left), int(y_absolute)),
+                        (int(right), int(y_absolute)), (0, 0, 255), 2)
+
+                # 四舍五入高度值
+                height_mm = int(np.round(height_mm, 0))
+                text = f"{height_mm}mm"
+
+                # 绘制绿色高度文字
+                cv2.putText(display_frame, text, (int(left) + 5, int(y_absolute) - 10),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+                print(f"[UI-Draw]   ROI {area_idx}: DRAWN successfully")
+
+            except Exception as e:
+                print(f"[UI-Draw]   ROI {area_idx}: ERROR - {e}")
+                continue
+
+        print(f"[UI-Draw] Step 9: Frame drawing complete")
         return display_frame
     
     def _updateVideoDisplay(self, channel_id, frame_or_data):
@@ -2641,7 +2660,92 @@ class ChannelPanelHandler:
             panel = self._channel_panels_map.get(channel_id)
             if panel and hasattr(panel, '_positionTaskLabel'):
                 panel._positionTaskLabel()
-            
+
         except Exception as e:
+            import traceback
+            traceback.print_exc()
+
+    def _onWebSocketDetectionResult(self, data):
+        """
+        接收WebSocket推送的检测结果并更新液位线显示
+
+        Args:
+            data: 检测结果数据
+        """
+        try:
+            print(f"[UI-Draw] Step 1: Received WebSocket detection result")
+
+            # 提取通道ID
+            channel_id = data.get('channel_id')
+            if not channel_id:
+                print(f"[UI-Draw] ERROR: No channel_id")
+                return
+
+            print(f"[UI-Draw] Step 2: Channel ID = {channel_id}")
+
+            # 提取检测结果数据
+            data_obj = data.get('data', {})
+            liquid_line_positions = data_obj.get('liquid_line_positions', {})
+
+            if not liquid_line_positions:
+                print(f"[UI-Draw] ERROR: No liquid_line_positions")
+                return
+
+            print(f"[UI-Draw] Step 3: Got liquid_line_positions with {len(liquid_line_positions)} ROIs")
+
+            # 转换key从字符串到整数
+            converted_positions = {}
+            for key, value in liquid_line_positions.items():
+                try:
+                    int_key = int(key)
+                    converted_positions[int_key] = value
+                    print(f"[UI-Draw] Step 4: ROI {int_key} - y={value.get('y')}, height={value.get('height_mm')}mm")
+                except (ValueError, TypeError):
+                    converted_positions[key] = value
+
+            # 更新液位线位置数据（线程安全）- 用于非HWND模式
+            if channel_id not in self._liquid_line_locks:
+                import threading
+                self._liquid_line_locks[channel_id] = threading.Lock()
+
+            with self._liquid_line_locks[channel_id]:
+                self._liquid_line_positions[channel_id] = converted_positions.copy()
+
+            print(f"[UI-Draw] Step 5: Updated _liquid_line_positions[{channel_id}]")
+
+            # 🔥 直接更新ChannelPanel的液位线显示（用于HWND模式）
+            panel = self._channel_panels_map.get(channel_id)
+            if panel:
+                print(f"[UI-Draw] Step 6: Found ChannelPanel for {channel_id}")
+
+                # 获取视频尺寸（从通道配置或默认值）
+                video_width = 1920  # 默认值，可以从配置读取
+                video_height = 1080
+
+                # 尝试从通道配置获取实际尺寸
+                if hasattr(self, '_channel_configs') and channel_id in self._channel_configs:
+                    config = self._channel_configs[channel_id]
+                    video_width = config.get('width', 1920)
+                    video_height = config.get('height', 1080)
+
+                print(f"[UI-Draw] Step 7: Video size = {video_width}x{video_height}")
+                print(f"[UI-Draw] Step 8: Calling panel.updateLiquidLines()...")
+
+                # 调用ChannelPanel的updateLiquidLines方法
+                panel.updateLiquidLines(
+                    liquid_positions=converted_positions,
+                    is_new_data=True,
+                    video_width=video_width,
+                    video_height=video_height
+                )
+
+                print(f"[UI-Draw] Step 9: panel.updateLiquidLines() called successfully")
+                print(f"[UI-Draw] SUCCESS: Liquid lines should now be visible on UI")
+            else:
+                print(f"[UI-Draw] WARNING: No ChannelPanel found for {channel_id}")
+                print(f"[UI-Draw] Available panels: {list(self._channel_panels_map.keys())}")
+
+        except Exception as e:
+            print(f"[UI-Draw] ERROR: {e}")
             import traceback
             traceback.print_exc()

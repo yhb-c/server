@@ -12,6 +12,13 @@ sys.path.insert(0, str(project_root))
 from qtpy import QtCore
 from .websocket_client import WebSocketClient
 
+# 导入CSV写入器
+try:
+    from client.storage.detection_result_csv_writer import DetectionResultCSVWriter
+except ImportError:
+    DetectionResultCSVWriter = None
+    print("[CommandManager] 警告: 无法导入CSV写入器，数据存储功能将不可用")
+
 class NetworkCommandManager(QtCore.QObject):
     """
     网络命令管理器
@@ -29,35 +36,59 @@ class NetworkCommandManager(QtCore.QObject):
     commandResponseReceived = QtCore.Signal(str, dict)  # 命令响应接收
     liquidHeightReceived = QtCore.Signal(str, list)     # 液位高度数据接收 (channel_id, heights)
     
-    def __init__(self, server_url='ws://192.168.0.121:8085', parent=None):
+    def __init__(self, server_url='ws://192.168.0.121:8085', parent=None, enable_csv_storage=True, csv_save_dir=None):
         """
         初始化网络命令管理器
-        
+
         Args:
             server_url: 服务器WebSocket地址
             parent: 父对象
+            enable_csv_storage: 是否启用CSV存储（默认True）
+            csv_save_dir: CSV保存目录（默认 D:\\system_client_sever\\client\\result）
         """
         super().__init__(parent)
-        
+
         self.server_url = server_url
         self.ws_client = None
         self.is_connected = False
-        
+
+        # CSV存储
+        self.enable_csv_storage = enable_csv_storage
+        self.csv_writer = None
+        if enable_csv_storage and DetectionResultCSVWriter:
+            try:
+                if csv_save_dir:
+                    self.csv_writer = DetectionResultCSVWriter(csv_save_dir)
+                else:
+                    self.csv_writer = DetectionResultCSVWriter()
+                print(f"[CommandManager] CSV存储已启用")
+            except Exception as e:
+                print(f"[CommandManager] CSV写入器初始化失败: {e}")
+
         self._init_websocket()
     
     def _init_websocket(self):
         """初始化WebSocket客户端"""
         try:
+            print(f"[CommandManager] ========== Initialize WebSocket ==========")
             self.ws_client = WebSocketClient(self.server_url, self)
-            
+
             # 连接WebSocket信号
+            print(f"[CommandManager] Connecting connection_status signal...")
             self.ws_client.connection_status.connect(self._on_connection_status)
+            print(f"[CommandManager] [OK] connection_status signal connected")
+
+            print(f"[CommandManager] Connecting detection_result signal...")
             self.ws_client.detection_result.connect(self._on_detection_result)
-            
-            print(f"[CommandManager] WebSocket客户端初始化完成: {self.server_url}")
-            
+            print(f"[CommandManager] [OK] detection_result signal connected")
+
+            print(f"[CommandManager] WebSocket client initialized: {self.server_url}")
+            print(f"[CommandManager] ==========================================\n")
+
         except Exception as e:
-            print(f"[CommandManager] WebSocket客户端初始化失败: {e}")
+            print(f"[CommandManager] WebSocket initialization failed: {e}")
+            import traceback
+            print(f"[CommandManager] Exception traceback: {traceback.format_exc()}")
             self.ws_client = None
     
     def start_connection(self):
@@ -106,16 +137,16 @@ class NetworkCommandManager(QtCore.QObject):
             else:
                 print(f"[CommandManager] 错误: 重连失败，无法发送命令")
                 return False
-        
+
         # 发送命令
-        print(f"[CommandManager] 发送WebSocket命令...")
+        print(f"[CommandManager] Sending WebSocket command...")
         success = self.ws_client.send_command(action, channel_id=channel_id)
-        
+
         if success:
-            print(f"[CommandManager] ✓ 检测命令发送成功: {action}, 通道: {channel_id}")
+            print(f"[CommandManager] [OK] Detection command sent: {action}, channel: {channel_id}")
         else:
-            print(f"[CommandManager] ✗ 检测命令发送失败: {action}, 通道: {channel_id}")
-        
+            print(f"[CommandManager] [FAIL] Detection command failed: {action}, channel: {channel_id}")
+
         return success
     
     def send_model_load_command(self, channel_id, model_path, device='cuda'):
@@ -245,6 +276,45 @@ class NetworkCommandManager(QtCore.QObject):
         """强制重新连接"""
         if self.ws_client:
             self.ws_client.force_reconnect()
+
+    # ========== CSV存储管理 ==========
+
+    def enable_csv_storage_for_channel(self, channel_id: str):
+        """
+        为指定通道启用CSV存储
+
+        Args:
+            channel_id: 通道ID
+        """
+        if self.csv_writer:
+            print(f"[CommandManager] 通道 {channel_id} CSV存储已启用")
+        else:
+            print(f"[CommandManager] CSV写入器未初始化")
+
+    def disable_csv_storage(self):
+        """禁用CSV存储"""
+        self.enable_csv_storage = False
+        print(f"[CommandManager] CSV存储已禁用")
+
+    def get_csv_filepath(self, channel_id: str):
+        """
+        获取指定通道的CSV文件路径
+
+        Args:
+            channel_id: 通道ID
+
+        Returns:
+            Path: CSV文件路径
+        """
+        if self.csv_writer:
+            return self.csv_writer.get_filepath(channel_id)
+        return None
+
+    def close_csv_files(self):
+        """关闭所有CSV文件"""
+        if self.csv_writer:
+            self.csv_writer.close_all()
+            print(f"[CommandManager] 所有CSV文件已关闭")
     
     def _on_connection_status(self, is_connected, message):
         """WebSocket连接状态变化处理"""
@@ -256,17 +326,33 @@ class NetworkCommandManager(QtCore.QObject):
     
     def _on_detection_result(self, data):
         """检测结果处理"""
-        print(f"[CommandManager] 收到检测结果: {data}")
-        
-        # 提取液位高度数据
-        if data.get('type') == 'detection_result':
-            channel_id = data.get('channel_id')
-            heights = data.get('heights', [])
-            
-            if channel_id and heights:
-                # 发送液位高度数据信号
-                self.liquidHeightReceived.emit(channel_id, heights)
-                print(f"[CommandManager] 液位高度数据: 通道{channel_id}, 高度={heights}")
-        
+        if data.get('type') != 'detection_result':
+            return
+
+        channel_id = data.get('channel_id')
+        data_obj = data.get('data', {})
+        liquid_line_positions = data_obj.get('liquid_line_positions', {})
+
+        # 从 liquid_line_positions 提取 heights 用于CSV存储
+        heights = []
+        if isinstance(liquid_line_positions, dict):
+            for key in sorted(liquid_line_positions.keys(), key=lambda x: int(x) if str(x).isdigit() else 0):
+                position_data = liquid_line_positions[key]
+                if isinstance(position_data, dict):
+                    height_mm = position_data.get('height_mm', 0)
+                    heights.append(height_mm)
+
+        if channel_id and heights:
+            # 发送液位高度数据信号
+            self.liquidHeightReceived.emit(channel_id, heights)
+
+            # 保存到CSV文件
+            if self.csv_writer:
+                try:
+                    timestamp = data.get('timestamp')
+                    self.csv_writer.write_detection_result(channel_id, heights, timestamp)
+                except Exception as e:
+                    print(f"[CommandManager] CSV save failed: {e}")
+
         # 转发检测结果信号
         self.detectionResultReceived.emit(data)

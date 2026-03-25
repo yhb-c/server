@@ -374,21 +374,40 @@ class SystemWindow(
     def _initWebSocketClient(self):
         """初始化网络命令管理器"""
         try:
+            # 检查是否为离线模式
+            import sys
+
+            # 尝试从__main__模块获取OFFLINE_MODE (因为main.py是作为主程序运行的)
+            offline_mode = False
+            try:
+                if '__main__' in sys.modules:
+                    offline_mode = getattr(sys.modules['__main__'], 'OFFLINE_MODE', False)
+                    print(f"[SystemWindow] 检测到离线模式设置: {offline_mode}")
+            except Exception as e:
+                print(f"[SystemWindow] 检查离线模式失败: {e}")
+                pass
+
+            if offline_mode:
+                print(f"[SystemWindow] 离线模式 - 跳过WebSocket连接")
+                self.command_manager = None
+                self.ws_client = None
+                return
+
             # 创建网络命令管理器 - 连接到远程服务端
             from client.network.command_manager import NetworkCommandManager
-            
+
             self.command_manager = NetworkCommandManager('ws://192.168.0.121:8085', self)
-            
+
             # 连接状态信号
             self.command_manager.connectionStatusChanged.connect(self._onWebSocketStatus)
             self.command_manager.detectionResultReceived.connect(self._onDetectionResult)
-            
+
             # 启动连接
             self.command_manager.start_connection()
-            
+
             # 为了向后兼容，保留ws_client属性
             self.ws_client = self.command_manager
-            
+
             print(f"[SystemWindow] 网络命令管理器已初始化并启动")
             
         except Exception as e:
@@ -414,12 +433,18 @@ class SystemWindow(
     
     def _onDetectionResult(self, data):
         """检测结果回调
-        
+
         Args:
             data: 检测结果数据
         """
         print(f"[SystemWindow] 收到检测结果: {data}")
-        # 这里可以添加处理检测结果的逻辑
+
+        # 转发给ChannelPanelHandler处理液位线显示
+        if hasattr(self, '_onWebSocketDetectionResult'):
+            print(f"[SystemWindow] 转发检测结果给ChannelPanelHandler...")
+            self._onWebSocketDetectionResult(data)
+        else:
+            print(f"[SystemWindow] [WARN] _onWebSocketDetectionResult方法不存在")
     
     def _createPages(self):
         """创建不同的页面"""

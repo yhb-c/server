@@ -175,12 +175,15 @@ class DataCollectionChannelHandler:
     def _connectDataCollectionChannelThread(self, channel_source):
         """在后台线程中连接数据采集通道（使用与实时监测管理相同的方式）"""
         try:
+            print(f"[数据采集] 开始连接通道，channel_source={channel_source}, 类型={type(channel_source)}")
             success = False
             error_detail = ""
-            
+
             # 如果channel_source是数字，尝试从配置中获取通道信息
             if str(channel_source).isdigit():
+                print(f"[数据采集] channel_source是数字，尝试从配置获取通道信息")
                 channel_config = self._getChannelConfigFromMainConfig(channel_source)
+                print(f"[数据采集] 获取到的通道配置: {channel_config}")
                 if channel_config:
                     success = self._connectRealChannel(channel_config)
                     if not success:
@@ -196,6 +199,8 @@ class DataCollectionChannelHandler:
                 if not success:
                     error_detail = f"无法连接到RTSP地址\n请检查：\n网络连接是否正常\nRTSP地址格式是否正确\n相机是否支持RTSP协议\n\n地址：{channel_source}"
             
+            print(f"[数据采集] 连接结果: success={success}")
+
             if not success:
                 self._showDataCollectionChannelError(
                     "相机连接失败", 
@@ -231,33 +236,39 @@ class DataCollectionChannelHandler:
     
     def _startDataCollectionVideoStream(self):
         """启动数据采集视频流处理"""
+        print("[数据采集] _startDataCollectionVideoStream 被调用")
         # 清空帧缓存
         while not self._dc_frame_buffer.empty():
             try:
                 self._dc_frame_buffer.get_nowait()
             except queue.Empty:
                 break
-        
+
         # 设置线程运行标志
         self._dc_capture_flag = True
         self._dc_display_flag = True
         self._dc_save_flag = True if self._dc_save_folder else False
-        
+        print(f"[数据采集] 线程标志已设置: capture={self._dc_capture_flag}, display={self._dc_display_flag}")
+
         # 启动捕获线程
+        print("[数据采集] 准备启动捕获线程")
         self._dc_capture_thread = threading.Thread(
             target=self._dataCollectionCaptureLoop,
             name="DC-Capture",
             daemon=True
         )
         self._dc_capture_thread.start()
-        
+        print(f"[数据采集] 捕获线程已启动: {self._dc_capture_thread.is_alive()}")
+
         # 启动显示线程
+        print("[数据采集] 准备启动显示线程")
         self._dc_display_thread = threading.Thread(
             target=self._dataCollectionDisplayLoop,
-            name="DC-Display", 
+            name="DC-Display",
             daemon=True
         )
         self._dc_display_thread.start()
+        print(f"[数据采集] 显示线程已启动: {self._dc_display_thread.is_alive()}")
         
         # 暂时禁用保存功能（根据用户要求）
         # if self._dc_save_folder:
@@ -270,24 +281,33 @@ class DataCollectionChannelHandler:
     
     def _dataCollectionCaptureLoop(self):
         """数据采集捕获线程循环"""
+        print("[数据采集] 捕获线程已启动")
         frame_count = 0
+        read_attempts = 0
         frame_interval = 1.0 / self._dc_capture_fps if self._dc_capture_fps > 0 else 0.04
-        
+
         while self._dc_capture_flag:
             try:
                 # 读取帧
                 ret = False
                 frame = None
-                
+                read_attempts += 1
+
                 if hasattr(self._dc_channel_capture, 'read_latest'):
                     # HKcapture
                     ret, frame = self._dc_channel_capture.read_latest()
+                    if read_attempts % 30 == 1:  # 每30次尝试打印一次
+                        print(f"[数据采集] read_latest 尝试 {read_attempts} 次, ret={ret}, frame={'有' if frame is not None else '无'}")
                 else:
                     # OpenCV
                     ret, frame = self._dc_channel_capture.read()
-                
+                    if read_attempts % 30 == 1:
+                        print(f"[数据采集] read 尝试 {read_attempts} 次, ret={ret}, frame={'有' if frame is not None else '无'}")
+
                 if ret and frame is not None:
                     frame_count += 1
+                    if frame_count % 30 == 1:  # 每30帧打印一次
+                        print(f"[数据采集] 捕获线程已捕获 {frame_count} 帧")
                     
                     # 将帧放入缓存池
                     try:
@@ -313,32 +333,53 @@ class DataCollectionChannelHandler:
     def _getChannelConfigFromMainConfig(self, channel_index):
         """从主配置中获取通道配置"""
         try:
+            print(f"[数据采集] _getChannelConfigFromMainConfig 被调用，channel_index={channel_index}")
             # 尝试获取channel配置
             channel_key = f"channel{channel_index}"
-            
+            print(f"[数据采集] 查找配置key: {channel_key}")
+
             # 首先尝试从RTSP配置文件获取
             rtsp_config = self._loadRTSPConfig()
-            
+            print(f"[数据采集] _loadRTSPConfig 返回: {rtsp_config}")
+
             if rtsp_config and 'channels' in rtsp_config:
+                print(f"[数据采集] rtsp_config包含channels，keys: {list(rtsp_config['channels'].keys())}")
                 if channel_key in rtsp_config['channels']:
                     config = rtsp_config['channels'][channel_key]
+                    print(f"[数据采集] 从RTSP配置找到通道配置: {config}")
                     return config
-            
+                else:
+                    print(f"[数据采集] RTSP配置中没有找到 {channel_key}")
+            else:
+                print(f"[数据采集] rtsp_config为空或不包含channels")
+
             # 如果RTSP配置没有，尝试从self._config获取
             if hasattr(self, '_config') and channel_key in self._config:
                 config = self._config[channel_key]
+                print(f"[数据采集] 从self._config找到通道配置: {config}")
                 return config
-            
+            else:
+                print(f"[数据采集] self._config中没有找到 {channel_key}")
+
             # 如果self._config没有，尝试从父类获取
             if hasattr(self, '_parent') and hasattr(self._parent, '_config'):
                 parent_config = self._parent._config
                 if channel_key in parent_config:
                     config = parent_config[channel_key]
+                    print(f"[数据采集] 从parent._config找到通道配置: {config}")
                     return config
-            
+                else:
+                    print(f"[数据采集] parent._config中没有找到 {channel_key}")
+            else:
+                print(f"[数据采集] 没有parent._config")
+
             # 如果都没有找到，返回None
+            print(f"[数据采集] 所有配置源都没有找到 {channel_key}，返回None")
             return None
         except Exception as e:
+            print(f"[数据采集] _getChannelConfigFromMainConfig 异常: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _loadRTSPConfig(self):
@@ -364,19 +405,17 @@ class DataCollectionChannelHandler:
                 return None
             
             # 提取通道地址配置（channel1, channel2, channel3, channel4）
-            rtsp_config = {}
+            channels = {}
             for i in range(1, 5):  # channel1 到 channel4
                 channel_key = f'channel{i}'
                 if channel_key in config:
                     channel_info = config[channel_key]
                     if isinstance(channel_info, dict):
-                        channel_name = channel_info.get('name', f'通道{i}')
-                        channel_address = channel_info.get('address', '')
-                        if channel_address:
-                            rtsp_config[channel_name] = channel_address
-            
-            if rtsp_config:
-                return rtsp_config
+                        # 直接使用原始配置格式
+                        channels[channel_key] = channel_info
+
+            if channels:
+                return {'channels': channels}
             else:
                 return None
             
@@ -531,16 +570,17 @@ class DataCollectionChannelHandler:
 
     def _dataCollectionDisplayLoop(self):
         """数据采集显示线程循环"""
+        print("[数据采集] 显示线程已启动")
         display_count = 0
         frame_interval = 1.0 / self._dc_display_fps if self._dc_display_fps > 0 else 0.033
         last_display_time = time.time()
-        
+
         while self._dc_display_flag:
             try:
                 # 从缓存池获取最新帧
                 frame = None
                 frames_skipped = 0
-                
+
                 # 清空队列，只保留最新帧
                 while not self._dc_frame_buffer.empty():
                     try:
@@ -548,13 +588,15 @@ class DataCollectionChannelHandler:
                         frames_skipped += 1
                     except queue.Empty:
                         break
-                
+
                 if frame is None:
                     # 没有帧，等待
                     time.sleep(0.01)
                     continue
-                
+
                 display_count += 1
+                if display_count % 30 == 1:  # 每30帧打印一次
+                    print(f"[数据采集] 已显示 {display_count} 帧，缓冲区大小: {self._dc_frame_buffer.qsize()}")
                 
                 # 更新UI显示
                 self._updateDataCollectionVideoDisplay(frame)
@@ -643,12 +685,18 @@ class DataCollectionChannelHandler:
             if hasattr(self, 'dataCollectionPanel'):
                 if hasattr(self.dataCollectionPanel, 'channel_preview'):
                     preview_widget = self.dataCollectionPanel.channel_preview
-                    
+
                     # 转换帧格式并显示
                     self._displayFrameInWidget(frame, preview_widget)
-                
+                else:
+                    print("[数据采集] dataCollectionPanel没有channel_preview属性")
+            else:
+                print("[数据采集] 没有dataCollectionPanel属性")
+
         except Exception as e:
-            pass
+            print(f"[数据采集] 更新显示异常: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _displayFrameInWidget(self, frame, widget):
         """在指定的QLabel控件中显示帧"""

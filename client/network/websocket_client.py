@@ -119,33 +119,46 @@ class WebSocketClient(QtCore.QObject):
     
     def _onTextMessage(self, message):
         """接收文本消息回调
-        
+
         Args:
             message: 文本消息
         """
         try:
             data = json.loads(message)
             message_type = data.get('type', '')
-            
+
             if message_type == 'detection_result':
                 # 液位检测结果
+                print(f"[WebSocket] Received detection_result for channel: {data.get('channel_id')}")
                 self.detection_result.emit(data)
-                
+
             elif message_type == 'server_status':
                 # 服务器状态消息
-                print(f"[WebSocket] 服务器状态: {data.get('message', '')}")
-                
+                print(f"[WebSocket] Server status: {data.get('message', '')}")
+
             elif message_type == 'error':
                 # 错误消息
-                print(f"[WebSocket] 服务器错误: {data.get('message', '')}")
-                
+                print(f"[WebSocket] Server error: {data.get('message', '')}")
+
+            elif message_type == 'command_response':
+                # 命令响应消息
+                print(f"[WebSocket] Command response: {data.get('command', '')} - {data.get('message', '')}")
+
+            elif message_type == 'detection_status':
+                # 检测状态消息
+                print(f"[WebSocket] Detection status: {data.get('status', '')}")
+
+            elif message_type == 'welcome':
+                # 欢迎消息
+                print(f"[WebSocket] Connected to server")
+
             else:
-                print(f"[WebSocket] 未知消息类型: {message_type}")
-                
+                print(f"[WebSocket] Unknown message type: {message_type}")
+
         except json.JSONDecodeError as e:
-            print(f"[WebSocket] JSON解析失败: {e}")
+            print(f"[WebSocket] JSON parse failed: {e}")
         except Exception as e:
-            print(f"[WebSocket] 处理文本消息异常: {e}")
+            print(f"[WebSocket] Message processing error: {e}")
     
     def _onBinaryMessage(self, data):
         """接收二进制消息回调

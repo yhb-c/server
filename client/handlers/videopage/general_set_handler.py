@@ -678,15 +678,29 @@ class GeneralSetPanelHandler:
 
             # 尝试发送命令
             if is_connected:
-                print(f"[检测启动] 网络已连接，发送启动检测命令...")
-                
-                # 使用新的命令管理器发送检测命令
+                print(f"[检测启动] 网络已连接，先订阅通道，再启动检测...")
+
+                # 步骤1: 订阅通道（必须先订阅才能接收检测结果）
+                print(f"[检测启动] 步骤1: 订阅通道 {channel_id}")
+                if hasattr(self.ws_client, 'send_subscribe_command'):
+                    subscribe_success = self.ws_client.send_subscribe_command(channel_id)
+                    print(f"[检测启动] 订阅命令发送结果: {subscribe_success}")
+                else:
+                    print(f"[检测启动] [WARN] ws_client没有send_subscribe_command方法")
+                    subscribe_success = False
+
+                # 等待订阅完成
+                import time
+                time.sleep(0.5)
+
+                # 步骤2: 启动检测
+                print(f"[检测启动] 步骤2: 发送启动检测命令")
                 if hasattr(self.ws_client, 'send_detection_command'):
                     success = self.ws_client.send_detection_command(channel_id, 'start_detection')
                 else:
                     # 向后兼容旧的接口
                     success = self.ws_client.send_command('start_detection', channel_id=channel_id)
-                
+
                 print(f"[检测启动] 命令发送结果: {success}")
 
                 if success:
@@ -721,9 +735,19 @@ class GeneralSetPanelHandler:
                             is_connected = self.ws_client.is_connected
                         
                         if is_connected:
-                            print(f"[检测启动] 重连成功，发送检测命令...")
-                            
-                            # 使用新的命令管理器发送检测命令
+                            print(f"[检测启动] 重连成功，先订阅通道，再发送检测命令...")
+
+                            # 步骤1: 订阅通道
+                            print(f"[检测启动] 步骤1: 订阅通道 {channel_id}")
+                            if hasattr(self.ws_client, 'send_subscribe_command'):
+                                subscribe_success = self.ws_client.send_subscribe_command(channel_id)
+                                print(f"[检测启动] 订阅命令发送结果: {subscribe_success}")
+
+                            # 等待订阅完成
+                            time.sleep(0.5)
+
+                            # 步骤2: 启动检测
+                            print(f"[检测启动] 步骤2: 发送启动检测命令")
                             if hasattr(self.ws_client, 'send_detection_command'):
                                 success = self.ws_client.send_detection_command(channel_id, 'start_detection')
                             else:
