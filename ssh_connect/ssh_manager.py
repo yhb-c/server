@@ -392,7 +392,7 @@ Host {self.ssh_config_host}
     def check_remote_services(self):
         """检查远程服务状态"""
         self.log_message("检查远程服务状态...")
-        
+
         services = {
             'go_api': {
                 'command': 'pgrep -f "liquid-api" || echo "not_running"',
@@ -400,17 +400,17 @@ Host {self.ssh_config_host}
                 'name': 'Go API服务'
             },
             'python_inference': {
-                'command': 'pgrep -f "python.*8085" || echo "not_running"',
+                'command': 'pgrep -f "websocket.ws_server" || echo "not_running"',
                 'port': 8085,
                 'name': 'Python推理服务'
             }
         }
-        
+
         status = {}
-        
+
         for service_key, service_info in services.items():
             result = self.execute_remote_command(service_info['command'])
-            
+
             if result['success']:
                 output = result['stdout'].strip()
                 if output and output != 'not_running':
@@ -422,5 +422,5 @@ Host {self.ssh_config_host}
             else:
                 status[service_key] = False
                 self.log_message(f"检查 {service_info['name']} 失败: {result['stderr']}", "ERROR")
-        
+
         return status

@@ -570,14 +570,14 @@ class RemoteConfigManager:
             return {}
 
 
-def load_config(config_path=None, use_remote=True):
+def load_config(config_path=None, use_remote=False):
     """
     加载配置文件 - 统一配置加载接口
-    
+
     Args:
         config_path: 本地配置文件路径（备用）
-        use_remote: 是否优先使用远程配置
-        
+        use_remote: 是否优先使用远程配置（默认False，不需要SSH）
+
     Returns:
         dict: 配置字典
     """
@@ -700,15 +700,15 @@ def load_config(config_path=None, use_remote=True):
     }
 
 
-def save_config(config, config_path=None, use_remote=True):
+def save_config(config, config_path=None, use_remote=False):
     """
     保存配置文件 - 统一配置保存接口
-    
+
     Args:
         config: 配置字典
         config_path: 本地配置文件路径
-        use_remote: 是否保存到远程
-        
+        use_remote: 是否保存到远程（默认False，不需要SSH）
+
     Returns:
         bool: 保存是否成功
     """

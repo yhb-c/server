@@ -41,11 +41,15 @@ mysql -u root -p
 
 # 执行建表脚本
 source /home/lqj/liquid/server/database/schema.sql
+
+# 初始化用户和配置数据
+source /home/lqj/liquid/server/database/init_users.sql
 ```
 
 或者直接执行：
 ```bash
 mysql -u root -p < /home/lqj/liquid/server/database/schema.sql
+mysql -u root -p < /home/lqj/liquid/server/database/init_users.sql
 ```
 
 ## 3. 安装 Go 依赖
@@ -224,6 +228,31 @@ DELETE /api/configs/system/main
 - `config_name`: 配置名称
 - `config_data`: 配置数据（JSON 格式）
 
+### users 表
+存储用户基本信息：
+- `id`: 主键
+- `user_id`: 用户唯一标识（唯一）
+- `username`: 用户名（唯一）
+- `password`: 密码（加密存储，当前免密模式可为空）
+- `email`: 邮箱
+- `phone`: 手机号
+- `role`: 用户角色（admin/user）
+- `status`: 状态（1-启用 0-禁用）
+- `last_login_time`: 最后登录时间
+- `created_at`: 创建时间
+- `updated_at`: 更新时间
+
+### user_configs 表
+存储用户配置信息：
+- `id`: 主键
+- `user_id`: 用户ID（外键关联users表）
+- `config_key`: 配置项名称
+- `config_value`: 配置项值（JSON格式）
+- `config_type`: 配置类型（camera_config/model_config/display_config/system_config）
+- `description`: 配置描述
+- `created_at`: 创建时间
+- `updated_at`: 最后更新时间
+
 ## 使用示例
 
 ### 使用 curl 测试 API
@@ -290,40 +319,86 @@ mysql -u root -p liquid_db < liquid_db_backup.sql
 3. 添加数据统计和分析接口
 4. 实现实时数据推送（WebSocket）
 5. 添加数据导出功能
-1. 数据库设计
-创建用户表(users)：存储用户基本信息(user_id, username, password等)
-创建配置表(user_configs)：存储用户配置信息
-user_id: 关联用户
-config_key: 配置项名称
-config_value: 配置项值(JSON格式存储复杂配置)
-config_type: 配置类型(如camera_config, model_config, display_config等)
-updated_at: 最后更新时间
-2. 客户端实现流程
-用户登录时从服务器拉取该用户的所有配置
-本地缓存配置文件，用于离线使用
-用户修改配置时：
-立即更新本地配置文件
-通过WebSocket或HTTP API发送配置更新请求到服务器
-请求包含：user_id, config_key, config_value, config_type
-3. 服务端实现流程
-提供配置管理API接口：
-GET /api/config/:user_id - 获取用户所有配置
-POST /api/config - 创建/更新配置
-DELETE /api/config/:user_id/:config_key - 删除配置
-接收客户端配置更新请求后：
-验证用户身份
-更新MySQL数据库中对应用户的配置记录
-如果配置涉及服务端文件(如模型配置)，同步更新服务端对应的配置文件
-4. 配置同步策略
-实时同步：客户端修改立即推送到服务器
-冲突处理：采用"最后写入优胜"策略，以最新时间戳为准
-离线支持：客户端离线时修改本地配置，上线后批量同步到服务器
-5. 服务端文件管理
-为每个用户创建独立的配置文件目录：/home/lqj/liquid/user_configs/{user_id}/
-当数据库配置更新时，同步生成对应的配置文件
-推理服务根据user_id加载对应用户的配置文件
-6. 安全考虑
-配置更新需要用户身份验证
-敏感配置(如密码)需要加密存储
-限制配置文件大小和更新频率，防止滥用
-这个方案的核心是：数据库作为配置的唯一真实来源，客户端和服务端文件都是数据库的镜像。
+
+## 用户配置同步功能
+
+### 配置类型说明
+- `camera_config`: 相机相关配置（RTSP地址、分辨率、帧率、解码参数等）
+- `model_config`: 模型相关配置（模型路径、置信度阈值、IOU阈值等）
+- `display_config`: 界面显示配置（是否显示FPS、液位线颜色、线条粗细等）
+- `system_config`: 系统配置（服务器地址、端口、自动重连等）
+
+### 用户配置API接口
+
+#### 获取用户所有配置
+```bash
+GET /api/users/:user_id/configs
+```
+
+#### 获取用户特定类型配置
+```bash
+GET /api/users/:user_id/configs?type=camera_config
+```
+
+#### 获取用户单个配置项
+```bash
+GET /api/users/:user_id/configs/:config_key
+```
+
+#### 创建/更新用户配置
+```bash
+POST /api/users/:user_id/configs
+Content-Type: application/json
+
+{
+  "config_key": "camera_rtsp",
+  "config_value": {
+    "url": "rtsp://admin:password@192.168.0.27:8000/stream1",
+    "width": 1920,
+    "height": 1080,
+    "fps": 25
+  },
+  "config_type": "camera_config",
+  "description": "相机RTSP流配置"
+}
+```
+
+#### 批量更新用户配置
+```bash
+PUT /api/users/:user_id/configs/batch
+Content-Type: application/json
+
+{
+  "configs": [
+    {
+      "config_key": "camera_rtsp",
+      "config_value": {...},
+      "config_type": "camera_config"
+    },
+    {
+      "config_key": "display_ui",
+      "config_value": {...},
+      "config_type": "display_config"
+    }
+  ]
+}
+```
+
+#### 删除用户配置
+```bash
+DELETE /api/users/:user_id/configs/:config_key
+```
+
+### 默认用户
+系统当前使用免密公用账户模式：
+- 公用账户：username=user, user_id=user（密码为空）
+
+所有客户端共享此账户的配置，后期可扩展为多账户模式。
+users表：password字段改为可空，支持免密登录
+init_users.sql：只创建一个公用账户（user_id=default），所有配置都关联到这个账户
+README.md：更新说明文档，标注当前为免密公用账户模式
+当前所有客户端共享user_id=default的配置，后期需要多账户时只需：
+
+在users表中添加新用户记录
+为新用户在user_configs表中创建独立配置
+客户端添加登录功能，根据不同user_id加载对应配置
