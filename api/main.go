@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"liquid-api/config"
+	"liquid-api/database"
 	"liquid-api/routes"
 )
 
@@ -15,6 +16,13 @@ func main() {
 	if err != nil {
 		log.Fatal("配置加载失败:", err)
 	}
+
+	// 初始化数据库连接
+	dsn := "root:root@tcp(localhost:3306)/liquid_db?charset=utf8mb4&parseTime=True&loc=Local"
+	if err := database.InitDB(dsn); err != nil {
+		log.Fatal("数据库连接失败:", err)
+	}
+	defer database.GetDB().Close()
 
 	// 设置Gin模式
 	if cfg.Server.Mode == "release" {

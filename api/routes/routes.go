@@ -52,4 +52,14 @@ func RegisterRoutes(router *gin.Engine) {
 			config.PUT("/", handlers.UpdateConfig)
 		}
 	}
+
+	// 用户配置相关接口
+	users := router.Group("/api/users")
+	{
+		users.GET("/:user_id/configs", handlers.GetUserConfigs)
+		users.GET("/:user_id/configs/:config_key", handlers.GetUserConfig)
+		users.POST("/:user_id/configs", handlers.SaveUserConfig)
+		users.PUT("/:user_id/configs/batch", handlers.BatchUpdateUserConfigs)
+		users.DELETE("/:user_id/configs/:config_key", handlers.DeleteUserConfig)
+	}
 }

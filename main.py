@@ -8,6 +8,7 @@ import subprocess
 import platform
 import os
 import time
+import socket
 from pathlib import Path
 
 from qtpy import QtWidgets
@@ -20,6 +21,29 @@ sys.path.insert(0, str(client_path))
 from client.widgets.login import LoginWindow
 from client.utils.config import load_config
 from client.utils.logger import setup_logging
+
+
+def check_port(host, port, timeout=2):
+    """
+    检查指定主机端口是否开放
+
+    Args:
+        host: 主机地址
+        port: 端口号
+        timeout: 超时时间（秒）
+
+    Returns:
+        bool: 端口开放返回 True，否则返回 False
+    """
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        return result == 0
+    except Exception as e:
+        print(f"[端口检测] 检测 {host}:{port} 失败: {e}")
+        return False
 
 
 def ping_host(host, timeout=2):
@@ -56,9 +80,57 @@ def ping_host(host, timeout=2):
         return False
 
 
+def start_remote_service(service_name, host, port, start_command):
+    """
+    启动远程服务
+
+    Args:
+        service_name: 服务名称
+        host: 服务器地址
+        port: 服务端口
+        start_command: 启动命令
+
+    Returns:
+        bool: 启动成功返回 True，否则返回 False
+    """
+    print(f"\n[服务启动] 正在启动 {service_name}...")
+
+    try:
+        # 使用SSH启动远程服务（后台运行）
+        ssh_command = f"ssh lqj@{host} 'nohup bash -c \"{start_command}\" > /dev/null 2>&1 &'"
+
+        result = subprocess.run(
+            ssh_command,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10
+        )
+
+        if result.returncode != 0:
+            print(f"[服务启动] {service_name} 启动命令执行失败")
+            return False
+
+        # 等待服务启动
+        print(f"[服务启动] 等待 {service_name} 启动...")
+        for i in range(10):
+            time.sleep(1)
+            if check_port(host, port):
+                print(f"[服务启动] {service_name} 启动成功")
+                return True
+            print(f"[服务启动] 等待中... ({i+1}/10)")
+
+        print(f"[服务启动] {service_name} 启动超时")
+        return False
+
+    except Exception as e:
+        print(f"[服务启动] {service_name} 启动失败: {e}")
+        return False
+
+
 def check_network_connectivity(config):
     """
-    检测网络连接状态
+    检测网络连接状态并自动启动服务
 
     Args:
         config: 配置字典
@@ -79,21 +151,38 @@ def check_network_connectivity(config):
         'ws_server': False
     }
 
-    # 1. 检测 API 服务器
+    # 获取服务器配置
     api_url = config.get('server', {}).get('api_url', 'http://192.168.0.121:8084')
     api_host = api_url.split('://')[1].split(':')[0] if '://' in api_url else '192.168.0.121'
+    api_port = int(api_url.split(':')[-1]) if ':' in api_url else 8084
 
-    print(f"\n[1/2] 检测 API 服务器: {api_host}")
-    status['api_server'] = ping_host(api_host)
-    print(f"      状态: {'连接成功' if status['api_server'] else '连接失败'}")
-
-    # 2. 检测 WebSocket 服务器
     ws_url = config.get('server', {}).get('ws_url', 'ws://192.168.0.121:8085')
     ws_host = ws_url.split('://')[1].split(':')[0] if '://' in ws_url else '192.168.0.121'
+    ws_port = int(ws_url.split(':')[-1]) if ':' in ws_url else 8085
 
-    print(f"\n[2/2] 检测 WebSocket 服务器: {ws_host}")
-    status['ws_server'] = ping_host(ws_host)
-    print(f"      状态: {'连接成功' if status['ws_server'] else '连接失败'}")
+    # 1. 检测 API 服务器
+    print(f"\n[1/2] 检测 API 服务器: {api_host}:{api_port}")
+    status['api_server'] = check_port(api_host, api_port)
+
+    if not status['api_server']:
+        print(f"      状态: 连接失败，尝试启动服务...")
+        # 启动 Go API 服务
+        api_start_cmd = f"cd /home/lqj/liquid/api && source ~/anaconda3/bin/activate liquid && go run main.go"
+        status['api_server'] = start_remote_service("API服务", api_host, api_port, api_start_cmd)
+    else:
+        print(f"      状态: 连接成功")
+
+    # 2. 检测 WebSocket 服务器
+    print(f"\n[2/2] 检测 WebSocket 服务器: {ws_host}:{ws_port}")
+    status['ws_server'] = check_port(ws_host, ws_port)
+
+    if not status['ws_server']:
+        print(f"      状态: 连接失败，尝试启动服务...")
+        # 启动 Python 推理服务
+        ws_start_cmd = f"cd /home/lqj/liquid/server && source ~/anaconda3/bin/activate liquid && python api_server.py"
+        status['ws_server'] = start_remote_service("推理服务", ws_host, ws_port, ws_start_cmd)
+    else:
+        print(f"      状态: 连接成功")
 
     print("\n" + "="*50)
     print("网络检测完成")

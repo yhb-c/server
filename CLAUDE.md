@@ -7,11 +7,6 @@
     2.4本项目所有代码都在环境liquid中运行，安装包和扩展资源也在环境liquid中,运行指令前3.不得使用模拟数据进行测试，如有必要，用户同意后才能使用模拟数据测试。
 4.服务器在Linux系统使用海康SDK解码rtsp流时，程序启动设置LD_LIBRARY_PATH环境变量指向海康SDK的lib目录。
 5.修改原单机版所有与业务功能相关的qt信号连接，改用WebSocket命令处理，只保留ui界面相关的信号连接。
-6.文件夹结构说明liquid_detect\system_client_sever\sdk\hikvision，此路径存放服务端用于解码rtsp流的海康威视SDK库
-实现液位检测系统核心功能，实时显示液位线。服务器只负责从rtsp流获取原始帧送入模型推理计算液位高度，将高度数据推送给客户端。客户端得到数据在原始帧上绘制液位线
-7.客户端的视频数据直接从rtsp相机获取，不是服务器推送数据
-在客户端代码中添加自动启动服务器的功能server_manager.py。创建服务器管理工具，并在客户端启动时自动检测并启动服务器：
-8.与深度学习模型相关的代码全部管理在system_client_sever\server\detection此文件夹中
 9.生成的任何文件任何内容不得使用emoji符号，所有文本内容保持纯文本格式
 10.所有与用户的交流都使用简体中文，外语名词可以正常使用
 11.代码中所有路径都基于项目根目录设置动态路径，避免使用硬编码的绝对路径，使用os.path.join()、pathlib或相对路径等方式构建动态路径
@@ -25,7 +20,6 @@
 - 保持项目结构的整洁和规范
 15.所有代码都在环境liquid运行，依赖也只安装在liquid中
 16不得创建简易版代码代替，保证原版功能不被简化
-17使用远程服务器测试，不得使用本地服务器做测试
 18.服务器上conda的安装路径和环境配置：
 ## 服务器环境配置
 
@@ -61,3 +55,4 @@
 F:\liquid_detect\system_client_sever\upload.py
 直接发送 `LiquidDetectionEngine.detect()` 的完整返回值
 代码中使用的是 liquid
+cd /home/lqj/liquid/client/database && python test_config_manager.py

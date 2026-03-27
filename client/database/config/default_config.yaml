@@ -17,99 +17,27 @@ batch_processing_enabled: false
 # 通道基本配置
 channel1:
   name: 通道1
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/1.mp4
+  address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+  file_path: ''
 channel1_model_path: database/model/detection_model/bestmodel/tensor.pt
 
 channel2:
   name: 通道2
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/2.mp4
+  address: rtsp://admin:cei345678@192.168.0.28:8000/stream1
+  file_path: ''
 channel2_model_path: database/model/detection_model/bestmodel/tensor.pt
 
 channel3:
   name: 通道3
   address: ''
-  file_path: /home/lqj/liquid/testvideo/3.mp4
+  file_path: ''
 channel3_model_path: database/model/detection_model/bestmodel/tensor.pt
 
 channel4:
   name: 通道4
   address: ''
-  file_path: /home/lqj/liquid/testvideo/4.mp4
+  file_path: ''
 channel4_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel5:
-  name: 通道5
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/5.mp4
-channel5_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel6:
-  name: 通道6
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/6.mp4
-channel6_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel7:
-  name: 通道7
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/7.mp4
-channel7_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel8:
-  name: 通道8
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/8.mp4
-channel8_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel9:
-  name: 通道9
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/9.mp4
-channel9_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel10:
-  name: 通道10
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/10.mp4
-channel10_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel11:
-  name: 通道11
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/11.mp4
-channel11_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel12:
-  name: 通道12
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/12.mp4
-channel12_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel13:
-  name: 通道13
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/13.mp4
-channel13_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel14:
-  name: 通道14
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/14.mp4
-channel14_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel15:
-  name: 通道15
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/15.mp4
-channel15_model_path: database/model/detection_model/bestmodel/tensor.pt
-
-channel16:
-  name: 通道16
-  address: ''
-  file_path: /home/lqj/liquid/testvideo/16.mp4
-channel16_model_path: database/model/detection_model/bestmodel/tensor.pt
 
 # 检测相关配置
 crop_frame_rate: 2

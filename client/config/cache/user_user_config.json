@@ -1,0 +1,13 @@
+{
+  "camera_rtsp_test": {
+    "config_value": {
+      "url": "rtsp://admin:cei345678@192.168.0.27:8000/stream1",
+      "width": 1920,
+      "height": 1080,
+      "fps": 30
+    },
+    "config_type": "camera_config",
+    "description": "测试相机配置更新",
+    "updated_at": "2026-03-25T16:49:42.198999"
+  }
+}

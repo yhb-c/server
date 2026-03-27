@@ -1,0 +1,5 @@
+camera_rtsp_test:
+  fps: 30
+  height: 1080
+  url: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+  width: 1920
