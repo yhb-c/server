@@ -15,21 +15,34 @@ from typing import Dict, List, Optional
 class DetectionResultCSVWriter:
     """检测结果CSV写入器 - 客户端版本"""
 
-    def __init__(self, save_dir: str = r"D:\system_client_sever\client\database\mission_result"):
+    def __init__(self, save_dir: str = None, main_window=None):
         """
         初始化CSV写入器
 
         Args:
-            save_dir: 保存目录路径
+            save_dir: 保存目录路径（可选，默认使用项目根目录下的database/mission_result）
+            main_window: 主窗口实例，用于获取通道任务信息
         """
-        self.save_dir = Path(save_dir)
+        if save_dir is None:
+            # 使用项目根目录下的database/mission_result
+            try:
+                from database.config import get_project_root
+                import os
+                project_root = get_project_root()
+                save_dir = os.path.join(project_root, 'database', 'mission_result')
+            except Exception as e:
+                print(f"[CSVWriter] 获取项目根目录失败: {e}")
+                save_dir = r"D:\system_client_sever\client\database\mission_result"
+
+        self.base_save_dir = Path(save_dir)
+        self.main_window = main_window
         self.csv_files = {}  # {channel_id: (file_handle, csv_writer)}
         self.csv_filepaths = {}  # {channel_id: filepath}
 
-        # 确保目录存在
-        self.save_dir.mkdir(parents=True, exist_ok=True)
+        # 确保基础目录存在
+        self.base_save_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"[CSVWriter] 初始化完成，保存目录: {self.save_dir}")
+        print(f"[CSVWriter] 初始化完成，基础保存目录: {self.base_save_dir}")
 
     def _get_or_create_writer(self, channel_id: str):
         """
@@ -42,10 +55,24 @@ class DetectionResultCSVWriter:
             tuple: (file_handle, csv_writer)
         """
         if channel_id not in self.csv_files:
+            # 获取通道的任务文件夹名称
+            task_folder_name = self._get_channel_task_folder(channel_id)
+
+            # 确定保存目录
+            if task_folder_name and task_folder_name != "未分配任务":
+                # 保存到任务文件夹
+                save_dir = self.base_save_dir / task_folder_name
+            else:
+                # 保存到基础目录
+                save_dir = self.base_save_dir
+
+            # 确保目录存在
+            save_dir.mkdir(parents=True, exist_ok=True)
+
             # 创建新的CSV文件
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             csv_filename = f'{channel_id}_{timestamp}.csv'
-            csv_filepath = self.save_dir / csv_filename
+            csv_filepath = save_dir / csv_filename
 
             # 打开文件
             file_handle = open(csv_filepath, 'w', newline='', encoding='utf-8-sig')
@@ -63,6 +90,37 @@ class DetectionResultCSVWriter:
             print(f"[CSVWriter] 创建CSV文件: {csv_filepath}")
 
         return self.csv_files[channel_id]
+
+    def _get_channel_task_folder(self, channel_id: str) -> str:
+        """
+        获取通道当前的任务文件夹名称
+
+        Args:
+            channel_id: 通道ID（如 'channel1'）
+
+        Returns:
+            str: 任务文件夹名称，如果没有任务返回None
+        """
+        try:
+            if not self.main_window:
+                return None
+
+            # 从通道任务标签获取任务名称
+            channel_num = int(channel_id.replace('channel', ''))
+            mission_var_name = f'channel{channel_num}mission'
+
+            if hasattr(self.main_window, mission_var_name):
+                mission_label = getattr(self.main_window, mission_var_name)
+                task_folder_name = mission_label.text()
+
+                if task_folder_name and task_folder_name != "未分配任务":
+                    return task_folder_name
+
+            return None
+
+        except Exception as e:
+            print(f"[CSVWriter] 获取通道任务失败 ({channel_id}): {e}")
+            return None
 
     def write_detection_result(self, channel_id: str, heights: List[float], timestamp: Optional[float] = None):
         """

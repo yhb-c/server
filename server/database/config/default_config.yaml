@@ -19,97 +19,97 @@ channel1:
   name: 通道1
   address: ''
   file_path: /home/lqj/liquid/testvideo/1.mp4
-channel1_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel1_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/1.engine
 
 channel2:
   name: 通道2
   address: ''
   file_path: /home/lqj/liquid/testvideo/2.mp4
-channel2_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel2_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/2.engine
 
 channel3:
   name: 通道3
   address: ''
   file_path: /home/lqj/liquid/testvideo/3.mp4
-channel3_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel3_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/3.engine
 
 channel4:
   name: 通道4
   address: ''
   file_path: /home/lqj/liquid/testvideo/4.mp4
-channel4_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel4_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/4.engine
 
 channel5:
   name: 通道5
   address: ''
   file_path: /home/lqj/liquid/testvideo/5.mp4
-channel5_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel5_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/5.engine
 
 channel6:
   name: 通道6
   address: ''
   file_path: /home/lqj/liquid/testvideo/6.mp4
-channel6_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel6_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/6.engine
 
 channel7:
   name: 通道7
   address: ''
   file_path: /home/lqj/liquid/testvideo/7.mp4
-channel7_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel7_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/7.engine
 
 channel8:
   name: 通道8
   address: ''
   file_path: /home/lqj/liquid/testvideo/8.mp4
-channel8_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel8_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/8.engine
 
 channel9:
   name: 通道9
   address: ''
   file_path: /home/lqj/liquid/testvideo/9.mp4
-channel9_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel9_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/5.engine
 
 channel10:
   name: 通道10
   address: ''
   file_path: /home/lqj/liquid/testvideo/10.mp4
-channel10_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel10_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/5.engine
 
 channel11:
   name: 通道11
   address: ''
   file_path: /home/lqj/liquid/testvideo/11.mp4
-channel11_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel11_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/6.engine
 
 channel12:
   name: 通道12
   address: ''
   file_path: /home/lqj/liquid/testvideo/12.mp4
-channel12_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel12_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/6.engine
 
 channel13:
   name: 通道13
   address: ''
   file_path: /home/lqj/liquid/testvideo/13.mp4
-channel13_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel13_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/7.engine
 
 channel14:
   name: 通道14
   address: ''
   file_path: /home/lqj/liquid/testvideo/14.mp4
-channel14_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel14_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/7.engine
 
 channel15:
   name: 通道15
   address: ''
   file_path: /home/lqj/liquid/testvideo/15.mp4
-channel15_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel15_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/8.engine
 
 channel16:
   name: 通道16
   address: ''
   file_path: /home/lqj/liquid/testvideo/16.mp4
-channel16_model_path: database/model/detection_model/bestmodel/tensor.pt
+channel16_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/8.engine
 
 # 检测相关配置
 crop_frame_rate: 2

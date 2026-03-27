@@ -9,6 +9,7 @@ import os
 import sys
 import logging
 import platform
+import cv2
 from pathlib import Path
 
 # 添加项目路径
@@ -69,71 +70,138 @@ class VideoCaptureFactory:
         except Exception as e:
             self.logger.error(f"设置海康SDK环境变量失败: {e}")
     
-    def create_capture(self, rtsp_url: str, channel_id: str, prefer_hikvision: bool = True):
+    def create_capture(self, video_source: str, channel_id: str, prefer_hikvision: bool = True):
         """
         创建视频捕获器
-        
+
         Args:
-            rtsp_url: RTSP流地址
+            video_source: 视频源（RTSP流地址或本地视频文件路径）
             channel_id: 通道ID
-            prefer_hikvision: 是否优先使用海康SDK（Linux系统）
-            
+            prefer_hikvision: 是否优先使用海康SDK（仅对RTSP流有效）
+
         Returns:
             视频捕获器实例
         """
         self.logger.info(f"[{channel_id}] 创建视频捕获器")
         self.logger.info(f"[{channel_id}] 系统类型: {self.system}")
-        self.logger.info(f"[{channel_id}] RTSP地址: {rtsp_url}")
-        
-        if self.system == 'linux' and prefer_hikvision and HK_CAPTURE_AVAILABLE:
-            # Linux系统优先尝试海康SDK
-            try:
-                self.logger.info(f"[{channel_id}] 尝试使用海康SDK...")
-                
-                # 创建HKcapture实例
-                hik_capture = HKcapture(
-                    source=rtsp_url,
-                    debug=True
-                )
-                
-                # 启用YUV队列模式（供检测使用）
-                hik_capture.enable_yuv_queue(enabled=True, interval=0.1)
-                
-                if hik_capture.open():
-                    self.logger.info(f"[{channel_id}] 海康SDK连接成功")
-                    
-                    if hik_capture.start_capture():
-                        self.logger.info(f"[{channel_id}] 海康SDK捕获启动成功")
-                        
-                        # 测试获取一帧
-                        import time
-                        start_time = time.time()
-                        test_frame = None
-                        while time.time() - start_time < 10:  # 等待最多10秒
-                            test_frame = hik_capture.get_yuv_data_nowait()
+        self.logger.info(f"[{channel_id}] 视频源: {video_source}")
+
+        # 判断是本地文件还是RTSP流
+        is_local_file = self._is_local_file(video_source)
+
+        if is_local_file:
+            # 本地视频文件，使用OpenCV
+            self.logger.info(f"[{channel_id}] 检测到本地视频文件，使用OpenCV")
+            return self._create_opencv_capture(video_source, channel_id)
+        else:
+            # RTSP流，优先使用海康SDK
+            if self.system == 'linux' and prefer_hikvision and HK_CAPTURE_AVAILABLE:
+                # Linux系统优先尝试海康SDK
+                try:
+                    self.logger.info(f"[{channel_id}] 尝试使用海康SDK...")
+
+                    # 创建HKcapture实例
+                    hik_capture = HKcapture(
+                        source=video_source,
+                        debug=True
+                    )
+
+                    # 启用YUV队列模式（供检测使用）
+                    hik_capture.enable_yuv_queue(enabled=True, interval=0.1)
+
+                    if hik_capture.open():
+                        self.logger.info(f"[{channel_id}] 海康SDK连接成功")
+
+                        if hik_capture.start_capture():
+                            self.logger.info(f"[{channel_id}] 海康SDK捕获启动成功")
+
+                            # 测试获取一帧
+                            import time
+                            start_time = time.time()
+                            test_frame = None
+                            while time.time() - start_time < 10:  # 等待最多10秒
+                                test_frame = hik_capture.get_yuv_data_nowait()
+                                if test_frame:
+                                    break
+                                time.sleep(0.1)
+
                             if test_frame:
-                                break
-                            time.sleep(0.1)
-                        
-                        if test_frame:
-                            yuv_bytes, width, height, timestamp = test_frame
-                            self.logger.info(f"[{channel_id}] 海康SDK帧获取测试成功: {width}x{height}")
-                            return hik_capture
+                                yuv_bytes, width, height, timestamp = test_frame
+                                self.logger.info(f"[{channel_id}] 海康SDK帧获取测试成功: {width}x{height}")
+                                return hik_capture
+                            else:
+                                self.logger.warning(f"[{channel_id}] 海康SDK帧获取测试失败，回退到OpenCV")
+                                hik_capture.release()
                         else:
-                            self.logger.warning(f"[{channel_id}] 海康SDK帧获取测试失败，回退到OpenCV")
+                            self.logger.warning(f"[{channel_id}] 海康SDK捕获启动失败，回退到OpenCV")
                             hik_capture.release()
                     else:
-                        self.logger.warning(f"[{channel_id}] 海康SDK捕获启动失败，回退到OpenCV")
-                        hik_capture.release()
-                else:
-                    self.logger.warning(f"[{channel_id}] 海康SDK连接失败，回退到OpenCV")
-                    
-            except Exception as e:
-                self.logger.error(f"[{channel_id}] 海康SDK创建失败: {e}")
+                        self.logger.warning(f"[{channel_id}] 海康SDK连接失败，回退到OpenCV")
 
-        # 海康SDK失败
-        self.logger.error(f"[{channel_id}] 视频捕获失败")
-        return None
+                except Exception as e:
+                    self.logger.error(f"[{channel_id}] 海康SDK创建失败: {e}")
+
+            # 海康SDK失败或不可用，回退到OpenCV
+            self.logger.info(f"[{channel_id}] 使用OpenCV处理RTSP流")
+            return self._create_opencv_capture(video_source, channel_id)
+
+    def _is_local_file(self, video_source: str) -> bool:
+        """
+        判断视频源是否为本地文件
+
+        Args:
+            video_source: 视频源路径
+
+        Returns:
+            bool: 是否为本地文件
+        """
+        # 检查是否为RTSP/RTMP/HTTP等流媒体协议
+        stream_protocols = ['rtsp://', 'rtmp://', 'http://', 'https://', 'rtp://']
+        for protocol in stream_protocols:
+            if video_source.lower().startswith(protocol):
+                return False
+
+        # 检查文件是否存在
+        return os.path.isfile(video_source)
+
+    def _create_opencv_capture(self, video_source: str, channel_id: str):
+        """
+        创建OpenCV视频捕获器
+
+        Args:
+            video_source: 视频源（文件路径或流地址）
+            channel_id: 通道ID
+
+        Returns:
+            OpenCV捕获器包装实例
+        """
+        try:
+            import cv2
+
+            self.logger.info(f"[{channel_id}] 创建OpenCV捕获器: {video_source}")
+
+            # 创建OpenCV VideoCapture
+            cap = cv2.VideoCapture(video_source)
+
+            if not cap.isOpened():
+                self.logger.error(f"[{channel_id}] OpenCV无法打开视频源: {video_source}")
+                return None
+
+            # 获取视频信息
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+
+            self.logger.info(f"[{channel_id}] OpenCV捕获器创建成功: {width}x{height} @ {fps}fps")
+
+            # 包装为统一接口
+            return OpenCVCaptureWrapper(cap, channel_id, video_source)
+
+        except Exception as e:
+            self.logger.error(f"[{channel_id}] 创建OpenCV捕获器失败: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
+            return None
     
     def get_frame_from_capture(self, capture, channel_id: str):
         """
@@ -235,3 +303,78 @@ class VideoCaptureFactory:
             self.logger.info(f"[{channel_id}] 视频捕获器已停止")
         except Exception as e:
             self.logger.error(f"[{channel_id}] 停止视频捕获器失败: {e}")
+
+
+class OpenCVCaptureWrapper:
+    """OpenCV视频捕获器包装类，提供统一接口"""
+
+    def __init__(self, cv_capture, channel_id: str, video_source: str):
+        """
+        初始化OpenCV捕获器包装
+
+        Args:
+            cv_capture: cv2.VideoCapture实例
+            channel_id: 通道ID
+            video_source: 视频源路径
+        """
+        self.cv_capture = cv_capture
+        self.channel_id = channel_id
+        self.video_source = video_source
+        self.logger = logging.getLogger(__name__)
+        self.is_reading = True
+        self._is_local_file = os.path.isfile(video_source)
+
+    def read(self):
+        """
+        读取一帧（兼容OpenCV接口）
+
+        Returns:
+            tuple: (ret, frame)
+        """
+        try:
+            ret, frame = self.cv_capture.read()
+
+            # 如果是本地文件且读取到末尾，循环播放
+            if not ret and self._is_local_file:
+                self.logger.info(f"[{self.channel_id}] 视频文件播放完毕，重新开始")
+                self.cv_capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ret, frame = self.cv_capture.read()
+
+            return ret, frame
+
+        except Exception as e:
+            self.logger.error(f"[{self.channel_id}] 读取帧失败: {e}")
+            return False, None
+
+    def get_frame(self):
+        """
+        获取一帧（统一接口）
+
+        Returns:
+            numpy.array: BGR格式的视频帧，失败返回None
+        """
+        ret, frame = self.read()
+        return frame if ret else None
+
+    def is_opened_status(self):
+        """
+        检查捕获器是否打开
+
+        Returns:
+            bool: 是否打开
+        """
+        return self.cv_capture.isOpened()
+
+    def release(self):
+        """释放捕获器资源"""
+        try:
+            self.is_reading = False
+            if self.cv_capture:
+                self.cv_capture.release()
+            self.logger.info(f"[{self.channel_id}] OpenCV捕获器已释放")
+        except Exception as e:
+            self.logger.error(f"[{self.channel_id}] 释放OpenCV捕获器失败: {e}")
+
+    def __del__(self):
+        """析构函数"""
+        self.release()

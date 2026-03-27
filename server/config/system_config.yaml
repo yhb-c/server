@@ -1,0 +1,18 @@
+detection:
+  batch_size: 1
+  confidence_threshold: 0.5
+  default_device: cuda
+  fps_limit: 25
+  kalman_enabled: true
+logging:
+  console_enabled: true
+  file_enabled: true
+  level: INFO
+model:
+  default_model_dir: /home/lqj/liquid/server/database/model/detection_model
+  model_cache_size: 3
+websocket:
+  heartbeat_interval: 30
+  host: 0.0.0.0
+  max_connections: 100
+  port: 8085

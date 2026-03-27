@@ -276,7 +276,10 @@ class SystemWindow(
         
         # 初始化WebSocket客户端
         self._initWebSocketClient()
-        
+
+        # 初始化CSV写入器
+        self._initCSVWriter()
+
         # 初始化UI
         self._initUI()
         
@@ -409,13 +412,36 @@ class SystemWindow(
             self.ws_client = self.command_manager
 
             print(f"[SystemWindow] 网络命令管理器已初始化并启动")
-            
+
         except Exception as e:
             print(f"[SystemWindow] 网络命令管理器初始化失败: {e}")
             import traceback
             traceback.print_exc()
             self.command_manager = None
             self.ws_client = None
+
+    def _initCSVWriter(self):
+        """初始化CSV写入器"""
+        try:
+            from client.storage.detection_result_csv_writer import DetectionResultCSVWriter
+            from client.database.config import get_project_root
+            import os
+
+            # 获取项目根目录
+            project_root = get_project_root()
+            save_dir = os.path.join(project_root, 'database', 'mission_result')
+
+            # 创建CSV写入器，传入主窗口实例以获取通道任务信息
+            self.csv_writer = DetectionResultCSVWriter(save_dir=save_dir, main_window=self)
+
+            print(f"[SystemWindow] CSV写入器已初始化，保存目录: {save_dir}")
+
+        except Exception as e:
+            print(f"[SystemWindow] CSV写入器初始化失败: {e}")
+            import traceback
+            traceback.print_exc()
+            self.csv_writer = None
+
     
     def _onWebSocketStatus(self, is_connected, message):
         """WebSocket连接状态变化回调
@@ -438,6 +464,24 @@ class SystemWindow(
             data: 检测结果数据
         """
         print(f"[SystemWindow] 收到检测结果: {data}")
+
+        # 保存检测结果到CSV
+        if hasattr(self, 'csv_writer') and self.csv_writer:
+            try:
+                channel_id = data.get('channel_id', 'unknown')
+                heights = data.get('heights', [])
+                timestamp = data.get('timestamp')
+
+                if heights:
+                    print(f"[SystemWindow] 保存检测结果到CSV - 通道: {channel_id}, 液位数: {len(heights)}")
+                    self.csv_writer.write_detection_result(channel_id, heights, timestamp)
+                else:
+                    print(f"[SystemWindow] 检测结果无液位数据，跳过保存 - 通道: {channel_id}")
+
+            except Exception as e:
+                print(f"[SystemWindow] 保存CSV失败: {e}")
+                import traceback
+                traceback.print_exc()
 
         # 转发给ChannelPanelHandler处理液位线显示
         if hasattr(self, '_onWebSocketDetectionResult'):
@@ -1284,7 +1328,16 @@ class SystemWindow(
                 for panel in self.channelPanels:
                     if hasattr(panel, '_infoOverlay') and panel._infoOverlay:
                         panel._infoOverlay.close()
-            
+
+            # 关闭CSV写入器
+            if hasattr(self, 'csv_writer') and self.csv_writer:
+                try:
+                    print("[关闭] 正在关闭CSV写入器...")
+                    self.csv_writer.close_all()
+                    print("[关闭] CSV写入器已关闭")
+                except Exception as e:
+                    print(f"[关闭] 关闭CSV写入器失败: {e}")
+
             # 程序退出时，停止全局存储线程并将缓冲区数据写入磁盘
             try:
                 from handlers.videopage.thread_manager.threads.storage_thread import StorageThread

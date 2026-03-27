@@ -57,8 +57,20 @@ class DetectionService:
     def _initialize_channels_from_config(self):
         """从配置文件初始化通道状态"""
         try:
-            # 从default_config.yaml读取通道配置
-            default_config = self.config_manager.system_config
+            # 读取default_config.yaml文件
+            default_config_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                'database', 'config', 'default_config.yaml'
+            )
+
+            if not os.path.exists(default_config_path):
+                self.logger.warning(f"配置文件不存在: {default_config_path}")
+                return
+
+            # 加载配置文件
+            import yaml
+            with open(default_config_path, 'r', encoding='utf-8') as f:
+                default_config = yaml.safe_load(f)
 
             # 遍历所有通道配置
             for key in default_config:
@@ -66,20 +78,26 @@ class DetectionService:
                     channel_id = key
                     channel_config = default_config[key]
 
+                    # 获取对应的模型路径配置
+                    model_path_key = f"{channel_id}_model_path"
+                    model_path = default_config.get(model_path_key, '')
+
                     # 初始化通道状态
                     self.channel_status[channel_id] = {
                         'model_loaded': False,
                         'configured': False,
                         'detecting': False,
                         'model_path': None,
+                        'config_model_path': model_path,  # 保存配置文件中的模型路径
                         'device': None,
                         'rtsp_url': channel_config.get('address', ''),
+                        'file_path': channel_config.get('file_path', ''),
                         'name': channel_config.get('name', channel_id),
                         'load_time': None,
                         'error': None
                     }
 
-                    self.logger.info(f"初始化通道: {channel_id} - {channel_config.get('name')}")
+                    self.logger.info(f"初始化通道: {channel_id} - {channel_config.get('name')}, 模型: {model_path}")
 
             self.logger.info(f"从配置文件初始化了 {len(self.channel_status)} 个通道")
 
@@ -126,7 +144,7 @@ class DetectionService:
 
                 # 创建任务配置
                 task_config = {
-                    'rtsp_url': self.channel_status[channel_id].get('rtsp_url', ''),
+                    'rtsp_url': self.channel_status[channel_id].get('rtsp_url') or self.channel_status[channel_id].get('file_path', ''),
                     'model_path': model_path,
                     'device': device
                 }
@@ -346,7 +364,69 @@ class DetectionService:
             })
             
             return False
-    
+
+    def start_all_detections(self) -> dict:
+        """
+        启动所有通道的检测
+
+        Returns:
+            dict: 启动结果统计
+        """
+        try:
+            self.logger.info("开始启动所有通道检测")
+
+            results = {
+                'success_count': 0,
+                'failed_count': 0,
+                'total_count': 0,
+                'channels': {}
+            }
+
+            # 获取所有通道
+            all_channels = list(self.channel_status.keys())
+            results['total_count'] = len(all_channels)
+
+            # 遍历所有通道并启动
+            for channel_id in all_channels:
+                try:
+                    success = self.start_detection(channel_id)
+
+                    if success:
+                        results['success_count'] += 1
+                        results['channels'][channel_id] = {
+                            'success': True,
+                            'message': '启动成功'
+                        }
+                    else:
+                        results['failed_count'] += 1
+                        results['channels'][channel_id] = {
+                            'success': False,
+                            'message': '启动失败'
+                        }
+
+                except Exception as e:
+                    results['failed_count'] += 1
+                    results['channels'][channel_id] = {
+                        'success': False,
+                        'message': str(e)
+                    }
+                    self.logger.error(f"启动通道 {channel_id} 异常: {e}")
+
+            self.logger.info(f"所有通道启动完成: 成功{results['success_count']}个, 失败{results['failed_count']}个")
+
+            return results
+
+        except Exception as e:
+            self.logger.error(f"启动所有通道异常: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return {
+                'success_count': 0,
+                'failed_count': 0,
+                'total_count': 0,
+                'channels': {},
+                'error': str(e)
+            }
+
     def stop_detection(self, channel_id: str) -> bool:
         """
         停止检测
@@ -416,7 +496,69 @@ class DetectionService:
             })
             
             return False
-    
+
+    def stop_all_detections(self) -> dict:
+        """
+        停止所有通道的检测
+
+        Returns:
+            dict: 停止结果统计
+        """
+        try:
+            self.logger.info("开始停止所有通道检测")
+
+            results = {
+                'success_count': 0,
+                'failed_count': 0,
+                'total_count': 0,
+                'channels': {}
+            }
+
+            # 获取所有通道
+            all_channels = list(self.channel_status.keys())
+            results['total_count'] = len(all_channels)
+
+            # 遍历所有通道并停止
+            for channel_id in all_channels:
+                try:
+                    success = self.stop_detection(channel_id)
+
+                    if success:
+                        results['success_count'] += 1
+                        results['channels'][channel_id] = {
+                            'success': True,
+                            'message': '停止成功'
+                        }
+                    else:
+                        results['failed_count'] += 1
+                        results['channels'][channel_id] = {
+                            'success': False,
+                            'message': '停止失败'
+                        }
+
+                except Exception as e:
+                    results['failed_count'] += 1
+                    results['channels'][channel_id] = {
+                        'success': False,
+                        'message': str(e)
+                    }
+                    self.logger.error(f"停止通道 {channel_id} 异常: {e}")
+
+            self.logger.info(f"所有通道停止完成: 成功{results['success_count']}个, 失败{results['failed_count']}个")
+
+            return results
+
+        except Exception as e:
+            self.logger.error(f"停止所有通道异常: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            return {
+                'success_count': 0,
+                'failed_count': 0,
+                'total_count': 0,
+                'channels': {},
+                'error': str(e)
+            }
+
     def _on_detection_result(self, channel_id: str, detection_result: dict):
         """
         检测结果回调函数

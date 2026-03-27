@@ -12,7 +12,7 @@ from qtpy import QtWidgets, QtCore, QtGui
 # 添加父目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from api.auth_api import AuthAPI
+from network.api.auth_api import AuthAPI
 
 
 class LoginWindow(QtWidgets.QWidget):

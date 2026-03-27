@@ -63,6 +63,9 @@ class MissionPanelHandler:
         mission_panel.channelConfirmed.connect(self._handleChannelConfirmed)
         mission_panel.channelCancelled.connect(self._handleChannelCancelled)
         mission_panel.channelDebugRequested.connect(self._handleChannelDebug)
+
+        # 🔥 连接一键启动信号
+        mission_panel.startAllClicked.connect(self._handleStartAll)
         
         # 🔥 连接表格单击事件（规则2：单击选中行时置为黑色）
         mission_panel.table.cellClicked.connect(self._onMissionRowClicked)
@@ -1170,53 +1173,53 @@ class MissionPanelHandler:
     
     def _handleChannelDebug(self, channel_id, address):
         """处理通道调试请求 - 测试RTSP连接"""
-        
+
         # 在新线程中测试RTSP连接，避免阻塞UI
         from qtpy.QtCore import QThread
         from handlers.videopage.HK_SDK.HKcapture import HKcapture
-        
+
         class RtspTestThread(QThread):
             """RTSP连接测试线程"""
             finished = QtCore.Signal(bool, str)  # 成功/失败，消息
-            
+
             def __init__(self, address):
                 super().__init__()
                 self.address = address
-            
+
             def run(self):
                 cap = None
                 try:
                     # 使用HKcapture类进行连接测试
                     cap = HKcapture(self.address)
-                    
+
                     # 尝试打开连接
                     if not cap.open():
                         self.finished.emit(False, "无法打开连接")
                         return
-                    
+
                     # 尝试开始捕获
                     if not cap.start_capture():
                         self.finished.emit(False, "无法启动捕获")
                         cap.release()
                         return
-                    
+
                     # 等待并读取帧
                     import time
                     max_retries = 10
                     success = False
-                    
+
                     for i in range(max_retries):
                         ret, frame = cap.read()
                         if ret and frame is not None and frame.size > 0:
                             success = True
                             break
                         time.sleep(0.2)  # 等待200ms
-                    
+
                     if success:
                         self.finished.emit(True, "连接成功")
                     else:
                         self.finished.emit(False, "无法读取视频帧")
-                        
+
                 except Exception as e:
                     import traceback
                     traceback.print_exc()
@@ -1225,25 +1228,71 @@ class MissionPanelHandler:
                     # 确保释放资源
                     if cap is not None:
                         cap.release()
-        
+
         # 创建测试线程
         test_thread = RtspTestThread(address)
-        
+
         # 连接完成信号
         def on_test_finished(success, message):
             # 更新UI按钮状态
             if hasattr(self, 'mission_panel') and self.mission_panel:
                 self.mission_panel.updateDebugButtonStatus(channel_id, success, message)
-        
+
         test_thread.finished.connect(on_test_finished)
-        
+
         # 启动测试线程
         test_thread.start()
-        
+
         # 保存线程引用，防止被垃圾回收
         if not hasattr(self, '_rtsp_test_threads'):
             self._rtsp_test_threads = {}
         self._rtsp_test_threads[channel_id] = test_thread
+
+    def _handleStartAll(self):
+        """处理一键启动按钮点击 - 发送start_all指令到服务器"""
+        try:
+            # 检查是否有WebSocket连接
+            if not hasattr(self, 'ws_client') or not self.ws_client:
+                QtWidgets.QMessageBox.warning(
+                    self.mission_panel,
+                    "警告",
+                    "WebSocket未连接，无法启动检测"
+                )
+                return
+
+            # 检查连接状态
+            if not self.ws_client.is_connected:
+                QtWidgets.QMessageBox.warning(
+                    self.mission_panel,
+                    "警告",
+                    "WebSocket未连接，请先连接服务器"
+                )
+                return
+
+            # 发送start_all指令到服务器
+            success = self.ws_client.ws_client.send_command('start_all')
+
+            if success:
+                QtWidgets.QMessageBox.information(
+                    self.mission_panel,
+                    "提示",
+                    "已发送一键启动指令到服务器"
+                )
+            else:
+                QtWidgets.QMessageBox.warning(
+                    self.mission_panel,
+                    "警告",
+                    "发送启动指令失败"
+                )
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            QtWidgets.QMessageBox.warning(
+                self.mission_panel,
+                "错误",
+                f"发送启动指令失败: {str(e)}"
+            )
     
     def _checkChannelsWithExistingTasks(self, selected_channels, new_task_name):
         """

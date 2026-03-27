@@ -206,12 +206,22 @@ class EnhancedWebSocketServer:
                 # 启动检测
                 self.logger.info(f"[{client_id}] 处理启动检测命令")
                 await self._handle_start_detection(websocket, channel_id)
-                
+
+            elif command == 'start_all':
+                # 启动所有通道检测
+                self.logger.info(f"[{client_id}] 处理启动所有通道检测命令")
+                await self._handle_start_all(websocket)
+
             elif command == 'stop_detection':
                 # 停止检测
                 self.logger.info(f"[{client_id}] 处理停止检测命令")
                 await self._handle_stop_detection(websocket, channel_id)
-                
+
+            elif command == 'stop_all':
+                # 停止所有通道检测
+                self.logger.info(f"[{client_id}] 处理停止所有通道检测命令")
+                await self._handle_stop_all(websocket)
+
             elif command == 'get_status':
                 # 获取状态
                 self.logger.info(f"[{client_id}] 处理状态查询命令")
@@ -380,7 +390,122 @@ class EnhancedWebSocketServer:
             })
         else:
             self.logger.error(f"[{client_id}] 检测启动失败: 通道{channel_id}")
-    
+
+    async def _handle_start_all(self, websocket):
+        """处理启动所有通道检测命令"""
+        client_id = self.clients[websocket]['client_info']['id']
+        self.logger.info(f"[{client_id}] 收到启动所有通道检测命令")
+
+        # 获取所有通道ID
+        all_channels = list(self.detection_service.channel_status.keys())
+        self.logger.info(f"[{client_id}] 找到 {len(all_channels)} 个通道: {all_channels}")
+
+        # 统计结果
+        success_count = 0
+        failed_channels = []
+        results = {}
+
+        # 遍历所有通道并启动检测
+        for channel_id in all_channels:
+            try:
+                self.logger.info(f"[{client_id}] 正在处理通道: {channel_id}")
+
+                # 检查客户端是否已订阅该通道，如果没有则自动订阅
+                if channel_id not in self.clients[websocket]['channels']:
+                    self.logger.info(f"[{client_id}] 客户端未订阅通道{channel_id}，自动订阅")
+                    self._subscribe_channel(websocket, channel_id)
+
+                # 获取通道状态
+                channel_state = self.detection_service.channel_status[channel_id]
+
+                # 步骤1: 加载模型（如果未加载）
+                if not channel_state['model_loaded']:
+                    model_path = channel_state.get('config_model_path')
+                    if not model_path:
+                        self.logger.error(f"[{client_id}] 通道 {channel_id} 配置中没有模型路径")
+                        failed_channels.append(channel_id)
+                        results[channel_id] = {'success': False, 'message': '配置中没有模型路径'}
+                        continue
+
+                    self.logger.info(f"[{client_id}] 通道 {channel_id} 开始加载模型: {model_path}")
+                    load_success = self.detection_service.load_model(channel_id, model_path, 'cuda')
+
+                    if not load_success:
+                        self.logger.error(f"[{client_id}] 通道 {channel_id} 模型加载失败")
+                        failed_channels.append(channel_id)
+                        results[channel_id] = {'success': False, 'message': '模型加载失败'}
+                        continue
+
+                    self.logger.info(f"[{client_id}] 通道 {channel_id} 模型加载成功")
+
+                # 步骤2: 配置通道（如果未配置）
+                if not channel_state['configured']:
+                    self.logger.info(f"[{client_id}] 通道 {channel_id} 开始配置")
+
+                    # 使用默认配置
+                    default_config = {
+                        'detection_config': {
+                            'confidence_threshold': 0.5,
+                            'iou_threshold': 0.45
+                        }
+                    }
+
+                    config_success = self.detection_service.configure_channel(channel_id, default_config)
+
+                    if not config_success:
+                        self.logger.error(f"[{client_id}] 通道 {channel_id} 配置失败")
+                        failed_channels.append(channel_id)
+                        results[channel_id] = {'success': False, 'message': '通道配置失败'}
+                        continue
+
+                    self.logger.info(f"[{client_id}] 通道 {channel_id} 配置成功")
+
+                # 步骤3: 启动检测
+                self.logger.info(f"[{client_id}] 通道 {channel_id} 开始启动检测")
+                success = self.detection_service.start_detection(channel_id)
+
+                if success:
+                    success_count += 1
+                    results[channel_id] = {'success': True, 'message': '启动成功'}
+                    self.logger.info(f"[{client_id}] 通道 {channel_id} 启动成功")
+
+                    # 广播状态变化
+                    await self.broadcast_to_channel(channel_id, {
+                        'type': 'detection_status',
+                        'channel_id': channel_id,
+                        'status': 'started',
+                        'message': '检测已启动',
+                        'timestamp': datetime.now().isoformat()
+                    })
+                else:
+                    failed_channels.append(channel_id)
+                    results[channel_id] = {'success': False, 'message': '启动失败'}
+                    self.logger.error(f"[{client_id}] 通道 {channel_id} 启动失败")
+
+            except Exception as e:
+                failed_channels.append(channel_id)
+                results[channel_id] = {'success': False, 'message': str(e)}
+                self.logger.error(f"[{client_id}] 通道 {channel_id} 处理异常: {e}")
+                import traceback
+                self.logger.error(f"[{client_id}] 异常详情:\n{traceback.format_exc()}")
+
+        # 发送汇总响应
+        response = {
+            'type': 'command_response',
+            'command': 'start_all',
+            'success': success_count > 0,
+            'message': f'成功启动 {success_count}/{len(all_channels)} 个通道',
+            'total_channels': len(all_channels),
+            'success_count': success_count,
+            'failed_count': len(failed_channels),
+            'failed_channels': failed_channels,
+            'results': results,
+            'timestamp': datetime.now().isoformat()
+        }
+
+        self.logger.info(f"[{client_id}] 启动所有通道完成: 成功{success_count}个, 失败{len(failed_channels)}个")
+        await websocket.send(json.dumps(response))
+
     async def _handle_stop_detection(self, websocket, channel_id: str):
         """处理停止检测命令"""
         if not channel_id:
@@ -408,7 +533,69 @@ class EnhancedWebSocketServer:
                 'message': '检测已停止',
                 'timestamp': datetime.now().isoformat()
             })
-    
+
+    async def _handle_stop_all(self, websocket):
+        """处理停止所有通道检测命令"""
+        client_id = self.clients[websocket]['client_info']['id']
+        self.logger.info(f"[{client_id}] 收到停止所有通道检测命令")
+
+        # 获取所有通道ID
+        all_channels = list(self.detection_service.channel_status.keys())
+        self.logger.info(f"[{client_id}] 找到 {len(all_channels)} 个通道: {all_channels}")
+
+        # 统计结果
+        success_count = 0
+        failed_channels = []
+        results = {}
+
+        # 遍历所有通道并停止检测
+        for channel_id in all_channels:
+            try:
+                self.logger.info(f"[{client_id}] 正在停止通道: {channel_id}")
+
+                # 停止检测
+                success = self.detection_service.stop_detection(channel_id)
+
+                if success:
+                    success_count += 1
+                    results[channel_id] = {'success': True, 'message': '停止成功'}
+                    self.logger.info(f"[{client_id}] 通道 {channel_id} 停止成功")
+
+                    # 广播状态变化
+                    await self.broadcast_to_channel(channel_id, {
+                        'type': 'detection_status',
+                        'channel_id': channel_id,
+                        'status': 'stopped',
+                        'message': '检测已停止',
+                        'timestamp': datetime.now().isoformat()
+                    })
+                else:
+                    failed_channels.append(channel_id)
+                    results[channel_id] = {'success': False, 'message': '停止失败'}
+                    self.logger.error(f"[{client_id}] 通道 {channel_id} 停止失败")
+
+            except Exception as e:
+                failed_channels.append(channel_id)
+                results[channel_id] = {'success': False, 'message': str(e)}
+                self.logger.error(f"[{client_id}] 通道 {channel_id} 停止异常: {e}")
+
+        # 发送汇总响应
+        response = {
+            'type': 'command_response',
+            'command': 'stop_all',
+            'success': success_count > 0,
+            'message': f'成功停止 {success_count}/{len(all_channels)} 个通道',
+            'total_channels': len(all_channels),
+            'success_count': success_count,
+            'failed_count': len(failed_channels),
+            'failed_channels': failed_channels,
+            'results': results,
+            'timestamp': datetime.now().isoformat()
+        }
+
+        self.logger.info(f"[{client_id}] 停止所有通道完成: 成功{success_count}个, 失败{len(failed_channels)}个")
+        await websocket.send(json.dumps(response))
+
     async def _handle_get_status(self, websocket, channel_id: Optional[str]):
         """处理获取状态命令"""
         if channel_id:

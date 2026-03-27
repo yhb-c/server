@@ -52,7 +52,7 @@ fi
 
 # 检查并启动Python推理服务
 echo -e "\n${YELLOW}[3/4]${NC} 检查Python推理服务..."
-if pgrep -f "websocket.ws_server" > /dev/null; then
+if pgrep -f "start_websocket_server" > /dev/null; then
     echo -e "${GREEN}✓${NC} Python推理服务已在运行"
 else
     echo -e "${YELLOW}→${NC} 启动Python推理服务..."
@@ -61,10 +61,10 @@ else
     # 设置海康SDK库路径
     export LD_LIBRARY_PATH=/home/lqj/liquid/sdk/hikvision/lib:$LD_LIBRARY_PATH
 
-    nohup python -m websocket.ws_server > inference.log 2>&1 &
+    nohup python websocket/start_websocket_server.py > inference.log 2>&1 &
     sleep 2
 
-    if pgrep -f "websocket.ws_server" > /dev/null; then
+    if pgrep -f "start_websocket_server" > /dev/null; then
         echo -e "${GREEN}✓${NC} Python推理服务启动成功 (端口8085)"
     else
         echo -e "${RED}✗${NC} Python推理服务启动失败"
@@ -87,8 +87,8 @@ else
 fi
 
 # 检查Python推理服务
-if pgrep -f "websocket.ws_server" > /dev/null; then
-    INFERENCE_PID=$(pgrep -f "websocket.ws_server" | head -1)
+if pgrep -f "start_websocket_server" > /dev/null; then
+    INFERENCE_PID=$(pgrep -f "start_websocket_server" | head -1)
     echo -e "Python推理服务:  ${GREEN}运行中${NC} (PID: $INFERENCE_PID, 端口: 8085)"
 else
     echo -e "Python推理服务:  ${RED}未运行${NC}"

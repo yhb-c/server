@@ -58,6 +58,9 @@ class MissionPanel(QtWidgets.QWidget):
     #  调试按钮信号
     debugLeftClicked = QtCore.Signal()  # 左键：一键启动检测
     debugRightClicked = QtCore.Signal()  # 右键：标注配置
+
+    # 一键启动信号
+    startAllClicked = QtCore.Signal()  # 一键启动所有通道检测
     
     # 分页信号
     pageChanged = QtCore.Signal(int)  # 页码改变信号，参数为新页码
@@ -547,15 +550,17 @@ class MissionPanel(QtWidgets.QWidget):
         # 创建按钮 - 使用全局文本按钮样式管理器
         self.btn_add = createTextButton("新建任务", parent=self)
         self.btn_channel_manage = createTextButton("通道管理", parent=self)
+        self.btn_start_all = createTextButton("一键启动", parent=self)
         self.btn_debug = createTextButton(" 调试", parent=self)
-        
+
         # 🔥 调试按钮默认隐藏（只有在debug模式下才显示）
         # 初始状态设置为隐藏和禁用，等待_handler根据编译模式更新
         self.btn_debug.setVisible(False)
         self.btn_debug.setEnabled(False)
-        
+
         toolbar_layout.addWidget(self.btn_add)
         toolbar_layout.addWidget(self.btn_channel_manage)
+        toolbar_layout.addWidget(self.btn_start_all)
         toolbar_layout.addWidget(self.btn_debug)
         toolbar_layout.addStretch()
     
@@ -625,7 +630,8 @@ class MissionPanel(QtWidgets.QWidget):
         # 工具栏按钮信号
         self.btn_add.clicked.connect(self._onAddTask)
         self.btn_channel_manage.clicked.connect(self._onChannelManage)
-        
+        self.btn_start_all.clicked.connect(self._onStartAll)
+
         #  调试按钮需要使用事件过滤器来区分左右键
         self.btn_debug.installEventFilter(self)
         
@@ -1357,6 +1363,10 @@ class MissionPanel(QtWidgets.QWidget):
         """通道管理按钮点击 - 发出信号"""
         pass
         self.channelManageClicked.emit()
+
+    def _onStartAll(self):
+        """一键启动按钮点击 - 发出信号"""
+        self.startAllClicked.emit()
     
     def _showContextMenu(self, pos):
         """
