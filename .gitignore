@@ -77,6 +77,7 @@ temp/
 tmp/
 
 # CSV result files (mission results)
+*.csv
 database/mission_result/**/*.csv
 
 # Video files

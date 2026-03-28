@@ -1,5 +1,13 @@
 # 增强的WebSocket服务器模块
-# 集成液位检测服务，处理客户端命令并推送检测结果
+#
+# 职责说明：
+# 1. 管理WebSocket客户端连接和断开
+# 2. 接收并处理客户端命令（订阅、加载模型、配置通道、启动/停止检测等）
+# 3. 管理通道订阅关系
+# 4. 推送检测结果和状态更新到订阅的客户端（唯一的推送出口）
+# 5. 集成DetectionService处理检测业务逻辑
+#
+# 注意：所有检测结果和状态更新都通过本模块的broadcast_to_channel方法推送
 
 import asyncio
 import websockets
@@ -718,11 +726,15 @@ class EnhancedWebSocketServer:
             channel_id: 通道ID
             data: 要发送的数据
         """
+        self.logger.debug(f"[{channel_id}] broadcast_to_channel被调用，数据类型: {data.get('type')}")
+
         if channel_id not in self.channel_subscribers:
             self.logger.warning(f"[{channel_id}] 通道没有订阅者字典，无法推送数据")
             return
 
         subscribers = self.channel_subscribers[channel_id].copy()
+        self.logger.debug(f"[{channel_id}] 订阅者数量: {len(subscribers)}")
+
         if not subscribers:
             self.logger.warning(f"[{channel_id}] 通道订阅者列表为空，无法推送数据")
             self.logger.debug(f"[{channel_id}] 所有通道订阅者状态: {[(ch, len(subs)) for ch, subs in self.channel_subscribers.items()]}")
@@ -731,6 +743,7 @@ class EnhancedWebSocketServer:
         # 构造消息
         message = json.dumps(data, ensure_ascii=False)
         self.server_stats['total_broadcasts'] += 1
+        self.logger.debug(f"[{channel_id}] 准备发送消息，长度: {len(message)}")
 
         # 移除已断开的连接
         disconnected = set()
@@ -738,6 +751,7 @@ class EnhancedWebSocketServer:
         for client in subscribers:
             try:
                 await client.send(message)
+                self.logger.debug(f"[{channel_id}] 消息已发送到客户端")
             except Exception as e:
                 self.logger.warning(f"[{channel_id}] 发送消息到客户端失败: {e}")
                 disconnected.add(client)

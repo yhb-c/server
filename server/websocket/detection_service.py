@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-检测服务 - 重构版本
-专注于WebSocket通信，接收客户端信号并执行检测，将检测结果推送到客户端
+检测服务模块
+
+职责说明：
+1. 管理检测任务的生命周期（加载模型、配置通道、启动/停止检测）
+2. 管理通道状态信息
+3. 接收检测结果回调
+4. 将检测结果转发给WebSocket服务器进行推送（不直接推送）
+
+注意：本模块不直接推送数据到客户端，所有推送都通过WebSocket服务器的broadcast_to_channel方法完成
 """
 
 import os
@@ -599,22 +606,19 @@ class DetectionService:
     
     def _send_detection_result(self, channel_id: str, result_data: dict):
         """
-        发送检测结果到客户端
+        发送检测结果到客户端（通过WebSocket服务器）
 
         Args:
             channel_id: 通道ID
             result_data: 结果数据
         """
         try:
-            self.logger.info(f"[{channel_id}] 准备推送检测结果: websocket_server={self.websocket_server is not None}, event_loop={self.event_loop is not None}")
-
             if self.websocket_server and self.event_loop:
                 # 从同步线程安全地调度到异步事件循环
-                future = asyncio.run_coroutine_threadsafe(
+                asyncio.run_coroutine_threadsafe(
                     self.websocket_server.broadcast_to_channel(channel_id, result_data),
                     self.event_loop
                 )
-                self.logger.info(f"[{channel_id}] 检测结果已提交到事件循环")
             else:
                 if not self.websocket_server:
                     self.logger.warning(f"[{channel_id}] WebSocket服务器未设置，无法发送检测结果")
@@ -628,8 +632,8 @@ class DetectionService:
     
     def _send_status_update(self, channel_id: str, status_type: str, status_data: dict):
         """
-        发送状态更新到客户端
-        
+        发送状态更新到客户端（通过WebSocket服务器）
+
         Args:
             channel_id: 通道ID
             status_type: 状态类型
@@ -643,15 +647,16 @@ class DetectionService:
                 'timestamp': time.time(),
                 'data': status_data
             }
-            
-            if self.websocket_server:
-                # 异步发送状态更新
-                asyncio.create_task(
-                    self.websocket_server.broadcast_to_channel(channel_id, update_data)
+
+            if self.websocket_server and self.event_loop:
+                # 从同步线程安全地调度到异步事件循环
+                asyncio.run_coroutine_threadsafe(
+                    self.websocket_server.broadcast_to_channel(channel_id, update_data),
+                    self.event_loop
                 )
             else:
                 self.logger.warning("WebSocket服务器未设置，无法发送状态更新")
-                
+
         except Exception as e:
             self.logger.error(f"发送状态更新失败 - 通道: {channel_id}, 错误: {str(e)}")
     

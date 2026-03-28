@@ -21,6 +21,9 @@ sys.path.insert(0, str(client_path))
 from client.widgets.login import LoginWindow
 from client.utils.config import load_config
 from client.utils.logger import setup_logging
+from client.network.start_api_service import start_api_service
+from client.network.start_websocket_service import start_websocket_service
+from client.network.auto_connect_websocket import create_websocket_connector
 
 
 def check_port_listening(port):
@@ -130,7 +133,6 @@ def ping_host(host, timeout=2):
 
 
 
-
 def check_network_connectivity(config):
     """
     检测网络连接状态并自动启动服务
@@ -178,12 +180,37 @@ def check_network_connectivity(config):
     print(f"\n[端口监听] API端口 {api_port}: {'已监听' if api_listening else '未监听'}")
     print(f"[端口监听] WebSocket端口 {ws_port}: {'已监听' if ws_listening else '未监听'}")
 
-    # 如果任一服务端口未监听，提示用户手动启动
+    # 自动启动未运行的服务
     if not api_listening or not ws_listening:
-        print(f"\n      状态: 检测到服务未启动")
-        print(f"[提示] 请手动启动服务或检查服务状态")
+        print(f"\n[自动启动] 检测到服务未启动，正在自动启动...")
+
+        # 启动API服务
+        if not api_listening:
+            if start_api_service():
+                # 重新检测API服务
+                time.sleep(1)
+                status['api_server'] = check_port(api_host, api_port)
+                if status['api_server']:
+                    print(f"[成功] API服务启动成功")
+                else:
+                    print(f"[警告] API服务启动后仍无法连接")
+            else:
+                print(f"[失败] API服务启动失败")
+
+        # 启动WebSocket服务
+        if not ws_listening:
+            if start_websocket_service():
+                # 重新检测WebSocket服务
+                time.sleep(2)
+                status['ws_server'] = check_port(ws_host, ws_port, is_websocket=True)
+                if status['ws_server']:
+                    print(f"[成功] WebSocket服务启动成功")
+                else:
+                    print(f"[警告] WebSocket服务启动后仍无法连接")
+            else:
+                print(f"[失败] WebSocket服务启动失败")
     else:
-        print(f"\n      状态: 所有服务已在运行")
+        print(f"\n[状态] 所有服务已在运行")
 
     print("\n" + "="*50)
     print("网络检测完成")
@@ -243,10 +270,28 @@ def main():
     login_window.show()
 
     print("[系统启动] 客户端界面已启动")
+
+    # 自动连接WebSocket服务
+    ws_url = config.get('server', {}).get('ws_url', 'ws://192.168.0.121:8085')
+    print(f"\n[系统启动] 启动WebSocket自动连接...")
+    ws_connector = create_websocket_connector(ws_url, max_retry=5, retry_interval=3)
+
+    def on_ws_ready(connected):
+        if connected:
+            print("[系统启动] WebSocket连接就绪")
+        else:
+            print("[系统启动] WebSocket连接失败，请检查服务状态")
+
+    ws_connector.connection_ready.connect(on_ws_ready)
+    ws_connector.start()
+
     print("="*60)
 
     # 启动事件循环
     exit_code = app.exec_()
+
+    # 清理资源
+    ws_connector.stop()
 
     sys.exit(exit_code)
 

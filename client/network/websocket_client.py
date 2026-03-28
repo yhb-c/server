@@ -65,12 +65,24 @@ class WebSocketClient(QtCore.QObject):
             print(f"[WebSocket] QWebSocket对象创建成功，已禁用代理")
 
             # 连接信号
+            print(f"[WebSocket] 连接信号...")
             self.websocket.connected.connect(self._onConnected)
+            print(f"[WebSocket] [OK] connected信号已连接")
+
             self.websocket.disconnected.connect(self._onDisconnected)
+            print(f"[WebSocket] [OK] disconnected信号已连接")
+
             self.websocket.textMessageReceived.connect(self._onTextMessage)
+            print(f"[WebSocket] [OK] textMessageReceived信号已连接")
+            logger.info("textMessageReceived信号已连接到_onTextMessage")
+
             self.websocket.binaryMessageReceived.connect(self._onBinaryMessage)
+            print(f"[WebSocket] [OK] binaryMessageReceived信号已连接")
+
             self.websocket.error.connect(self._onError)
-            print(f"[WebSocket] 信号连接完成")
+            print(f"[WebSocket] [OK] error信号已连接")
+
+            print(f"[WebSocket] 所有信号连接完成")
 
             # 开始连接
             self.websocket.open(QtCore.QUrl(self.url))
