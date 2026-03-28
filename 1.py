@@ -188,12 +188,16 @@ def test_single_video(engine, video_path, config_path, channel_id):
         # 调试信息：打印第一帧的检测结果
         if frame_count == 1:
             print(f"\n[调试] 第1帧检测结果:")
+            print(f"  frame shape: {frame.shape}")
             print(f"  detect_result类型: {type(detect_result)}")
             print(f"  detect_result内容: {detect_result}")
             if detect_result:
                 print(f"  detect_result的keys: {detect_result.keys() if isinstance(detect_result, dict) else 'N/A'}")
                 print(f"  success: {detect_result.get('success', 'N/A')}")
                 print(f"  liquid_line_positions: {detect_result.get('liquid_line_positions', 'N/A')}")
+                print(f"  camera_status: {detect_result.get('camera_status', 'N/A')}")
+                print(f"  camera_moved: {detect_result.get('camera_moved', 'N/A')}")
+                print(f"  camera_message: {detect_result.get('camera_message', 'N/A')}")
 
         # 保存检测结果到CSV（时间戳和液位线）
         csv_line = timestamp
