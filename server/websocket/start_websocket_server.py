@@ -16,7 +16,7 @@ current_dir = Path(__file__).parent
 server_dir = current_dir.parent
 sys.path.insert(0, str(server_dir))
 
-from websocket.enhanced_ws_server import EnhancedWebSocketServer
+from enhanced_ws_server import EnhancedWebSocketServer
 
 
 # 配置日志

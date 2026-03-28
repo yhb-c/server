@@ -23,7 +23,6 @@ from client.utils.config import load_config
 from client.utils.logger import setup_logging
 from client.network.start_api_service import start_api_service
 from client.network.start_websocket_service import start_websocket_service
-from client.network.auto_connect_websocket import create_websocket_connector
 
 
 def check_port_listening(port):
@@ -270,28 +269,10 @@ def main():
     login_window.show()
 
     print("[系统启动] 客户端界面已启动")
-
-    # 自动连接WebSocket服务
-    ws_url = config.get('server', {}).get('ws_url', 'ws://192.168.0.121:8085')
-    print(f"\n[系统启动] 启动WebSocket自动连接...")
-    ws_connector = create_websocket_connector(ws_url, max_retry=5, retry_interval=3)
-
-    def on_ws_ready(connected):
-        if connected:
-            print("[系统启动] WebSocket连接就绪")
-        else:
-            print("[系统启动] WebSocket连接失败，请检查服务状态")
-
-    ws_connector.connection_ready.connect(on_ws_ready)
-    ws_connector.start()
-
     print("="*60)
 
     # 启动事件循环
     exit_code = app.exec_()
-
-    # 清理资源
-    ws_connector.stop()
 
     sys.exit(exit_code)
 
