@@ -2,12 +2,29 @@
 # 负责管理与服务端的命令通信，分离网络连接和业务逻辑
 
 import json
+import logging
 from pathlib import Path
 import sys
+import os
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
+
+# 配置日志
+log_dir = project_root / 'client' / 'logs'
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / 'client.log'
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('CommandManager')
 
 from qtpy import QtCore
 from .websocket_client import WebSocketClient
@@ -17,7 +34,7 @@ try:
     from client.storage.detection_result_csv_writer import DetectionResultCSVWriter
 except ImportError:
     DetectionResultCSVWriter = None
-    print("[CommandManager] 警告: 无法导入CSV写入器，数据存储功能将不可用")
+    logger.warning("无法导入CSV写入器，数据存储功能将不可用")
 
 class NetworkCommandManager(QtCore.QObject):
     """
@@ -55,15 +72,33 @@ class NetworkCommandManager(QtCore.QObject):
         # CSV存储
         self.enable_csv_storage = enable_csv_storage
         self.csv_writer = None
+
+        logger.info("========== CSV初始化 ==========")
+        logger.info(f"enable_csv_storage: {enable_csv_storage}")
+        logger.info(f"DetectionResultCSVWriter available: {DetectionResultCSVWriter is not None}")
+
         if enable_csv_storage and DetectionResultCSVWriter:
             try:
+                logger.info("正在初始化CSV写入器...")
                 if csv_save_dir:
+                    logger.info(f"使用指定目录: {csv_save_dir}")
                     self.csv_writer = DetectionResultCSVWriter(csv_save_dir)
                 else:
+                    logger.info("使用默认目录")
                     self.csv_writer = DetectionResultCSVWriter()
-                print(f"[CommandManager] CSV存储已启用")
+                logger.info(f"CSV存储已启用，csv_writer={self.csv_writer}")
             except Exception as e:
-                print(f"[CommandManager] CSV写入器初始化失败: {e}")
+                logger.error(f"CSV写入器初始化失败: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+        else:
+            if not enable_csv_storage:
+                logger.info("CSV存储已禁用")
+            if not DetectionResultCSVWriter:
+                logger.error("DetectionResultCSVWriter未导入")
+
+        logger.info(f"CSV初始化完成，csv_writer={self.csv_writer}")
+        logger.info("========================================\n")
 
         self._init_websocket()
     
@@ -333,6 +368,8 @@ class NetworkCommandManager(QtCore.QObject):
         data_obj = data.get('data', {})
         liquid_line_positions = data_obj.get('liquid_line_positions', {})
 
+        logger.debug(f"收到检测结果 - 通道: {channel_id}")
+
         # 从 liquid_line_positions 提取 heights 用于CSV存储
         heights = []
         if isinstance(liquid_line_positions, dict):
@@ -342,6 +379,8 @@ class NetworkCommandManager(QtCore.QObject):
                     height_mm = position_data.get('height_mm', 0)
                     heights.append(height_mm)
 
+        logger.debug(f"提取液位高度 - 通道: {channel_id}, 液位数: {len(heights)}, heights: {heights}")
+
         if channel_id and heights:
             # 发送液位高度数据信号
             self.liquidHeightReceived.emit(channel_id, heights)
@@ -350,9 +389,23 @@ class NetworkCommandManager(QtCore.QObject):
             if self.csv_writer:
                 try:
                     timestamp = data.get('timestamp')
+                    logger.info(f"准备保存CSV - 通道: {channel_id}, 液位数: {len(heights)}")
                     self.csv_writer.write_detection_result(channel_id, heights, timestamp)
+                    logger.info(f"CSV保存成功 - 通道: {channel_id}, 液位数: {len(heights)}")
                 except Exception as e:
-                    print(f"[CommandManager] CSV save failed: {e}")
+                    logger.error(f"CSV保存失败 - 通道: {channel_id}, 错误: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+            else:
+                logger.warning(f"CSV写入器未初始化，无法保存数据 - 通道: {channel_id}")
+        else:
+            if not channel_id:
+                logger.warning("检测结果缺少channel_id")
+            if not heights:
+                logger.warning(f"检测结果无液位数据 - 通道: {channel_id}")
+
+        # 将heights添加到data中，方便system_window使用
+        data['heights'] = heights
 
         # 转发检测结果信号
         self.detectionResultReceived.emit(data)

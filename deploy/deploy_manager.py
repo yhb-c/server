@@ -122,81 +122,29 @@ class DeployManager:
         self.log_message("API服务构建完成", "SUCCESS")
         return True
     
-    def create_service_scripts(self):
-        """创建服务管理脚本"""
-        self.log_message("创建服务管理脚本...")
-        
-        # 创建启动脚本
-        start_script = '''#!/bin/bash
-# 启动液位检测系统服务
 
-cd /home/lqj/liquid
-
-# 激活conda环境
-source /home/lqj/anaconda3/bin/activate liquid
-
-# 设置环境变量
-export LD_LIBRARY_PATH=/home/lqj/liquid/sdk/hikvision/lib:$LD_LIBRARY_PATH
-
-# 启动API服务
-echo "启动API服务..."
-cd api
-nohup ./liquid-api > ../logs/api.log 2>&1 &
-API_PID=$!
-echo "API服务已启动，PID: $API_PID"
-
-# 启动推理服务
-echo "启动推理服务..."
-cd ../server
-nohup python main.py > ../logs/inference.log 2>&1 &
-INFERENCE_PID=$!
-echo "推理服务已启动，PID: $INFERENCE_PID"
-
-echo "所有服务已启动"
-echo "API服务: http://192.168.0.121:8084"
-echo "推理服务: ws://192.168.0.121:8085"
-'''
-        
-        # 写入启动脚本
-        create_start_cmd = f"cat > {self.server_path}/start_services.sh << 'EOF'\n{start_script}\nEOF"
-        result = self.ssh_manager.execute_remote_command(create_start_cmd)
-        if not result['success']:
-            self.log_message(f"创建启动脚本失败: {result['stderr']}", "ERROR")
-            return False
-        
-        # 设置执行权限
-        chmod_cmd = f"chmod +x {self.server_path}/start_services.sh"
-        result = self.ssh_manager.execute_remote_command(chmod_cmd)
-        if not result['success']:
-            self.log_message(f"设置脚本权限失败: {result['stderr']}", "ERROR")
-            return False
-        
-        self.log_message("服务管理脚本创建完成", "SUCCESS")
-        return True
-    
     def deploy(self):
         """执行完整部署流程"""
         self.log_message("开始部署到远程服务器 192.168.0.121...")
-        
+
         # 检查SSH连接
         if not self.ssh_manager.is_ssh_configured():
             self.log_message("SSH未配置，开始配置SSH连接...")
             if not self.ssh_manager.setup_ssh_connection():
                 self.log_message("SSH配置失败，无法继续部署", "ERROR")
                 return False
-        
+
         # 测试SSH连接
         if not self.ssh_manager.test_ssh_connection():
             self.log_message("SSH连接测试失败，无法继续部署", "ERROR")
             return False
-        
+
         # 执行部署步骤
         steps = [
             ("停止现有服务", self.stop_services),
             ("清空服务器目录", self.clean_server_directory),
             ("上传文件", self.upload_files),
-            ("构建API服务", self.build_api_service),
-            ("创建服务脚本", self.create_service_scripts)
+            ("构建API服务", self.build_api_service)
         ]
         
         for step_name, step_func in steps:
@@ -204,10 +152,8 @@ echo "推理服务: ws://192.168.0.121:8085"
             if not step_func():
                 self.log_message(f"步骤失败: {step_name}", "ERROR")
                 return False
-        
+
         self.log_message("部署完成!", "SUCCESS")
-        self.log_message("要启动服务，请运行:")
-        self.log_message(f"ssh lqj@192.168.0.121 'cd {self.server_path} && ./start_services.sh'")
         return True
 
 

@@ -49,11 +49,25 @@ fi
 # 创建日志目录
 mkdir -p logs
 
+# 检查并初始化日志文件
+LOG_FILE="logs/websocket_server.log"
+if [ ! -f "$LOG_FILE" ]; then
+    echo "日志文件不存在，创建新日志文件: $LOG_FILE"
+    touch "$LOG_FILE"
+    echo "========================================" > "$LOG_FILE"
+    echo "WebSocket服务器日志" >> "$LOG_FILE"
+    echo "创建时间: $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG_FILE"
+    echo "========================================" >> "$LOG_FILE"
+else
+    echo "日志文件已存在: $LOG_FILE"
+fi
+
 echo "启动增强WebSocket服务器..."
 echo "监听地址: 0.0.0.0:8085"
 echo "客户端连接地址: ws://192.168.0.121:8085"
+echo "日志文件: $LOG_FILE"
 echo "按 Ctrl+C 停止服务器"
 echo "=========================================="
 
 # 启动服务器
-python start_websocket_server.py 2>&1 | tee logs/websocket_server.log
+python start_websocket_server.py 2>&1 | tee -a "$LOG_FILE"

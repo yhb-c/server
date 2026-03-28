@@ -129,49 +129,6 @@ def ping_host(host, timeout=2):
         return False
 
 
-def start_local_services():
-    """
-    启动本地服务（使用start_services.sh脚本）
-
-    Returns:
-        bool: 启动成功返回 True，否则返回 False
-    """
-    print(f"\n[服务启动] 正在启动服务...")
-
-    try:
-        # 获取项目根目录
-        project_root = os.path.dirname(os.path.abspath(__file__))
-        start_script = os.path.join(project_root, 'start_services.sh')
-
-        # 检查启动脚本是否存在
-        if not os.path.exists(start_script):
-            print(f"[服务启动] 启动脚本不存在: {start_script}")
-            return False
-
-        # 执行启动脚本
-        result = subprocess.run(
-            ['bash', start_script],
-            cwd=project_root,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=30,
-            text=True
-        )
-
-        if result.returncode != 0:
-            print(f"[服务启动] 启动脚本执行失败")
-            print(f"[错误信息] {result.stderr}")
-            return False
-
-        print(f"[服务启动] 服务启动完成")
-        return True
-
-    except subprocess.TimeoutExpired:
-        print(f"[服务启动] 启动超时")
-        return False
-    except Exception as e:
-        print(f"[服务启动] 启动失败: {e}")
-        return False
 
 
 def check_network_connectivity(config):
@@ -221,31 +178,10 @@ def check_network_connectivity(config):
     print(f"\n[端口监听] API端口 {api_port}: {'已监听' if api_listening else '未监听'}")
     print(f"[端口监听] WebSocket端口 {ws_port}: {'已监听' if ws_listening else '未监听'}")
 
-    # 如果任一服务端口未监听，尝试启动所有服务
+    # 如果任一服务端口未监听，提示用户手动启动
     if not api_listening or not ws_listening:
-        print(f"\n      状态: 检测到服务未启动，尝试启动所有服务...")
-
-        # 启动服务
-        if start_local_services():
-            # 等待服务完全启动
-            print(f"\n[服务检测] 等待服务完全启动...")
-            time.sleep(3)
-
-            # 重新检测服务状态
-            status['api_server'] = check_port(api_host, api_port)
-            status['ws_server'] = check_port(ws_host, ws_port, is_websocket=True)
-
-            if status['api_server']:
-                print(f"[API服务] 状态: 启动成功")
-            else:
-                print(f"[API服务] 状态: 启动失败")
-
-            if status['ws_server']:
-                print(f"[推理服务] 状态: 启动成功")
-            else:
-                print(f"[推理服务] 状态: 启动失败")
-        else:
-            print(f"[服务启动] 服务启动失败")
+        print(f"\n      状态: 检测到服务未启动")
+        print(f"[提示] 请手动启动服务或检查服务状态")
     else:
         print(f"\n      状态: 所有服务已在运行")
 

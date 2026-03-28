@@ -4,6 +4,7 @@
 import json
 import time
 import threading
+import logging
 from pathlib import Path
 import sys
 
@@ -12,6 +13,9 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from qtpy import QtCore, QtWebSockets, QtNetwork
+
+# 配置日志
+logger = logging.getLogger('WebSocketClient')
 
 
 class WebSocketClient(QtCore.QObject):
@@ -30,14 +34,19 @@ class WebSocketClient(QtCore.QObject):
             parent: 父对象
         """
         super().__init__(parent)
-        
+
         self.url = url
         self.websocket = None
         self.is_running = False
         self.reconnect_timer = QtCore.QTimer()
         self.reconnect_timer.timeout.connect(self._reconnect)
         self.reconnect_interval = 5000  # 5秒重连间隔
-        
+
+        # 心跳定时器
+        self.heartbeat_timer = QtCore.QTimer()
+        self.heartbeat_timer.timeout.connect(self.sendHeartbeat)
+        self.heartbeat_interval = 30000  # 30秒心跳间隔
+
         print(f"[WebSocket] 客户端初始化: {url}")
     
     def start(self):
@@ -80,17 +89,18 @@ class WebSocketClient(QtCore.QObject):
         """停止WebSocket连接"""
         if not self.is_running:
             return
-        
+
         try:
             self.is_running = False
             self.reconnect_timer.stop()
-            
+            self.heartbeat_timer.stop()  # 停止心跳定时器
+
             if self.websocket:
                 self.websocket.close()
                 self.websocket = None
-            
+
             print("[WebSocket] 客户端已停止")
-            
+
         except Exception as e:
             print(f"[WebSocket] 停止异常: {e}")
     
@@ -98,8 +108,13 @@ class WebSocketClient(QtCore.QObject):
         """连接成功回调"""
         print("[WebSocket] 连接成功")
         self.reconnect_timer.stop()
+
+        # 启动心跳定时器
+        self.heartbeat_timer.start(self.heartbeat_interval)
+        print(f"[WebSocket] 心跳定时器已启动，间隔: {self.heartbeat_interval}ms")
+
         self.connection_status.emit(True, "连接成功")
-        
+
         # 发送初始化消息
         self._sendMessage({
             'type': 'client_init',
@@ -109,13 +124,34 @@ class WebSocketClient(QtCore.QObject):
     
     def _onDisconnected(self):
         """连接断开回调"""
-        print("[WebSocket] 连接断开")
+        print("[WebSocket] ========== 连接断开 ==========")
+        print(f"[WebSocket] 断开时间: {time.time()}")
+        print(f"[WebSocket] is_running状态: {self.is_running}")
+
+        # 获取断开原因
+        if self.websocket:
+            print(f"[WebSocket] WebSocket状态: {self.websocket.state()}")
+            print(f"[WebSocket] 错误代码: {self.websocket.error()}")
+            print(f"[WebSocket] 错误信息: {self.websocket.errorString()}")
+            print(f"[WebSocket] 关闭代码: {self.websocket.closeCode()}")
+            print(f"[WebSocket] 关闭原因: {self.websocket.closeReason()}")
+
+        # 打印调用堆栈
+        import traceback
+        print(f"[WebSocket] 断开调用堆栈:\n{''.join(traceback.format_stack())}")
+
+        # 停止心跳定时器
+        self.heartbeat_timer.stop()
+        print("[WebSocket] 心跳定时器已停止")
+
         self.connection_status.emit(False, "连接断开")
-        
+
         # 如果还在运行状态，启动重连
         if self.is_running:
             print(f"[WebSocket] 将在{self.reconnect_interval/1000}秒后尝试重连...")
             self.reconnect_timer.start(self.reconnect_interval)
+        else:
+            print("[WebSocket] is_running=False，不进行重连")
     
     def _onTextMessage(self, message):
         """接收文本消息回调
@@ -124,41 +160,56 @@ class WebSocketClient(QtCore.QObject):
             message: 文本消息
         """
         try:
+            logger.debug(f"收到文本消息，长度: {len(message)}")
             data = json.loads(message)
             message_type = data.get('type', '')
+            logger.debug(f"消息类型: {message_type}")
 
             if message_type == 'detection_result':
                 # 液位检测结果
-                print(f"[WebSocket] Received detection_result for channel: {data.get('channel_id')}")
+                channel_id = data.get('channel_id', 'unknown')
+                logger.info(f"收到检测结果 - 通道: {channel_id}")
+                print(f"[WebSocket] Received detection_result for channel: {channel_id}")
                 self.detection_result.emit(data)
+                logger.debug(f"检测结果信号已发射 - 通道: {channel_id}")
 
             elif message_type == 'server_status':
                 # 服务器状态消息
+                logger.debug(f"服务器状态: {data.get('message', '')}")
                 print(f"[WebSocket] Server status: {data.get('message', '')}")
 
             elif message_type == 'error':
                 # 错误消息
+                logger.warning(f"服务器错误: {data.get('message', '')}")
                 print(f"[WebSocket] Server error: {data.get('message', '')}")
 
             elif message_type == 'command_response':
                 # 命令响应消息
+                logger.debug(f"命令响应: {data.get('command', '')} - {data.get('message', '')}")
                 print(f"[WebSocket] Command response: {data.get('command', '')} - {data.get('message', '')}")
 
             elif message_type == 'detection_status':
                 # 检测状态消息
+                logger.debug(f"检测状态: {data.get('status', '')}")
                 print(f"[WebSocket] Detection status: {data.get('status', '')}")
 
             elif message_type == 'welcome':
                 # 欢迎消息
+                logger.info("已连接到服务器")
                 print(f"[WebSocket] Connected to server")
 
             else:
+                logger.warning(f"未知消息类型: {message_type}")
                 print(f"[WebSocket] Unknown message type: {message_type}")
 
         except json.JSONDecodeError as e:
+            logger.error(f"JSON解析失败: {e}")
             print(f"[WebSocket] JSON parse failed: {e}")
         except Exception as e:
+            logger.error(f"消息处理错误: {e}")
             print(f"[WebSocket] Message processing error: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
     def _onBinaryMessage(self, data):
         """接收二进制消息回调
@@ -225,10 +276,15 @@ class WebSocketClient(QtCore.QObject):
 
         error_name = error_names.get(error, f"未知错误({error})")
         error_msg = f"WebSocket错误: {error} - {error_name}"
+        print(f"[WebSocket] ========== 发生错误 ==========")
         print(f"[WebSocket] {error_msg}")
         print(f"[WebSocket] 尝试连接的URL: {self.url}")
         print(f"[WebSocket] 当前状态: {self.websocket.state() if self.websocket else 'None'}")
         print(f"[WebSocket] 错误字符串: {self.websocket.errorString() if self.websocket else 'None'}")
+
+        # 打印调用堆栈
+        import traceback
+        print(f"[WebSocket] 错误调用堆栈:\n{''.join(traceback.format_stack())}")
         self.connection_status.emit(False, error_msg)
     
     def _reconnect(self):

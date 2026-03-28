@@ -57,3 +57,4 @@ F:\liquid_detect\system_client_sever\upload.py
 代码中使用的是 liquid
 cd /home/lqj/liquid/client/database && python test_config_manager.py
 本机器就是服务器，不用上传代码到服务器，直接修改代码
+在Python代码中直接配置日志输出到文件

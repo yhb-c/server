@@ -17,13 +17,20 @@ current_dir = Path(__file__).parent
 server_root = current_dir.parent  # server目录
 sys.path.insert(0, str(server_root))
 
-# 配置日志
+# 配置日志目录
+log_dir = server_root / 'logs'
+log_dir.mkdir(exist_ok=True)
+
+# 配置日志文件路径
+log_file = log_dir / 'websocket_server.log'
+
+# 配置日志（同时输出到文件和stdout）
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler(server_root / 'logs' / 'websocket_server.log', encoding='utf-8')
+        logging.FileHandler(log_file, mode='a', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
     ]
 )
 

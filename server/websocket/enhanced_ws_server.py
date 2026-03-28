@@ -154,15 +154,20 @@ class EnhancedWebSocketServer:
                     self.logger.error(f"[{client_id}] 处理消息异常: {e}")
                     await self._send_error_response(websocket, "处理消息失败", str(e))
                     
-        except websockets.exceptions.ConnectionClosed:
-            self.logger.info(f"[{client_id}] 客户端正常断开")
+        except websockets.exceptions.ConnectionClosed as e:
+            self.logger.info(f"[{client_id}] 客户端正常断开 - 原因: {e.code} {e.reason}")
+            import traceback
+            self.logger.debug(f"[{client_id}] 断开堆栈:\n{traceback.format_exc()}")
         except Exception as e:
             self.logger.error(f"[{client_id}] 客户端连接异常: {e}")
+            import traceback
+            self.logger.error(f"[{client_id}] 异常堆栈:\n{traceback.format_exc()}")
         finally:
             # 注销客户端
+            self.logger.info(f"[{client_id}] 开始注销客户端，当前订阅通道: {list(self.clients[websocket]['channels']) if websocket in self.clients else '无'}")
             self._unregister_client(websocket)
             self.server_stats['active_connections'] -= 1
-            self.logger.info(f"[{client_id}] 客户端连接结束")
+            self.logger.info(f"[{client_id}] 客户端连接结束，活跃连接数: {self.server_stats['active_connections']}")
     
     async def _handle_command(self, websocket, data: dict):
         """
@@ -662,12 +667,12 @@ class EnhancedWebSocketServer:
         """订阅通道"""
         if channel_id not in self.channel_subscribers:
             self.channel_subscribers[channel_id] = set()
-        
+
         self.channel_subscribers[channel_id].add(websocket)
         self.clients[websocket]['channels'].add(channel_id)
-        
+
         client_id = self.clients[websocket]['client_info']['id']
-        self.logger.info(f"[{client_id}] 订阅通道: {channel_id}")
+        self.logger.info(f"[{client_id}] 订阅通道: {channel_id}，当前订阅者数量: {len(self.channel_subscribers[channel_id])}")
     
     def _unsubscribe_channel(self, websocket, channel_id: str):
         """取消订阅通道"""
@@ -677,8 +682,9 @@ class EnhancedWebSocketServer:
         if websocket in self.clients:
             self.clients[websocket]['channels'].discard(channel_id)
 
-        client_id = self.clients[websocket]['client_info']['id']
-        self.logger.info(f"[{client_id}] 取消订阅通道: {channel_id}")
+        client_id = self.clients[websocket]['client_info']['id'] if websocket in self.clients else 'unknown'
+        remaining_subscribers = len(self.channel_subscribers.get(channel_id, set()))
+        self.logger.info(f"[{client_id}] 取消订阅通道: {channel_id}，剩余订阅者数量: {remaining_subscribers}")
 
         # 检查该通道是否还有订阅者，如果没有则自动停止检测
         if channel_id in self.channel_subscribers and len(self.channel_subscribers[channel_id]) == 0:
@@ -719,6 +725,7 @@ class EnhancedWebSocketServer:
         subscribers = self.channel_subscribers[channel_id].copy()
         if not subscribers:
             self.logger.warning(f"[{channel_id}] 通道订阅者列表为空，无法推送数据")
+            self.logger.debug(f"[{channel_id}] 所有通道订阅者状态: {[(ch, len(subs)) for ch, subs in self.channel_subscribers.items()]}")
             return
 
         # 构造消息
@@ -731,7 +738,8 @@ class EnhancedWebSocketServer:
         for client in subscribers:
             try:
                 await client.send(message)
-            except:
+            except Exception as e:
+                self.logger.warning(f"[{channel_id}] 发送消息到客户端失败: {e}")
                 disconnected.add(client)
 
         # 清理断开的连接
