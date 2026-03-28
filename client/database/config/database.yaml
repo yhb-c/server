@@ -34,7 +34,7 @@ migration:
 # 日志配置
 logging:
   level: info  # debug, info, warn, error
-  file: /var/log/liquid/server.log
+  file: logs/server.log
   max_size: 100  # MB
   max_backups: 10
   max_age: 30  # 天
