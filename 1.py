@@ -29,8 +29,25 @@ def load_annotation_config(config_path, channel_id):
         raise ValueError(f"通道 {channel_id} 不存在于配置文件中")
 
     config = all_configs[channel_id]
+
+    # 转换boxes格式：从[x, y, width]转换为[cx, cy, size]
+    # 其中cx是中心x坐标，cy需要从fixed_bottoms和fixed_tops计算中心y坐标
+    boxes = []
+    for i, box in enumerate(config['boxes']):
+        x, y, width = box
+        # 计算中心坐标
+        cx = x + width // 2
+        # 从fixed_bottoms和fixed_tops计算高度和中心y
+        bottom = config['fixed_bottoms'][i]
+        top = config['fixed_tops'][i]
+        height = bottom - top
+        cy = top + height // 2
+        # size取宽高的最大值
+        size = max(width, height)
+        boxes.append([cx, cy, size])
+
     return {
-        'boxes': config['boxes'],
+        'boxes': boxes,
         'fixed_bottoms': config['fixed_bottoms'],
         'fixed_tops': config['fixed_tops'],
         'actual_heights': [area['height'].replace('mm', '') for area in config['areas'].values()],

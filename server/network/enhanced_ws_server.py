@@ -728,6 +728,12 @@ class EnhancedWebSocketServer:
         """
         self.logger.debug(f"[{channel_id}] broadcast_to_channel被调用，数据类型: {data.get('type')}")
 
+        # 记录检测结果数据的关键信息（INFO级别）
+        if data.get('type') == 'detection_result':
+            result_data = data.get('data', {})
+            self.logger.info(f"[{channel_id}] 收到检测结果推送 - 帧号: {result_data.get('frame_count')}, "
+                           f"数据字段: {list(result_data.keys())}")
+
         if channel_id not in self.channel_subscribers:
             self.logger.warning(f"[{channel_id}] 通道没有订阅者字典，无法推送数据")
             return

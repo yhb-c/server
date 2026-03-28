@@ -540,9 +540,12 @@ if QT_AVAILABLE:
             # ROI区域（支持多个）
             self.roi_list = []  # [(x, y, w, h), ...]
             self.use_roi = False
-            
+
             # 日志记录
-            self.csv_log_path = r"c:\Users\123\Desktop\yewei\detection_liquid_system\handlers\videopage\detect.csv"
+            project_root = Path(__file__).parent.parent.parent.parent
+            log_dir = project_root / 'logs'
+            log_dir.mkdir(parents=True, exist_ok=True)
+            self.csv_log_path = str(log_dir / 'detect.csv')
             self.frame_counter = 0
             self.csv_file = None
             self.csv_writer = None
