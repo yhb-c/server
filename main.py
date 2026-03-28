@@ -23,6 +23,34 @@ from client.utils.config import load_config
 from client.utils.logger import setup_logging
 
 
+def check_port_listening(port):
+    """
+    检查本地端口是否处于监听状态（使用ss命令）
+
+    Args:
+        port: 端口号
+
+    Returns:
+        bool: 端口正在监听返回 True，否则返回 False
+    """
+    try:
+        # 使用 ss 命令检测端口监听状态
+        result = subprocess.run(
+            ['ss', '-ltn', f'sport = :{port}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=2
+        )
+
+        # 检查输出中是否包含 LISTEN 状态
+        output = result.stdout
+        return 'LISTEN' in output and str(port) in output
+    except Exception as e:
+        print(f"[端口检测] 检测端口 {port} 监听状态失败: {e}")
+        return False
+
+
 def check_port(host, port, timeout=2, is_websocket=False):
     """
     检查指定主机端口是否开放
@@ -38,14 +66,20 @@ def check_port(host, port, timeout=2, is_websocket=False):
     """
     try:
         if is_websocket:
-            # WebSocket端口检测：发送HTTP升级请求避免服务器报错
+            # WebSocket端口检测：发送完整的WebSocket握手请求
             import http.client
             try:
                 conn = http.client.HTTPConnection(host, port, timeout=timeout)
-                conn.request("GET", "/")
+                headers = {
+                    'Upgrade': 'websocket',
+                    'Connection': 'Upgrade',
+                    'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
+                    'Sec-WebSocket-Version': '13'
+                }
+                conn.request("GET", "/", headers=headers)
                 response = conn.getresponse()
                 conn.close()
-                # 任何响应都说明端口开放（包括400/426等错误码）
+                # 101 Switching Protocols 或任何响应都说明端口开放
                 return True
             except Exception:
                 return False
@@ -180,8 +214,15 @@ def check_network_connectivity(config):
     print(f"\n[2/2] 检测 WebSocket 服务器: {ws_host}:{ws_port}")
     status['ws_server'] = check_port(ws_host, ws_port, is_websocket=True)
 
-    # 如果任一服务未启动，尝试启动所有服务
-    if not status['api_server'] or not status['ws_server']:
+    # 检查本地端口监听状态，避免重复启动
+    api_listening = check_port_listening(api_port)
+    ws_listening = check_port_listening(ws_port)
+
+    print(f"\n[端口监听] API端口 {api_port}: {'已监听' if api_listening else '未监听'}")
+    print(f"[端口监听] WebSocket端口 {ws_port}: {'已监听' if ws_listening else '未监听'}")
+
+    # 如果任一服务端口未监听，尝试启动所有服务
+    if not api_listening or not ws_listening:
         print(f"\n      状态: 检测到服务未启动，尝试启动所有服务...")
 
         # 启动服务

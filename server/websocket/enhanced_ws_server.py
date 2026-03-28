@@ -442,15 +442,39 @@ class EnhancedWebSocketServer:
                 if not channel_state['configured']:
                     self.logger.info(f"[{client_id}] 通道 {channel_id} 开始配置")
 
-                    # 使用默认配置
-                    default_config = {
+                    # 从annotation_result.yaml加载ROI配置
+                    import yaml
+                    import os
+                    annotation_file = os.path.join(
+                        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        'database', 'config', 'annotation_result.yaml'
+                    )
+
+                    annotation_config = {}
+                    if os.path.exists(annotation_file):
+                        try:
+                            with open(annotation_file, 'r', encoding='utf-8') as f:
+                                all_annotations = yaml.safe_load(f)
+                                if channel_id in all_annotations:
+                                    annotation_config = all_annotations[channel_id]
+                                    self.logger.info(f"[{client_id}] 通道 {channel_id} 加载ROI配置成功: {annotation_config.get('annotation_count', 0)}个区域")
+                                else:
+                                    self.logger.warning(f"[{client_id}] 通道 {channel_id} 在annotation_result.yaml中未找到配置")
+                        except Exception as e:
+                            self.logger.error(f"[{client_id}] 通道 {channel_id} 加载ROI配置失败: {e}")
+                    else:
+                        self.logger.warning(f"[{client_id}] annotation_result.yaml文件不存在: {annotation_file}")
+
+                    # 构建完整配置
+                    config = {
                         'detection_config': {
                             'confidence_threshold': 0.5,
                             'iou_threshold': 0.45
-                        }
+                        },
+                        'annotation_config': annotation_config  # 添加ROI配置
                     }
 
-                    config_success = self.detection_service.configure_channel(channel_id, default_config)
+                    config_success = self.detection_service.configure_channel(channel_id, config)
 
                     if not config_success:
                         self.logger.error(f"[{client_id}] 通道 {channel_id} 配置失败")
@@ -683,36 +707,38 @@ class EnhancedWebSocketServer:
     async def broadcast_to_channel(self, channel_id: str, data: dict):
         """
         推送数据到订阅该通道的所有客户端
-        
+
         Args:
             channel_id: 通道ID
             data: 要发送的数据
         """
         if channel_id not in self.channel_subscribers:
+            self.logger.warning(f"[{channel_id}] 通道没有订阅者字典，无法推送数据")
             return
-        
+
         subscribers = self.channel_subscribers[channel_id].copy()
         if not subscribers:
+            self.logger.warning(f"[{channel_id}] 通道订阅者列表为空，无法推送数据")
             return
-        
+
         # 构造消息
         message = json.dumps(data, ensure_ascii=False)
         self.server_stats['total_broadcasts'] += 1
-        
+
         # 移除已断开的连接
         disconnected = set()
-        
+
         for client in subscribers:
             try:
                 await client.send(message)
             except:
                 disconnected.add(client)
-        
+
         # 清理断开的连接
         for client in disconnected:
             self._unsubscribe_channel(client, channel_id)
-        
-        self.logger.debug(f"广播到通道 {channel_id}: {len(subscribers) - len(disconnected)} 个客户端")
+
+        self.logger.info(f"[{channel_id}] 成功广播到 {len(subscribers) - len(disconnected)} 个客户端")
     
     def get_server_info(self) -> dict:
         """获取服务器信息"""

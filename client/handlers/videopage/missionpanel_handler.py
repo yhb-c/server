@@ -1269,21 +1269,44 @@ class MissionPanelHandler:
                 )
                 return
 
-            # 发送start_all指令到服务器
+            print("[一键启动] 开始订阅所有通道...")
+
+            # 步骤1: 先订阅所有通道（确保能接收检测结果）
+            all_channels = [f'channel{i}' for i in range(1, 17)]  # channel1-channel16
+            subscribe_success_count = 0
+
+            for channel_id in all_channels:
+                if hasattr(self.ws_client, 'send_subscribe_command'):
+                    if self.ws_client.send_subscribe_command(channel_id):
+                        subscribe_success_count += 1
+                        print(f"[一键启动] 订阅通道成功: {channel_id}")
+                    else:
+                        print(f"[一键启动] 订阅通道失败: {channel_id}")
+
+            print(f"[一键启动] 订阅完成: {subscribe_success_count}/16 个通道")
+
+            # 等待订阅完成
+            import time
+            time.sleep(0.5)
+
+            # 步骤2: 发送start_all指令到服务器
+            print("[一键启动] 发送start_all指令...")
             success = self.ws_client.ws_client.send_command('start_all')
 
             if success:
                 QtWidgets.QMessageBox.information(
                     self.mission_panel,
                     "提示",
-                    "已发送一键启动指令到服务器"
+                    f"已发送一键启动指令到服务器\n订阅了 {subscribe_success_count}/16 个通道"
                 )
+                print(f"[一键启动] 启动成功，已订阅 {subscribe_success_count}/16 个通道")
             else:
                 QtWidgets.QMessageBox.warning(
                     self.mission_panel,
                     "警告",
                     "发送启动指令失败"
                 )
+                print("[一键启动] 发送启动指令失败")
 
         except Exception as e:
             import traceback

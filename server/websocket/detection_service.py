@@ -240,6 +240,18 @@ class DetectionService:
                 if not success:
                     self.logger.error(f"配置检测参数失败 - 通道: {channel_id}")
                     return False
+
+            # 配置ROI标注信息
+            annotation_config = config.get('annotation_config', {})
+            if annotation_config:
+                self.logger.info(f"配置ROI标注 - 通道: {channel_id}, 区域数: {annotation_config.get('annotation_count', 0)}")
+                success = self.task_manager.configure_annotation(channel_id, annotation_config)
+                if not success:
+                    self.logger.error(f"配置ROI标注失败 - 通道: {channel_id}")
+                    return False
+                self.logger.info(f"ROI标注配置成功 - 通道: {channel_id}")
+            else:
+                self.logger.warning(f"未提供ROI标注配置 - 通道: {channel_id}")
             
             # 更新通道状态
             self.channel_status[channel_id].update({
@@ -562,26 +574,26 @@ class DetectionService:
     def _on_detection_result(self, channel_id: str, detection_result: dict):
         """
         检测结果回调函数
-        
+
         Args:
             channel_id: 通道ID
             detection_result: 检测结果数据
         """
         try:
-            # 构建推送数据
+            # 构建推送数据（保持完整的检测结果格式）
             push_data = {
                 'type': 'detection_result',
                 'channel_id': channel_id,
                 'timestamp': time.time(),
                 'data': detection_result
             }
-            
+
             # 通过WebSocket推送结果
             self._send_detection_result(channel_id, push_data)
-            
+
             # 记录调试信息
             self.logger.debug(f"推送检测结果 - 通道: {channel_id}, 帧: {detection_result.get('frame_count', 0)}")
-            
+
         except Exception as e:
             self.logger.error(f"处理检测结果异常 - 通道: {channel_id}, 错误: {str(e)}")
     
@@ -594,20 +606,25 @@ class DetectionService:
             result_data: 结果数据
         """
         try:
+            self.logger.info(f"[{channel_id}] 准备推送检测结果: websocket_server={self.websocket_server is not None}, event_loop={self.event_loop is not None}")
+
             if self.websocket_server and self.event_loop:
                 # 从同步线程安全地调度到异步事件循环
-                asyncio.run_coroutine_threadsafe(
+                future = asyncio.run_coroutine_threadsafe(
                     self.websocket_server.broadcast_to_channel(channel_id, result_data),
                     self.event_loop
                 )
+                self.logger.info(f"[{channel_id}] 检测结果已提交到事件循环")
             else:
                 if not self.websocket_server:
-                    self.logger.warning("WebSocket服务器未设置，无法发送检测结果")
+                    self.logger.warning(f"[{channel_id}] WebSocket服务器未设置，无法发送检测结果")
                 if not self.event_loop:
-                    self.logger.warning("事件循环未设置，无法发送检测结果")
+                    self.logger.warning(f"[{channel_id}] 事件循环未设置，无法发送检测结果")
 
         except Exception as e:
-            self.logger.error(f"发送检测结果失败 - 通道: {channel_id}, 错误: {str(e)}")
+            self.logger.error(f"[{channel_id}] 发送检测结果失败: {str(e)}")
+            import traceback
+            self.logger.error(traceback.format_exc())
     
     def _send_status_update(self, channel_id: str, status_type: str, status_data: dict):
         """
