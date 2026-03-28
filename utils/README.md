@@ -23,7 +23,7 @@ python utils/upload.py --folder server
 - 服务器IP: 192.168.0.121
 - 用户名: lqj
 - 密码: admin
-- API远程路径: /home/lqj/liquid/api
+- API远程路径: /home/lqj/liquid/server/network/api
 - Server远程路径: /home/lqj/liquid/server
 
 ## 注意事项

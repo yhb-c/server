@@ -80,7 +80,7 @@ def start_api_local():
         log_dir = api_dir / 'logs'
 
         # 创建日志目录
-        log_dir.mkdir(exist_ok=True)
+        log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / 'api_service.log'
 
         # 检查可执行文件是否存在
