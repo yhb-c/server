@@ -99,7 +99,7 @@ echo "4. 关键文件检查"
 echo "-" * 40
 
 files=(
-    "/home/lqj/liquid/api/liquid-api"
+    "/home/lqj/liquid/server/network/api/liquid-api"
     "/home/lqj/liquid/start_inference_server.py"
     "/home/lqj/liquid/database/schema.sql"
     "/home/lqj/liquid/database/seed.sql"

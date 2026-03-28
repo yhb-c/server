@@ -25,7 +25,7 @@ class ServerUploader:
         self.test_local_path = self.project_root / "test"
         
         # 远程路径配置
-        self.api_remote_path = "/home/lqj/liquid/api"
+        self.api_remote_path = "/home/lqj/liquid/server/network/api"
         self.server_remote_path = "/home/lqj/liquid/server"
         self.test_remote_path = "/home/lqj/liquid/test"
         

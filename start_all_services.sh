@@ -23,7 +23,7 @@ mkdir -p /home/lqj/liquid/logs
 
 # 启动API服务（后台运行）
 echo "[3/4] 启动API服务 (端口8084)..."
-cd /home/lqj/liquid/api
+cd /home/lqj/liquid/server/network/api
 nohup ./liquid-api > /home/lqj/liquid/logs/api_service.log 2>&1 &
 API_PID=$!
 echo "  API服务已启动，PID: $API_PID"

@@ -19,7 +19,7 @@ sys.path.insert(0, project_root)
 
 from server.video.video_capture_factory import VideoCaptureFactory
 from server.detection.detection import LiquidDetectionEngine
-from server.websocket.config_manager import ConfigManager
+from server.network.config_manager import ConfigManager
 
 class DetectionTaskManager:
     """检测任务管理器"""

@@ -186,7 +186,7 @@ def check_network_connectivity(config):
 
         # 启动API服务
         if not api_listening:
-            if start_api_service():
+            if start_api_service(api_host):
                 # 重新检测API服务
                 time.sleep(1)
                 status['api_server'] = check_port(api_host, api_port)
@@ -199,7 +199,7 @@ def check_network_connectivity(config):
 
         # 启动WebSocket服务
         if not ws_listening:
-            if start_websocket_service():
+            if start_websocket_service(ws_host):
                 # 重新检测WebSocket服务
                 time.sleep(2)
                 status['ws_server'] = check_port(ws_host, ws_port, is_websocket=True)

@@ -27,7 +27,7 @@
 - **服务器IP**: 192.168.0.121
 - **用户**: lqj 用户密码admin
 - **项目路径**: 服务端代码/home/lqj/liquid/server
-                api代码/home/lqj/liquid/api
+                api代码/home/lqj/liquid/server/network/api
 - **操作系统**: Linux
 
 ### Conda环境配置
