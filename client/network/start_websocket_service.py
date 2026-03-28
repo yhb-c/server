@@ -77,7 +77,7 @@ def start_websocket_local():
         project_root = Path(__file__).parent.parent.parent
         server_dir = project_root / 'server' / 'websocket'
         start_script = server_dir / 'start_websocket_server.py'
-        log_dir = project_root / 'server' / 'logs'
+        log_dir = project_root / 'logs'
 
         # 创建日志目录
         log_dir.mkdir(exist_ok=True)

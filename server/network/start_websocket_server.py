@@ -14,18 +14,22 @@ from pathlib import Path
 # 添加项目路径
 current_dir = Path(__file__).parent
 server_dir = current_dir.parent
+project_root = server_dir.parent
 sys.path.insert(0, str(server_dir))
 
 from network.enhanced_ws_server import EnhancedWebSocketServer
 
 
 # 配置日志
+log_dir = project_root / 'logs'
+log_dir.mkdir(exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(server_dir / 'logs' / 'websocket_server.log', encoding='utf-8')
+        logging.FileHandler(log_dir / 'websocket_server.log', encoding='utf-8')
     ]
 )
 

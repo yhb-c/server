@@ -16,9 +16,10 @@ def setup_logging(log_level='INFO'):
         log_level: 日志级别
     """
     # 创建日志目录
-    log_dir = Path(__file__).parent.parent.parent / 'logs'
+    project_root = Path(__file__).parent.parent.parent
+    log_dir = project_root / 'logs'
     os.makedirs(log_dir, exist_ok=True)
-    
+
     log_file = log_dir / 'client.log'
     
     # 配置日志格式

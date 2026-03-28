@@ -58,3 +58,11 @@ F:\liquid_detect\system_client_sever\upload.py
 cd /home/lqj/liquid/client/database && python test_config_manager.py
 本机器就是服务器，不用上传代码到服务器，直接修改代码
 在Python代码中直接配置日志输出到文件
+单机模式启动 - 通过subprocess直接启动本地服务
+
+API服务：启动 /home/lqj/liquid/server/network/api/liquid-api
+WebSocket服务：启动 /home/lqj/liquid/server/websocket/start_websocket_server.py
+分离模式启动 - 通过SSH远程启动服务器上的服务
+
+使用sshpass自动登录远程服务器
+在远程服务器上执行启动命令

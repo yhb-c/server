@@ -12,7 +12,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # 配置日志
-log_dir = project_root / 'client' / 'logs'
+log_dir = project_root / 'logs'
 log_dir.mkdir(parents=True, exist_ok=True)
 log_file = log_dir / 'client.log'
 

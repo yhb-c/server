@@ -11,7 +11,8 @@ import os
 from datetime import datetime
 
 # 配置日志
-_LOG_DIR = os.path.join(os.path.dirname(__file__), 'utils_log')
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+_LOG_DIR = os.path.join(_PROJECT_ROOT, 'logs')
 os.makedirs(_LOG_DIR, exist_ok=True)
 _LOG_FILE = os.path.join(_LOG_DIR, f'cameraposition_{datetime.now().strftime("%Y%m%d")}.log')
 

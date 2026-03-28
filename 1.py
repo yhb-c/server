@@ -104,36 +104,44 @@ def test_detection_speed():
             print(f"ROI{i} 平均检测耗时: {roi_latency:.2f}ms")
         print("=" * 80)
 
+        # 保存结果到testresult.md
+        save_result_to_file(result)
+
+
+def save_result_to_file(result):
+    """保存测试总结到testresult.md"""
+    result_path = Path("/home/lqj/liquid/testresult.md")
+
+    with open(result_path, 'w', encoding='utf-8') as f:
+        f.write(f"检测路数: {result['num_channels']}, ROI数量: {result['num_rois']}, ROI大小: {result['roi_sizes']}, 平均检测FPS: {result['avg_fps']:.2f}\n")
+
+    print(f"\n测试总结已保存到: {result_path}")
+
 
 def test_single_video(engine, video_path, config_path, channel_id):
     """测试单个视频的检测速度，计算最高帧率"""
 
     MAX_FRAMES = 2000  # 最多检测2000帧
 
-    # 创建时间日志文件
-    log_path = Path(__file__).parent / "detection_timing_log.txt"
-    log_file = open(log_path, 'w', encoding='utf-8')
-    log_file.write(f"检测时间记录 - {video_path.name}\n")
-    log_file.write(f"开始时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}\n")
-    log_file.write("-" * 80 + "\n")
-    log_file.write(f"{'帧号':<10} {'时间戳':<30} {'检测耗时(ms)':<15} {'瞬时FPS':<15}\n")
-    log_file.write("-" * 80 + "\n")
-
     print(f"开始测试 (通道: {channel_id})")
 
     # 加载标注配置
     try:
         annotation_config = load_annotation_config(config_path, channel_id)
+        print(f"\n[调试] 标注配置:")
+        print(f"  boxes: {annotation_config['boxes']}")
+        print(f"  fixed_bottoms: {annotation_config['fixed_bottoms']}")
+        print(f"  fixed_tops: {annotation_config['fixed_tops']}")
+        print(f"  actual_heights: {annotation_config['actual_heights']}")
+        print(f"  areas: {annotation_config.get('areas', {})}")
     except Exception as e:
         print(f"错误: 无法加载通道 {channel_id} 的配置: {e}")
-        log_file.close()
         return None
 
     # 打开视频
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         print("错误: 无法打开视频")
-        log_file.close()
         return None
 
     # 获取视频信息
@@ -143,10 +151,19 @@ def test_single_video(engine, video_path, config_path, channel_id):
     test_frames = min(MAX_FRAMES, total_frames)
     print(f"视频信息: {total_frames} 帧, {fps:.2f} FPS, {num_rois} 个ROI, 测试 {test_frames} 帧")
 
+    # 创建CSV文件并写入表头
+    csv_path = Path("/home/lqj/liquid/1.csv")
+    csv_file = open(csv_path, 'w', encoding='utf-8')
+
+    # 根据ROI数量生成表头
+    header = "时间戳"
+    for i in range(1, num_rois + 1):
+        header += f",ROI{i}液位线"
+    csv_file.write(header + "\n")
+
     # 测试统计
     frame_count = 0
     detect_times = []  # 每帧检测时间列表(毫秒)
-    fps_list = []  # 每帧FPS列表
     roi_detect_times = [[] for _ in range(num_rois)]  # 每个ROI的检测时间列表
     start_time = time.time()
 
@@ -161,20 +178,56 @@ def test_single_video(engine, video_path, config_path, channel_id):
         # 检测液位
         detect_start = time.time()
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-        result = engine.detect(frame, annotation_config=annotation_config, channel_id=channel_id)
+        detect_result = engine.detect(frame, annotation_config=annotation_config, channel_id=channel_id)
         detect_end = time.time()
 
-        # 计算单帧检测时间和瞬时FPS
+        # 计算单帧检测时间
         detect_time = (detect_end - detect_start) * 1000  # 毫秒
-        instant_fps = 1000.0 / detect_time if detect_time > 0 else 0
-
         detect_times.append(detect_time)
-        fps_list.append(instant_fps)
 
-        # 记录到日志
-        log_file.write(f"{frame_count:<10} {timestamp:<30} {detect_time:<15.2f} {instant_fps:<15.2f}\n")
+        # 调试信息：打印第一帧的检测结果
+        if frame_count == 1:
+            print(f"\n[调试] 第1帧检测结果:")
+            print(f"  detect_result类型: {type(detect_result)}")
+            print(f"  detect_result内容: {detect_result}")
+            if detect_result:
+                print(f"  detect_result的keys: {detect_result.keys() if isinstance(detect_result, dict) else 'N/A'}")
+                print(f"  success: {detect_result.get('success', 'N/A')}")
+                print(f"  liquid_line_positions: {detect_result.get('liquid_line_positions', 'N/A')}")
+
+        # 保存检测结果到CSV（时间戳和液位线）
+        csv_line = timestamp
+        if detect_result and detect_result.get('success') and detect_result.get('liquid_line_positions'):
+            liquid_positions = detect_result['liquid_line_positions']
+            # 按ROI索引顺序提取液位线位置
+            for i in range(num_rois):
+                if i in liquid_positions:
+                    position_data = liquid_positions[i]
+                    # 提取液位线的y坐标
+                    if isinstance(position_data, dict) and 'liquid_line_y' in position_data:
+                        csv_line += f",{position_data['liquid_line_y']}"
+                    elif isinstance(position_data, (int, float)):
+                        csv_line += f",{position_data}"
+                    else:
+                        csv_line += ","
+                else:
+                    csv_line += ","
+            # 调试信息：每100帧打印一次液位线数据
+            if frame_count % 100 == 0:
+                print(f"[调试] 第{frame_count}帧液位线: {liquid_positions}")
+        else:
+            # 如果没有检测结果，填充空值
+            for i in range(num_rois):
+                csv_line += ","
+            # 调试信息：打印为什么没有液位线数据
+            if frame_count <= 5:
+                success = detect_result.get('success', False) if detect_result else False
+                has_positions = bool(detect_result.get('liquid_line_positions')) if detect_result else False
+                print(f"[调试] 第{frame_count}帧没有液位线数据，success={success}, has_positions={has_positions}, positions={detect_result.get('liquid_line_positions') if detect_result else None}")
+        csv_file.write(csv_line + "\n")
+
         if frame_count % 100 == 0:
-            log_file.flush()
+            csv_file.flush()
 
         # 所有ROI共享同一个检测时间
         for i in range(num_rois):
@@ -182,32 +235,26 @@ def test_single_video(engine, video_path, config_path, channel_id):
 
         # 每50帧输出一次进度
         if frame_count % 50 == 0:
-            avg_fps_so_far = np.mean(fps_list)
-            print(f"进度: {frame_count}/{test_frames} 帧, 当前平均FPS: {avg_fps_so_far:.2f}")
+            print(f"进度: {frame_count}/{test_frames} 帧")
 
     cap.release()
-
-    # 关闭日志文件
-    log_file.write("-" * 80 + "\n")
-    log_file.write(f"结束时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}\n")
-    log_file.write(f"总帧数: {frame_count}\n")
-    log_file.close()
-    print("时间日志已保存")
+    csv_file.close()
+    print(f"每帧检测结果已保存到: {csv_path}")
 
     # 计算统计数据
     total_time = time.time() - start_time
 
     print(f"测试完成: {frame_count} 帧, 耗时 {total_time:.2f}s")
 
-    # 计算FPS统计
-    avg_fps = np.mean(fps_list)
-    max_fps = np.max(fps_list)
-    min_fps = np.min(fps_list)
-
-    # 计算检测耗时统计
+    # 计算平均检测耗时和FPS
     avg_latency = np.mean(detect_times)
     min_latency = np.min(detect_times)
     max_latency = np.max(detect_times)
+
+    # 平均FPS = 1000ms / 平均每帧耗时(ms)
+    avg_fps = 1000.0 / avg_latency if avg_latency > 0 else 0
+    max_fps = 1000.0 / min_latency if min_latency > 0 else 0
+    min_fps = 1000.0 / max_latency if max_latency > 0 else 0
 
     # 计算每个ROI的平均检测耗时
     roi_latencies = []
@@ -218,6 +265,14 @@ def test_single_video(engine, video_path, config_path, channel_id):
         else:
             roi_latencies.append(0)
 
+    # 获取ROI大小信息
+    roi_sizes = []
+    for box in annotation_config['boxes']:
+        x, y, width = box
+        # 高度从fixed_bottoms和fixed_tops计算
+        height = annotation_config['fixed_bottoms'][len(roi_sizes)] - annotation_config['fixed_tops'][len(roi_sizes)]
+        roi_sizes.append(f"{width}x{height}")
+
     return {
         'total_frames': frame_count,
         'total_time': total_time,
@@ -227,7 +282,9 @@ def test_single_video(engine, video_path, config_path, channel_id):
         'avg_latency': avg_latency,
         'min_latency': min_latency,
         'max_latency': max_latency,
+        'num_channels': 1,
         'num_rois': num_rois,
+        'roi_sizes': ', '.join(roi_sizes),
         'roi_latencies': roi_latencies
     }
 

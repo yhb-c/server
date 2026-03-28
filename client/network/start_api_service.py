@@ -77,7 +77,7 @@ def start_api_local():
         project_root = Path(__file__).parent.parent.parent
         api_dir = project_root / 'server' / 'network' / 'api'
         api_executable = api_dir / 'liquid-api'
-        log_dir = api_dir / 'logs'
+        log_dir = project_root / 'logs'
 
         # 创建日志目录
         log_dir.mkdir(parents=True, exist_ok=True)
