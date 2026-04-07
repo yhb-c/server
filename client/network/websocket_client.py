@@ -182,8 +182,11 @@ class WebSocketClient(QtCore.QObject):
                 channel_id = data.get('channel_id', 'unknown')
                 logger.info(f"收到检测结果 - 通道: {channel_id}")
                 print(f"[WebSocket] Received detection_result for channel: {channel_id}")
+                print(f"[WebSocket] detection_result data keys: {list(data.keys())}")
+                print(f"[WebSocket] Emitting detection_result signal...")
                 self.detection_result.emit(data)
-                logger.debug(f"检测结果信号已发射 - 通道: {channel_id}")
+                print(f"[WebSocket] detection_result signal emitted successfully")
+                logger.info(f"检测结果信号已发射 - 通道: {channel_id}")
 
             elif message_type == 'server_status':
                 # 服务器状态消息

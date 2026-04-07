@@ -1251,8 +1251,11 @@ class MissionPanelHandler:
     def _handleStartAll(self):
         """处理一键启动按钮点击 - 发送start_all指令到服务器"""
         try:
+            print("[一键启动] ========== 开始一键启动流程 ==========")
+
             # 检查是否有WebSocket连接
             if not hasattr(self, 'ws_client') or not self.ws_client:
+                print("[一键启动] 错误: WebSocket未初始化")
                 QtWidgets.QMessageBox.warning(
                     self.mission_panel,
                     "警告",
@@ -1262,6 +1265,7 @@ class MissionPanelHandler:
 
             # 检查连接状态
             if not self.ws_client.is_connected:
+                print("[一键启动] 错误: WebSocket未连接")
                 QtWidgets.QMessageBox.warning(
                     self.mission_panel,
                     "警告",
@@ -1269,7 +1273,7 @@ class MissionPanelHandler:
                 )
                 return
 
-            print("[一键启动] 开始订阅所有通道...")
+            print("[一键启动] WebSocket连接正常，开始订阅所有通道...")
 
             # 步骤1: 先订阅所有通道（确保能接收检测结果）
             all_channels = [f'channel{i}' for i in range(1, 17)]  # channel1-channel16
@@ -1294,21 +1298,27 @@ class MissionPanelHandler:
             success = self.ws_client.ws_client.send_command('start_all')
 
             if success:
-                QtWidgets.QMessageBox.information(
-                    self.mission_panel,
-                    "提示",
-                    f"已发送一键启动指令到服务器\n订阅了 {subscribe_success_count}/16 个通道"
-                )
-                print(f"[一键启动] 启动成功，已订阅 {subscribe_success_count}/16 个通道")
+                print(f"[一键启动] start_all指令发送成功")
+                print(f"[一键启动] 已订阅 {subscribe_success_count}/16 个通道")
+                print(f"[一键启动] WebSocket连接状态: {self.ws_client.is_connected}")
+                print(f"[一键启动] ========== 一键启动流程完成，保持连接接收数据 ==========")
+
+                # 不显示MessageBox，避免阻塞事件循环
+                # 改为在状态栏显示消息
+                if hasattr(self, 'statusBar'):
+                    self.statusBar().showMessage(f"一键启动成功，已订阅 {subscribe_success_count}/16 个通道", 5000)
+
+                print(f"[一键启动] 提示: 连接将保持活跃，持续接收检测结果")
             else:
+                print("[一键启动] 错误: start_all指令发送失败")
                 QtWidgets.QMessageBox.warning(
                     self.mission_panel,
                     "警告",
                     "发送启动指令失败"
                 )
-                print("[一键启动] 发送启动指令失败")
 
         except Exception as e:
+            print(f"[一键启动] 异常: {e}")
             import traceback
             traceback.print_exc()
             QtWidgets.QMessageBox.warning(

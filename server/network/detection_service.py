@@ -28,6 +28,7 @@ sys.path.insert(0, project_root)
 
 from server.network.config_manager import ConfigManager
 from server.detection.detection_task_manager import DetectionTaskManager
+from server.storage.csv_writer import CSVWriter
 
 class DetectionService:
     """
@@ -55,6 +56,14 @@ class DetectionService:
 
         # 通道状态管理
         self.channel_status: Dict[str, Dict] = {}
+
+        # CSV写入器管理（每个通道一个CSV写入器）
+        self.csv_writers: Dict[str, CSVWriter] = {}
+
+        # CSV保存路径
+        self.csv_save_path = os.path.join(project_root, 'server', 'database', 'detection_results')
+        os.makedirs(self.csv_save_path, exist_ok=True)
+        self.logger.info(f"CSV保存路径: {self.csv_save_path}")
 
         # 从配置文件初始化通道
         self._initialize_channels_from_config()
@@ -470,8 +479,14 @@ class DetectionService:
             
             # 停止检测任务
             success = self.task_manager.stop_task(channel_id)
-            
+
             if success:
+                # 关闭CSV写入器
+                if channel_id in self.csv_writers:
+                    self.csv_writers[channel_id].close()
+                    del self.csv_writers[channel_id]
+                    self.logger.info(f"关闭通道 {channel_id} 的CSV写入器")
+
                 # 更新状态
                 self.channel_status[channel_id].update({
                     'detecting': False,
@@ -587,6 +602,9 @@ class DetectionService:
             detection_result: 检测结果数据
         """
         try:
+            # 保存到CSV文件
+            self._save_to_csv(channel_id, detection_result)
+
             # 构建推送数据（保持完整的检测结果格式）
             push_data = {
                 'type': 'detection_result',
@@ -603,6 +621,43 @@ class DetectionService:
 
         except Exception as e:
             self.logger.error(f"处理检测结果异常 - 通道: {channel_id}, 错误: {str(e)}")
+
+    def _save_to_csv(self, channel_id: str, detection_result: dict):
+        """
+        保存检测结果到CSV文件
+
+        Args:
+            channel_id: 通道ID
+            detection_result: 检测结果数据
+        """
+        try:
+            # 如果该通道还没有CSV写入器，创建一个
+            if channel_id not in self.csv_writers:
+                self.csv_writers[channel_id] = CSVWriter(self.csv_save_path, channel_id)
+                self.logger.info(f"为通道 {channel_id} 创建CSV写入器")
+
+            # 从检测结果中提取液位数据
+            liquid_line_positions = detection_result.get('liquid_line_positions', {})
+
+            # 遍历每个液位位置并保存
+            for position_key, position_data in liquid_line_positions.items():
+                if isinstance(position_data, dict):
+                    csv_data = {
+                        'height_mm': position_data.get('height_mm', 0),
+                        'liquid_level': position_data.get('liquid_level', 0),
+                        'confidence': position_data.get('confidence', 0),
+                        'timestamp': detection_result.get('timestamp', time.time()),
+                        'status': 'normal',
+                        'note': f'位置{position_key}'
+                    }
+                    self.csv_writers[channel_id].write(csv_data)
+
+            self.logger.debug(f"CSV保存成功 - 通道: {channel_id}, 液位数: {len(liquid_line_positions)}")
+
+        except Exception as e:
+            self.logger.error(f"CSV保存失败 - 通道: {channel_id}, 错误: {str(e)}")
+            import traceback
+            self.logger.error(traceback.format_exc())
     
     def _send_detection_result(self, channel_id: str, result_data: dict):
         """

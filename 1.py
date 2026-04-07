@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 检测速度测试脚本
-测试单路视频2个ROI的最高检测帧率
+测试4个视频、8个ROI（每个视频2个ROI）、4个模型的并行检测性能
 """
 
 import sys
@@ -12,6 +12,8 @@ import time
 import numpy as np
 from pathlib import Path
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 # 添加项目路径
 project_root = Path(__file__).resolve().parent
@@ -50,7 +52,7 @@ def load_annotation_config(config_path, channel_id):
         'boxes': boxes,
         'fixed_bottoms': config['fixed_bottoms'],
         'fixed_tops': config['fixed_tops'],
-        'actual_heights': [area['height'].replace('mm', '') for area in config['areas'].values()],
+        'actual_heights': [float(area['height'].replace('mm', '')) for area in config['areas'].values()],
         'fixed_init_levels': config.get('fixed_init_levels', []),
         'areas': config.get('areas', {}),
         'channel_id': channel_id
@@ -58,107 +60,210 @@ def load_annotation_config(config_path, channel_id):
 
 
 def test_detection_speed():
-    """测试单路视频2个ROI的最高检测帧率"""
+    """测试16个视频、32个ROI、4个模型（每4个视频共用1个模型）的并行检测性能"""
 
     # 配置路径
-    model_path = Path("/home/lqj/liquid/server/database/model/detection_model/testmodel/1.engine")
-    video_path = Path("/home/lqj/liquid/testvideo/1.mp4")
     config_path = Path("/home/lqj/liquid/server/database/config/annotation_result.yaml")
-    channel_id = "channel1"
 
-    if not model_path.exists():
-        print(f"错误: 模型文件不存在 {model_path}")
-        return
+    # 16个视频路径
+    video_paths = [
+        Path("/home/lqj/liquid/testvideo/1.mp4"),
+        Path("/home/lqj/liquid/testvideo/2.mp4"),
+        Path("/home/lqj/liquid/testvideo/3.mp4"),
+        Path("/home/lqj/liquid/testvideo/4.mp4"),
+        Path("/home/lqj/liquid/testvideo/5.mp4"),
+        Path("/home/lqj/liquid/testvideo/6.mp4"),
+        Path("/home/lqj/liquid/testvideo/7.mp4"),
+        Path("/home/lqj/liquid/testvideo/8.mp4"),
+        Path("/home/lqj/liquid/testvideo/9.mp4"),
+        Path("/home/lqj/liquid/testvideo/10.mp4"),
+        Path("/home/lqj/liquid/testvideo/11.mp4"),
+        Path("/home/lqj/liquid/testvideo/12.mp4"),
+        Path("/home/lqj/liquid/testvideo/13.mp4"),
+        Path("/home/lqj/liquid/testvideo/14.mp4"),
+        Path("/home/lqj/liquid/testvideo/15.mp4"),
+        Path("/home/lqj/liquid/testvideo/16.mp4")
+    ]
 
-    if not video_path.exists():
-        print(f"错误: 视频文件不存在 {video_path}")
-        return
+    # 4个共用模型（每4个视频共用1个模型）
+    shared_model_paths = [
+        Path("/home/lqj/liquid/server/database/model/detection_model/bestmodel/1.engine"),
+        Path("/home/lqj/liquid/server/database/model/detection_model/bestmodel/2.engine"),
+        Path("/home/lqj/liquid/server/database/model/detection_model/bestmodel/3.engine"),
+        Path("/home/lqj/liquid/server/database/model/detection_model/bestmodel/4.engine")
+    ]
 
+    # 16个通道ID
+    channel_ids = ["channel1"] * 16
+
+    # 检查文件是否存在
     if not config_path.exists():
         print(f"错误: 配置文件不存在 {config_path}")
         return
 
+    for i, video_path in enumerate(video_paths, 1):
+        if not video_path.exists():
+            print(f"错误: 视频文件{i}不存在 {video_path}")
+            return
+
+    for i, model_path in enumerate(shared_model_paths, 1):
+        if not model_path.exists():
+            print(f"错误: 模型文件{i}不存在 {model_path}")
+            return
+
     print("=" * 80)
-    print("单路视频2个ROI最高帧率测试")
+    print("16个视频、32个ROI、4个模型（每4个视频共用1个模型）并行检测测试")
     print("=" * 80)
-    print(f"模型: {model_path.name}")
-    print(f"视频: {video_path.name}")
-    print(f"通道: {channel_id}")
+    print(f"视频数量: {len(video_paths)}")
+    print(f"模型数量: {len(shared_model_paths)}")
+    print(f"总ROI数量: {len(video_paths) * 2} (每个视频2个ROI)")
+    print(f"配置: 视频1-4共用模型1, 视频5-8共用模型2, 视频9-12共用模型3, 视频13-16共用模型4")
     print("-" * 80)
 
-    # 初始化检测引擎
-    print("正在加载模型...")
-    engine = LiquidDetectionEngine(model_path=str(model_path), device='cuda')
-    if not engine.load_model(str(model_path)):
-        print("错误: 无法加载模型")
-        return
-
-    print("模型加载成功")
+    # 加载4个共用模型
+    print("正在加载共用模型...")
+    shared_engines = []
+    for i, model_path in enumerate(shared_model_paths, 1):
+        engine = LiquidDetectionEngine(model_path=str(model_path), device='cuda')
+        if not engine.load_model(str(model_path)):
+            print(f"错误: 无法加载模型{i}")
+            return
+        shared_engines.append(engine)
+        print(f"模型{i}加载成功")
     print("-" * 80)
 
-    # 测试视频
-    result = test_single_video(engine, video_path, config_path, channel_id)
+    # 使用线程池并行测试
+    # 每4个视频共用1个模型
+    results = []
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        futures = []
+        for i in range(16):
+            # 每4个视频使用一个模型
+            model_index = i // 4
+            future = executor.submit(
+                test_single_video_with_shared_model,
+                shared_engines[model_index],
+                video_paths[i],
+                config_path,
+                channel_ids[i],
+                i + 1
+            )
+            futures.append(future)
 
-    # 清理引擎
-    engine.cleanup()
+        # 等待所有任务完成
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                if result:
+                    results.append(result)
+            except Exception as e:
+                print(f"错误: 测试任务失败: {e}")
 
-    # 输出结果
-    if result:
+    # 汇总结果
+    if results:
         print("\n" + "=" * 80)
-        print("测试结果")
+        print("测试结果汇总")
         print("=" * 80)
-        print(f"总帧数: {result['total_frames']}")
-        print(f"总耗时: {result['total_time']:.2f}s")
-        print(f"平均FPS: {result['avg_fps']:.2f}")
-        print(f"最高FPS: {result['max_fps']:.2f}")
-        print(f"最低FPS: {result['min_fps']:.2f}")
+
+        total_rois = sum(r['num_rois'] for r in results)
+        avg_fps_all = np.mean([r['avg_fps'] for r in results])
+
+        print(f"总视频数: {len(results)}")
+        print(f"总ROI数: {total_rois}")
+        print(f"平均检测FPS: {avg_fps_all:.2f}")
         print("-" * 80)
-        print(f"平均每帧检测耗时: {result['avg_latency']:.2f}ms")
-        print(f"最快检测耗时: {result['min_latency']:.2f}ms")
-        print(f"最慢检测耗时: {result['max_latency']:.2f}ms")
-        print("-" * 80)
-        for i, roi_latency in enumerate(result['roi_latencies'], 1):
-            print(f"ROI{i} 平均检测耗时: {roi_latency:.2f}ms")
+
+        for i, result in enumerate(results, 1):
+            print(f"视频{i}: {result['num_rois']}个ROI, 平均FPS: {result['avg_fps']:.2f}, ROI大小: {result['roi_sizes']}")
+
         print("=" * 80)
 
         # 保存结果到testresult.md
-        save_result_to_file(result)
+        save_result_to_file(results, total_rois, avg_fps_all)
 
 
-def save_result_to_file(result):
-    """保存测试总结到testresult.md"""
+def save_result_to_file(results, total_rois, avg_fps_all):
+    """保存测试总结到testresult.md第二行"""
     result_path = Path("/home/lqj/liquid/testresult.md")
 
+    # 读取现有内容
+    existing_lines = []
+    if result_path.exists():
+        with open(result_path, 'r', encoding='utf-8') as f:
+            existing_lines = f.readlines()
+
+    # 构建新的结果行
+    roi_sizes_list = [r['roi_sizes'] for r in results]
+    new_line = f"检测路数: {len(results)}, ROI数量: {total_rois}, ROI大小: {', '.join(roi_sizes_list)}, 平均检测FPS: {avg_fps_all:.2f}\n"
+
+    # 插入到第二行
+    if len(existing_lines) >= 1:
+        # 如果已有内容，插入到第二行
+        existing_lines.insert(1, new_line)
+    else:
+        # 如果文件为空，直接写入
+        existing_lines = [new_line]
+
+    # 写回文件
     with open(result_path, 'w', encoding='utf-8') as f:
-        f.write(f"检测路数: {result['num_channels']}, ROI数量: {result['num_rois']}, ROI大小: {result['roi_sizes']}, 平均检测FPS: {result['avg_fps']:.2f}\n")
+        f.writelines(existing_lines)
 
     print(f"\n测试总结已保存到: {result_path}")
 
 
-def test_single_video(engine, video_path, config_path, channel_id):
+def test_single_video_with_shared_model(shared_engine, video_path, config_path, channel_id, video_num):
+    """测试单个视频使用共用模型的检测速度"""
+    print(f"\n[视频{video_num}] 开始测试")
+    print(f"  视频: {video_path}")
+    print(f"  通道: {channel_id}")
+    print(f"  使用共用模型")
+
+    # 测试视频（使用共用的引擎）
+    result = test_single_video(shared_engine, video_path, config_path, channel_id, video_num)
+
+    return result
+
+
+def test_single_video_with_model(model_path, video_path, config_path, channel_id, video_num):
+    """测试单个视频+单个模型的检测速度"""
+    print(f"\n[视频{video_num}] 开始测试")
+    print(f"  模型: {model_path}")
+    print(f"  视频: {video_path}")
+    print(f"  通道: {channel_id}")
+
+    # 初始化检测引擎
+    engine = LiquidDetectionEngine(model_path=str(model_path), device='cuda')
+    if not engine.load_model(str(model_path)):
+        print(f"[视频{video_num}] 错误: 无法加载模型")
+        return None
+
+    print(f"[视频{video_num}] 模型加载成功")
+
+    # 测试视频
+    result = test_single_video(engine, video_path, config_path, channel_id, video_num)
+
+    # 清理引擎
+    engine.cleanup()
+
+    return result
+
+
+def test_single_video(engine, video_path, config_path, channel_id, video_num):
     """测试单个视频的检测速度，计算最高帧率"""
 
     MAX_FRAMES = 2000  # 最多检测2000帧
 
-    print(f"开始测试 (通道: {channel_id})")
-
     # 加载标注配置
     try:
         annotation_config = load_annotation_config(config_path, channel_id)
-        print(f"\n[调试] 标注配置:")
-        print(f"  boxes: {annotation_config['boxes']}")
-        print(f"  fixed_bottoms: {annotation_config['fixed_bottoms']}")
-        print(f"  fixed_tops: {annotation_config['fixed_tops']}")
-        print(f"  actual_heights: {annotation_config['actual_heights']}")
-        print(f"  areas: {annotation_config.get('areas', {})}")
     except Exception as e:
-        print(f"错误: 无法加载通道 {channel_id} 的配置: {e}")
+        print(f"[视频{video_num}] 错误: 无法加载通道 {channel_id} 的配置: {e}")
         return None
 
     # 打开视频
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
-        print("错误: 无法打开视频")
+        print(f"[视频{video_num}] 错误: 无法打开视频")
         return None
 
     # 获取视频信息
@@ -166,27 +271,29 @@ def test_single_video(engine, video_path, config_path, channel_id):
     fps = cap.get(cv2.CAP_PROP_FPS)
     num_rois = len(annotation_config['boxes'])
     test_frames = min(MAX_FRAMES, total_frames)
-    print(f"视频信息: {total_frames} 帧, {fps:.2f} FPS, {num_rois} 个ROI, 测试 {test_frames} 帧")
+    print(f"[视频{video_num}] 视频信息: {total_frames} 帧, {fps:.2f} FPS, {num_rois} 个ROI, 测试 {test_frames} 帧")
 
     # 创建CSV文件并写入表头
-    csv_path = Path("/home/lqj/liquid/1.csv")
+    csv_path = Path(f"/home/lqj/liquid/{video_num}.csv")
     csv_file = open(csv_path, 'w', encoding='utf-8')
 
     # 根据ROI数量生成表头
     header = "时间戳"
     for i in range(1, num_rois + 1):
-        header += f",ROI{i}液位线"
+        header += f",ROI{i}液位高度(mm)"
     csv_file.write(header + "\n")
 
     # 测试统计
     frame_count = 0
     detect_times = []  # 每帧检测时间列表(毫秒)
     roi_detect_times = [[] for _ in range(num_rois)]  # 每个ROI的检测时间列表
+
     start_time = time.time()
 
     # 逐帧检测
     while frame_count < MAX_FRAMES:
         ret, frame = cap.read()
+
         if not ret:
             break
 
@@ -202,49 +309,25 @@ def test_single_video(engine, video_path, config_path, channel_id):
         detect_time = (detect_end - detect_start) * 1000  # 毫秒
         detect_times.append(detect_time)
 
-        # 调试信息：打印第一帧的检测结果
-        if frame_count == 1:
-            print(f"\n[调试] 第1帧检测结果:")
-            print(f"  frame shape: {frame.shape}")
-            print(f"  detect_result类型: {type(detect_result)}")
-            print(f"  detect_result内容: {detect_result}")
-            if detect_result:
-                print(f"  detect_result的keys: {detect_result.keys() if isinstance(detect_result, dict) else 'N/A'}")
-                print(f"  success: {detect_result.get('success', 'N/A')}")
-                print(f"  liquid_line_positions: {detect_result.get('liquid_line_positions', 'N/A')}")
-                print(f"  camera_status: {detect_result.get('camera_status', 'N/A')}")
-                print(f"  camera_moved: {detect_result.get('camera_moved', 'N/A')}")
-                print(f"  camera_message: {detect_result.get('camera_message', 'N/A')}")
-
-        # 保存检测结果到CSV（时间戳和液位线）
+        # 保存检测结果到CSV（时间戳和液位高度）
         csv_line = timestamp
         if detect_result and detect_result.get('success') and detect_result.get('liquid_line_positions'):
             liquid_positions = detect_result['liquid_line_positions']
-            # 按ROI索引顺序提取液位线位置
+            # 按ROI索引顺序提取液位高度
             for i in range(num_rois):
                 if i in liquid_positions:
                     position_data = liquid_positions[i]
-                    # 提取液位线的y坐标
-                    if isinstance(position_data, dict) and 'liquid_line_y' in position_data:
-                        csv_line += f",{position_data['liquid_line_y']}"
-                    elif isinstance(position_data, (int, float)):
-                        csv_line += f",{position_data}"
+                    # 提取液位高度(mm)
+                    if isinstance(position_data, dict) and 'height_mm' in position_data:
+                        csv_line += f",{position_data['height_mm']}"
                     else:
                         csv_line += ","
                 else:
                     csv_line += ","
-            # 调试信息：每100帧打印一次液位线数据
-            if frame_count % 100 == 0:
-                print(f"[调试] 第{frame_count}帧液位线: {liquid_positions}")
         else:
             # 如果没有检测结果，填充空值
             for i in range(num_rois):
                 csv_line += ","
-            # 调试信息：打印为什么没有液位线数据
-            if frame_count <= 5:
-                success = detect_result.get('success', False) if detect_result else False
-                has_positions = bool(detect_result.get('liquid_line_positions')) if detect_result else False
-                print(f"[调试] 第{frame_count}帧没有液位线数据，success={success}, has_positions={has_positions}, positions={detect_result.get('liquid_line_positions') if detect_result else None}")
         csv_file.write(csv_line + "\n")
 
         if frame_count % 100 == 0:
@@ -254,18 +337,18 @@ def test_single_video(engine, video_path, config_path, channel_id):
         for i in range(num_rois):
             roi_detect_times[i].append(detect_time)
 
-        # 每50帧输出一次进度
-        if frame_count % 50 == 0:
-            print(f"进度: {frame_count}/{test_frames} 帧")
+        # 每200帧输出一次进度
+        if frame_count % 200 == 0:
+            print(f"[视频{video_num}] 进度: {frame_count}/{test_frames} 帧")
 
     cap.release()
     csv_file.close()
-    print(f"每帧检测结果已保存到: {csv_path}")
+    print(f"[视频{video_num}] 每帧检测结果已保存到: {csv_path}")
 
     # 计算统计数据
     total_time = time.time() - start_time
 
-    print(f"测试完成: {frame_count} 帧, 耗时 {total_time:.2f}s")
+    print(f"[视频{video_num}] 测试完成: {frame_count} 帧, 耗时 {total_time:.2f}s")
 
     # 计算平均检测耗时和FPS
     avg_latency = np.mean(detect_times)
@@ -276,6 +359,8 @@ def test_single_video(engine, video_path, config_path, channel_id):
     avg_fps = 1000.0 / avg_latency if avg_latency > 0 else 0
     max_fps = 1000.0 / min_latency if min_latency > 0 else 0
     min_fps = 1000.0 / max_latency if max_latency > 0 else 0
+
+    print(f"[视频{video_num}] 平均FPS: {avg_fps:.2f}, 平均检测耗时: {avg_latency:.2f}ms")
 
     # 计算每个ROI的平均检测耗时
     roi_latencies = []
@@ -288,11 +373,9 @@ def test_single_video(engine, video_path, config_path, channel_id):
 
     # 获取ROI大小信息
     roi_sizes = []
-    for box in annotation_config['boxes']:
-        x, y, width = box
-        # 高度从fixed_bottoms和fixed_tops计算
-        height = annotation_config['fixed_bottoms'][len(roi_sizes)] - annotation_config['fixed_tops'][len(roi_sizes)]
-        roi_sizes.append(f"{width}x{height}")
+    for idx, box in enumerate(annotation_config['boxes']):
+        cx, cy, size = box
+        roi_sizes.append(f"{size}x{size}")
 
     return {
         'total_frames': frame_count,

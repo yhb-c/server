@@ -8,7 +8,7 @@ sys.path.insert(0, str(project_root / "server"))
 import torch
 from ultralytics import YOLO
 
-def convert_pt_to_engine(pt_path, output_path=None, imgsz=640, device='cuda', half=False):
+def convert_pt_to_engine(pt_path, output_path=None, imgsz=640, device='cuda', half=True):
     """
     将pt格式模型转换为TensorRT engine格式
 
@@ -17,7 +17,7 @@ def convert_pt_to_engine(pt_path, output_path=None, imgsz=640, device='cuda', ha
         output_path: 输出engine文件路径，默认与pt文件同目录同名
         imgsz: 输入图像尺寸
         device: 设备类型
-        half: 是否使用FP16精度
+        half: 是否使用FP16精度（默认True，强制使用FP16）
 
     Returns:
         bool: 转换是否成功
@@ -87,7 +87,7 @@ def convert_pt_to_engine(pt_path, output_path=None, imgsz=640, device='cuda', ha
         traceback.print_exc()
         return False
 
-def batch_convert_models(model_dir, output_dir=None, imgsz=640, device='cuda', half=False):
+def batch_convert_models(model_dir, output_dir=None, imgsz=640, device='cuda', half=True):
     """
     批量转换目录下的所有pt模型
 
@@ -96,7 +96,7 @@ def batch_convert_models(model_dir, output_dir=None, imgsz=640, device='cuda', h
         output_dir: 输出目录，默认与输入目录相同
         imgsz: 输入图像尺寸
         device: 设备类型
-        half: 是否使用FP16精度
+        half: 是否使用FP16精度（默认True，强制使用FP16）
     """
     model_dir = Path(model_dir)
 
@@ -153,10 +153,13 @@ def main():
     parser.add_argument('-o', '--output', help='输出engine文件路径或目录')
     parser.add_argument('-s', '--imgsz', type=int, default=640, help='输入图像尺寸 (默认: 640)')
     parser.add_argument('-d', '--device', default='cuda', help='设备类型 (默认: cuda)')
-    parser.add_argument('--half', action='store_true', help='使用FP16半精度')
+    parser.add_argument('--no-half', action='store_true', help='不使用FP16半精度（默认使用FP16）')
     parser.add_argument('-b', '--batch', action='store_true', help='批量转换目录下所有pt文件')
 
     args = parser.parse_args()
+
+    # 默认使用FP16，除非指定--no-half
+    use_half = not args.no_half
 
     input_path = Path(args.input)
 
@@ -165,9 +168,9 @@ def main():
         return 1
 
     if args.batch or input_path.is_dir():
-        batch_convert_models(input_path, args.output, args.imgsz, args.device, args.half)
+        batch_convert_models(input_path, args.output, args.imgsz, args.device, use_half)
     else:
-        success = convert_pt_to_engine(input_path, args.output, args.imgsz, args.device, args.half)
+        success = convert_pt_to_engine(input_path, args.output, args.imgsz, args.device, use_half)
         return 0 if success else 1
 
     return 0

@@ -77,7 +77,9 @@ class EnhancedWebSocketServer:
             self.server = await websockets.serve(
                 self._handle_client,
                 self.host,
-                self.port
+                self.port,
+                ping_interval=None,  # 禁用自动ping
+                ping_timeout=None    # 禁用ping超时
             )
             
             self.logger.info(f"增强WebSocket服务器启动成功: ws://{self.host}:{self.port}")
@@ -738,8 +740,20 @@ class EnhancedWebSocketServer:
             self.logger.warning(f"[{channel_id}] 通道没有订阅者字典，无法推送数据")
             return
 
+        # 记录复制前的订阅者数量
+        original_count = len(self.channel_subscribers[channel_id])
+        self.logger.debug(f"[{channel_id}] 复制前订阅者数量: {original_count}")
+
         subscribers = self.channel_subscribers[channel_id].copy()
-        self.logger.debug(f"[{channel_id}] 订阅者数量: {len(subscribers)}")
+        self.logger.debug(f"[{channel_id}] 复制后订阅者数量: {len(subscribers)}")
+
+        # 详细记录订阅者信息
+        if subscribers:
+            for sub in subscribers:
+                client_info = self.clients.get(sub, {}).get('client_info', {})
+                self.logger.debug(f"[{channel_id}] 订阅者: {client_info.get('id', 'unknown')}, state: {sub.state if hasattr(sub, 'state') else 'unknown'}")
+
+        self.logger.debug(f"[{channel_id}] 检查订阅者列表: len={len(subscribers)}, bool={bool(subscribers)}, not={not subscribers}")
 
         if not subscribers:
             self.logger.warning(f"[{channel_id}] 通道订阅者列表为空，无法推送数据")
@@ -747,9 +761,16 @@ class EnhancedWebSocketServer:
             return
 
         # 构造消息
-        message = json.dumps(data, ensure_ascii=False)
-        self.server_stats['total_broadcasts'] += 1
-        self.logger.debug(f"[{channel_id}] 准备发送消息，长度: {len(message)}")
+        try:
+            message = json.dumps(data, ensure_ascii=False)
+            self.server_stats['total_broadcasts'] += 1
+            self.logger.debug(f"[{channel_id}] 准备发送消息，长度: {len(message)}")
+        except Exception as e:
+            self.logger.error(f"[{channel_id}] JSON序列化失败: {e}")
+            self.logger.error(f"[{channel_id}] 数据类型: {data.get('type')}, 数据键: {list(data.keys())}")
+            import traceback
+            self.logger.error(traceback.format_exc())
+            return
 
         # 移除已断开的连接
         disconnected = set()
