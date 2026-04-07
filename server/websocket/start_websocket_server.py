@@ -5,7 +5,6 @@ WebSocket服务器启动脚本
 """
 
 import asyncio
-import logging
 import signal
 import sys
 import os
@@ -16,25 +15,15 @@ current_dir = Path(__file__).parent
 server_dir = current_dir.parent
 project_root = server_dir.parent
 network_dir = server_dir / 'network'
+utils_dir = server_dir / 'utils'
 sys.path.insert(0, str(network_dir))
+sys.path.insert(0, str(utils_dir))
 
 from enhanced_ws_server import EnhancedWebSocketServer
-
+from logger import setup_logging
 
 # 配置日志
-log_dir = project_root / 'logs'
-log_dir.mkdir(exist_ok=True)
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler(log_dir / 'websocket_server.log', encoding='utf-8')
-    ]
-)
-
-logger = logging.getLogger(__name__)
+logger = setup_logging('websocket', 'DEBUG')
 
 
 def signal_handler(signum, frame):

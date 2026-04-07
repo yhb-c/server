@@ -69,6 +69,10 @@ class NetworkCommandManager(QtCore.QObject):
         self.ws_client = None
         self.is_connected = False
 
+        # 记录已订阅的通道列表（用于重连后自动重新订阅）
+        self.subscribed_channels = set()
+        self.auto_resubscribe = True  # 是否在重连后自动重新订阅
+
         # CSV存储
         self.enable_csv_storage = enable_csv_storage
         self.csv_writer = None
@@ -284,27 +288,29 @@ class NetworkCommandManager(QtCore.QObject):
     def send_subscribe_command(self, channel_id):
         """
         发送订阅通道命令
-        
+
         Args:
             channel_id: 通道ID
-            
+
         Returns:
             bool: 发送是否成功
         """
         if not self.ws_client or not self.is_connected:
             print(f"[CommandManager] WebSocket未连接，无法发送订阅命令")
             return False
-        
+
         success = self.ws_client.send_command(
             'subscribe',
             channel_id=channel_id
         )
-        
+
         if success:
+            # 记录已订阅的通道
+            self.subscribed_channels.add(channel_id)
             print(f"[CommandManager] 订阅通道命令发送成功: {channel_id}")
         else:
             print(f"[CommandManager] 订阅通道命令发送失败: {channel_id}")
-        
+
         return success
     
     def force_reconnect(self):
@@ -353,9 +359,25 @@ class NetworkCommandManager(QtCore.QObject):
     
     def _on_connection_status(self, is_connected, message):
         """WebSocket连接状态变化处理"""
+        was_connected = self.is_connected
         self.is_connected = is_connected
         print(f"[CommandManager] 连接状态变化: {'已连接' if is_connected else '未连接'} - {message}")
-        
+
+        # 如果是重连成功，自动重新订阅之前订阅的通道
+        if is_connected and not was_connected and self.auto_resubscribe and self.subscribed_channels:
+            print(f"[CommandManager] 检测到重连成功，自动重新订阅 {len(self.subscribed_channels)} 个通道...")
+            import time
+            time.sleep(0.5)  # 等待连接稳定
+
+            for channel_id in list(self.subscribed_channels):
+                try:
+                    self.send_subscribe_command(channel_id)
+                    print(f"[CommandManager] 重新订阅成功: {channel_id}")
+                except Exception as e:
+                    print(f"[CommandManager] 重新订阅失败: {channel_id}, 错误: {e}")
+
+            print(f"[CommandManager] 自动重新订阅完成")
+
         # 转发连接状态信号
         self.connectionStatusChanged.emit(is_connected, message)
     
