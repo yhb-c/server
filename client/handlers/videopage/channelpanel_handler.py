@@ -13,6 +13,7 @@ import threading
 import queue
 import time
 import yaml
+import logging
 from qtpy import QtCore
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QFileSystemWatcher
@@ -91,6 +92,9 @@ class ChannelPanelHandler:
     
     def _initChannelResources(self):
         """初始化通道相关资源（在MainWindow的__init__中调用）"""
+        # 初始化logger
+        self.logger = logging.getLogger('client')
+
         # 存储活动的通道捕获对象 {channel_id: HKcapture}
         self._channel_captures = {}
         
@@ -168,7 +172,7 @@ class ChannelPanelHandler:
                 'resolution': '1920x1080'
             }
             panel.addChannel(channel_id, channel_data)
-            print(f"[DEBUG] 已添加通道数据: {channel_id} -> {channel_data}")
+            self.logger.debug(f"[DEBUG] 已添加通道数据: {channel_id} -> {channel_data}")
     
     def _connectChannelPanelSignals(self, panel):
         """
@@ -267,8 +271,8 @@ class ChannelPanelHandler:
             
             # 调试：检查JPEG数据
             if not hasattr(self, '_jpeg_decode_debug_logged'):
-                print(f"[视频帧调试] JPEG数据大小: {len(jpeg_data)} bytes")
-                print(f"[视频帧调试] 图像尺寸: {width}x{height}")
+                self.logger.debug(f"[视频帧调试] JPEG数据大小: {len(jpeg_data)} bytes")
+                self.logger.debug(f"[视频帧调试] 图像尺寸: {width}x{height}")
                 self._jpeg_decode_debug_logged = True
             
             # JPEG解码为QPixmap
@@ -277,13 +281,13 @@ class ChannelPanelHandler:
             success = pixmap.loadFromData(jpeg_data, 'JPEG')
             
             if not success or pixmap.isNull():
-                print(f"[视频帧] JPEG解码失败")
+                self.logger.debug(f"[视频帧] JPEG解码失败")
                 return
             
             # 调试：检查QPixmap
             if not hasattr(self, '_pixmap_debug_logged'):
-                print(f"[视频帧调试] QPixmap尺寸: {pixmap.width()}x{pixmap.height()}")
-                print(f"[视频帧调试] QPixmap格式: {pixmap.depth()} bits")
+                self.logger.debug(f"[视频帧调试] QPixmap尺寸: {pixmap.width()}x{pixmap.height()}")
+                self.logger.debug(f"[视频帧调试] QPixmap格式: {pixmap.depth()} bits")
                 self._pixmap_debug_logged = True
             
             # 显示到面板
@@ -291,7 +295,7 @@ class ChannelPanelHandler:
                 panel.displayFrame(pixmap)
             
         except Exception as e:
-            print(f"[视频帧] 处理异常: {e}")
+            self.logger.debug(f"[视频帧] 处理异常: {e}")
             import traceback
             traceback.print_exc()
     
@@ -317,7 +321,7 @@ class ChannelPanelHandler:
             confidence = data.get('confidence', 0)
             timestamp = data.get('timestamp', '')
             
-            print(f"[检测结果] {channel_id} 液位: {liquid_level}% 置信度: {confidence}")
+            self.logger.debug(f"[检测结果] {channel_id} 液位: {liquid_level}% 置信度: {confidence}")
             
             # 更新通道面板显示
             panel = self._channel_panels_map.get(channel_id)
@@ -328,7 +332,7 @@ class ChannelPanelHandler:
                 pass
             
         except Exception as e:
-            print(f"[检测结果] 处理异常: {e}")
+            self.logger.debug(f"[检测结果] 处理异常: {e}")
             import traceback
             traceback.print_exc()
     
@@ -342,14 +346,14 @@ class ChannelPanelHandler:
         """
         try:
             if is_connected:
-                print(f"[WebSocket] 连接成功: {message}")
+                self.logger.debug(f"[WebSocket] 连接成功: {message}")
                 self.statusBar().showMessage(f"推理服务已连接")
             else:
-                print(f"[WebSocket] 连接断开: {message}")
+                self.logger.debug(f"[WebSocket] 连接断开: {message}")
                 self.statusBar().showMessage(f"推理服务未连接")
                 
         except Exception as e:
-            print(f"[WebSocket] 状态处理异常: {e}")
+            self.logger.debug(f"[WebSocket] 状态处理异常: {e}")
     
     def setDetectionEngine(self, channel_id, detection_engine):
         """
@@ -481,14 +485,14 @@ class ChannelPanelHandler:
             bool: 保存是否成功
         """
         try:
-            print(f"[DEBUG] 保存通道{channel_id}名称到服务端: {new_name}")
+            self.logger.debug(f"[DEBUG] 保存通道{channel_id}名称到服务端: {new_name}")
             
             # 获取当前配置
             current_config = {}
             try:
                 current_config = self._remote_config_manager.load_channel_config()
             except Exception as e:
-                print(f"[DEBUG] 加载当前配置失败，使用空配置: {e}")
+                self.logger.debug(f"[DEBUG] 加载当前配置失败，使用空配置: {e}")
                 current_config = {}
             
             # 确保 channels 部分存在
@@ -517,7 +521,7 @@ class ChannelPanelHandler:
             success = self._remote_config_manager.save_channel_config(current_config)
             
             if success:
-                print(f"[DEBUG] 通道{channel_id}名称已成功保存到服务端")
+                self.logger.debug(f"[DEBUG] 通道{channel_id}名称已成功保存到服务端")
                 # 更新内存中的配置
                 if hasattr(self, '_config'):
                     if self._config is None:
@@ -526,11 +530,11 @@ class ChannelPanelHandler:
                         self._config[channel_id]['name'] = new_name
                 return True
             else:
-                print(f"[ERROR] 保存通道{channel_id}名称到服务端失败")
+                self.logger.debug(f"[ERROR] 保存通道{channel_id}名称到服务端失败")
                 return False
             
         except Exception as e:
-            print(f"[ERROR] 保存通道{channel_id}名称异常: {e}")
+            self.logger.debug(f"[ERROR] 保存通道{channel_id}名称异常: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -542,25 +546,25 @@ class ChannelPanelHandler:
     
     def onChannelConnected(self, channel_id):
         """打开通道"""
-        print(f"[DEBUG] onChannelConnected被调用: {channel_id}")
+        self.logger.debug(f"[DEBUG] onChannelConnected被调用: {channel_id}")
         self.statusBar().showMessage(self.tr("正在打开通道: {}").format(channel_id))
         
         # 找到发送信号的通道面板（映射已在初始化时建立）
         sender = self.sender()
-        print(f"[DEBUG] sender: {sender}")
+        self.logger.debug(f"[DEBUG] sender: {sender}")
         
         # 关键修复：如果通道已经连接或正在连接，不要重复连接
         if channel_id in self._channel_captures:
-            print(f"[DEBUG] {channel_id} 已经连接")
+            self.logger.debug(f"[DEBUG] {channel_id} 已经连接")
             return
         
         if channel_id in self._channels_connecting:
-            print(f"[DEBUG] {channel_id} 正在连接中")
+            self.logger.debug(f"[DEBUG] {channel_id} 正在连接中")
             return
         
         # 立即标记为正在连接（防止重复调用）
         self._channels_connecting.add(channel_id)
-        print(f"[DEBUG] {channel_id} 标记为正在连接")
+        self.logger.debug(f"[DEBUG] {channel_id} 标记为正在连接")
         
         # 映射已在 initializeChannelPanels 中建立，这里不需要再建立
         # 但为了兼容性，如果映射不存在则建立（某些特殊情况）
@@ -570,13 +574,13 @@ class ChannelPanelHandler:
         
         # 临时方案：跳过配置文件检查，直接使用硬编码配置
         channel_config = {'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'}
-        print(f"[DEBUG] 使用硬编码配置: {channel_config}")
+        self.logger.debug(f"[DEBUG] 使用硬编码配置: {channel_config}")
         
         # 读取并设置通道名称到面板（调用业务逻辑方法）
         # 从 channel_id (如 'channel1') 提取通道编号
         channel_number = channel_id.replace('channel', '') if 'channel' in channel_id else '?'
         channel_name = f"通道{channel_number}"
-        print(f"[DEBUG] 通道名称: {channel_name}")
+        self.logger.debug(f"[DEBUG] 通道名称: {channel_name}")
         
         panel = self._channel_panels_map.get(channel_id)
         if panel and hasattr(panel, 'setChannelName'):
@@ -587,12 +591,12 @@ class ChannelPanelHandler:
         hwnd = None
         if panel and hasattr(panel, 'getVideoHwnd'):
             hwnd = panel.getVideoHwnd()
-            print(f"[DEBUG] 主线程获取 {channel_id} HWND: {hwnd}")
+            self.logger.debug(f"[DEBUG] 主线程获取 {channel_id} HWND: {hwnd}")
             
             # 设置面板为HWND渲染模式
             if hasattr(panel, 'setHwndRenderMode'):
                 panel.setHwndRenderMode(True)
-                print(f"[DEBUG] 主线程设置 {channel_id} HWND渲染模式")
+                self.logger.debug(f"[DEBUG] 主线程设置 {channel_id} HWND渲染模式")
         
         # 切换到视频监控页面
         self.showVideoPage()
@@ -605,7 +609,7 @@ class ChannelPanelHandler:
             daemon=True
         )
         thread.start()
-        print(f"[DEBUG] 后台线程已启动")
+        self.logger.debug(f"[DEBUG] 后台线程已启动")
     
     def _loadTaskInfoToPanel(self, channel_id, panel):
         """
@@ -818,13 +822,13 @@ class ChannelPanelHandler:
     def _getChannelConfigFromFile(self, channel_id):
         """从服务端配置文件读取单个通道配置"""
         try:
-            print(f"[DEBUG] 从服务端读取通道{channel_id}配置")
+            self.logger.debug(f"[DEBUG] 从服务端读取通道{channel_id}配置")
             
             # 使用远程配置管理器获取通道信息
             channel_info = self._remote_config_manager.get_channel_info(int(channel_id.replace('channel', '')))
             
             if channel_info:
-                print(f"[DEBUG] 成功获取通道{channel_id}配置: {channel_info}")
+                self.logger.debug(f"[DEBUG] 成功获取通道{channel_id}配置: {channel_info}")
                 return channel_info
             
             # 如果没有找到，尝试从内存配置读取
@@ -835,14 +839,14 @@ class ChannelPanelHandler:
                 channel_config = config.get(channel_id)
                 
                 if channel_config and isinstance(channel_config, dict):
-                    print(f"[DEBUG] 从内存配置获取通道{channel_id}配置")
+                    self.logger.debug(f"[DEBUG] 从内存配置获取通道{channel_id}配置")
                     return channel_config
             
-            print(f"[DEBUG] 未找到通道{channel_id}配置，返回None")
+            self.logger.debug(f"[DEBUG] 未找到通道{channel_id}配置，返回None")
             return None
             
         except Exception as e:
-            print(f"[ERROR] 读取通道{channel_id}配置失败: {e}")
+            self.logger.debug(f"[ERROR] 读取通道{channel_id}配置失败: {e}")
             return None
     
     def loadAllChannelConfig(self):
@@ -861,7 +865,7 @@ class ChannelPanelHandler:
             }
         """
         try:
-            print("[DEBUG] 开始从服务端加载通道配置")
+            self.logger.debug("[DEBUG] 开始从服务端加载通道配置")
             
             # 使用远程配置管理器加载配置
             channel_config = self._remote_config_manager.load_channel_config()
@@ -886,7 +890,7 @@ class ChannelPanelHandler:
                                 'address': address
                             }
                             address_list.append(f"{name}: {address}")
-                            print(f"[DEBUG] 从channels配置加载通道{channel_id}: {name} -> {address}")
+                            self.logger.debug(f"[DEBUG] 从channels配置加载通道{channel_id}: {name} -> {address}")
             
             # 如果 channels 部分没有数据，尝试从 default_config.yaml 读取
             if not channels and default_config:
@@ -904,7 +908,7 @@ class ChannelPanelHandler:
                                 'address': address
                             }
                             address_list.append(f"{name}: {address}")
-                            print(f"[DEBUG] 从default_config加载通道{i}: {name} -> {address}")
+                            self.logger.debug(f"[DEBUG] 从default_config加载通道{i}: {name} -> {address}")
             
             # 如果还是没有数据，尝试从 channel_config.yaml 的根级别读取
             if not channels:
@@ -928,7 +932,7 @@ class ChannelPanelHandler:
                                 'address': address
                             }
                             address_list.append(f"{name}: {address}")
-                            print(f"[DEBUG] 从channel配置加载通道{i}: {name} -> {address}")
+                            self.logger.debug(f"[DEBUG] 从channel配置加载通道{i}: {name} -> {address}")
             
             # 获取地址列表（如果配置中有的话）
             config_address_list = channel_config.get('address_list', '') or default_config.get('address_list', '')
@@ -937,7 +941,7 @@ class ChannelPanelHandler:
             else:
                 address_list_str = '\n'.join(address_list)
             
-            print(f"[DEBUG] 成功加载{len(channels)}个通道配置")
+            self.logger.debug(f"[DEBUG] 成功加载{len(channels)}个通道配置")
             
             # 更新内存中的配置
             self._config = {**default_config, **channel_config}
@@ -948,7 +952,7 @@ class ChannelPanelHandler:
             }
         
         except Exception as e:
-            print(f"[ERROR] 加载远程通道配置失败: {e}")
+            self.logger.debug(f"[ERROR] 加载远程通道配置失败: {e}")
             # 返回备用配置
             return {
                 'channels': {
@@ -978,7 +982,7 @@ class ChannelPanelHandler:
             bool: 保存是否成功
         """
         try:
-            print(f"[DEBUG] 开始保存通道配置到服务端: {channel_data}")
+            self.logger.debug(f"[DEBUG] 开始保存通道配置到服务端: {channel_data}")
             
             # 获取当前完整配置
             current_config = {}
@@ -987,7 +991,7 @@ class ChannelPanelHandler:
             try:
                 current_config = self._remote_config_manager.load_channel_config()
             except Exception as e:
-                print(f"[DEBUG] 加载当前配置失败，使用空配置: {e}")
+                self.logger.debug(f"[DEBUG] 加载当前配置失败，使用空配置: {e}")
                 current_config = {}
             
             channels = channel_data.get('channels', {})
@@ -1029,12 +1033,12 @@ class ChannelPanelHandler:
             success = self._remote_config_manager.save_channel_config(current_config)
             
             if success:
-                print("[DEBUG] 通道配置已成功保存到服务端")
+                self.logger.debug("[DEBUG] 通道配置已成功保存到服务端")
                 # 更新内存中的配置
                 self._config = current_config
                 return True
             else:
-                print("[ERROR] 保存通道配置到服务端失败")
+                self.logger.debug("[ERROR] 保存通道配置到服务端失败")
                 QtWidgets.QMessageBox.warning(
                     self,
                     self.tr("保存失败"),
@@ -1043,7 +1047,7 @@ class ChannelPanelHandler:
                 return False
         
         except Exception as e:
-            print(f"[ERROR] 保存通道配置异常: {e}")
+            self.logger.debug(f"[ERROR] 保存通道配置异常: {e}")
             QtWidgets.QMessageBox.warning(
                 self,
                 self.tr("保存失败"),
@@ -1060,13 +1064,13 @@ class ChannelPanelHandler:
             hwnd: 预先获取的窗口句柄
         """
         try:
-            print(f"[通道连接] {channel_id} 开始连接RTSP相机")
+            self.logger.debug(f"[通道连接] {channel_id} 开始连接RTSP相机")
             
             # 解析RTSP地址
             rtsp_url = channel_config.get('address', '')
             username, password, ip, port = self._parseRTSP(rtsp_url)
             
-            print(f"[通道连接] RTSP解析结果: {ip}:{port}, 用户: {username}")
+            self.logger.debug(f"[通道连接] RTSP解析结果: {ip}:{port}, 用户: {username}")
             
             # 导入HKcapture
             import sys
@@ -1094,19 +1098,19 @@ class ChannelPanelHandler:
             # 设置HWND（如果有）
             if hwnd:
                 cap.set_hwnd(hwnd)
-                print(f"[通道连接] 设置HWND: {hwnd}")
+                self.logger.debug(f"[通道连接] 设置HWND: {hwnd}")
             
             # 打开相机连接
             if not cap.open():
                 raise Exception("无法打开相机连接")
             
-            print(f"[通道连接] {channel_id} 相机连接成功")
+            self.logger.debug(f"[通道连接] {channel_id} 相机连接成功")
             
             # 开始捕获
             if not cap.start_capture():
                 raise Exception("无法开始视频捕获")
             
-            print(f"[通道连接] {channel_id} 视频捕获已启动")
+            self.logger.debug(f"[通道连接] {channel_id} 视频捕获已启动")
             
             # 保存捕获对象
             self._channel_captures[channel_id] = cap
@@ -1120,10 +1124,10 @@ class ChannelPanelHandler:
             # 更新UI状态（在主线程中执行）
             QtCore.QTimer.singleShot(0, lambda: self._updateChannelConnectedUI(channel_id))
             
-            print(f"[通道连接] {channel_id} 连接完成")
+            self.logger.debug(f"[通道连接] {channel_id} 连接完成")
             
         except Exception as e:
-            print(f"[通道连接] {channel_id} 连接失败: {e}")
+            self.logger.debug(f"[通道连接] {channel_id} 连接失败: {e}")
             import traceback
             traceback.print_exc()
             self._channels_connecting.discard(channel_id)
@@ -1232,10 +1236,10 @@ class ChannelPanelHandler:
             # 更新状态栏
             self.statusBar().showMessage(f"通道 {channel_id} 已连接")
             
-            print(f"[UI更新] {channel_id} 连接状态已更新")
+            self.logger.debug(f"[UI更新] {channel_id} 连接状态已更新")
             
         except Exception as e:
-            print(f"[UI更新] {channel_id} 更新失败: {e}")
+            self.logger.debug(f"[UI更新] {channel_id} 更新失败: {e}")
         
         try:
             # 更新通道面板状态
@@ -1293,7 +1297,7 @@ class ChannelPanelHandler:
                 if cap and hasattr(cap, 'release'):
                     cap.release()
                 del self._channel_captures[channel_id]
-                print(f"[通道断开] {channel_id} 捕获对象已释放")
+                self.logger.debug(f"[通道断开] {channel_id} 捕获对象已释放")
             
             # 清理帧缓冲
             if hasattr(self, '_frame_buffers') and channel_id in self._frame_buffers:
@@ -1326,7 +1330,7 @@ class ChannelPanelHandler:
             self.statusBar().showMessage(f"通道 {channel_id} 已断开")
             
         except Exception as e:
-            print(f"[通道断开] {channel_id} 断开异常: {e}")
+            self.logger.debug(f"[通道断开] {channel_id} 断开异常: {e}")
             import traceback
             traceback.print_exc()
         
@@ -1499,7 +1503,7 @@ class ChannelPanelHandler:
                     if panel and hasattr(panel, 'hideOverlay'):
                         panel.hideOverlay()
         except Exception as e:
-            print(f"[WARNING] 隐藏 overlay 失败: {e}")
+            self.logger.debug(f"[WARNING] 隐藏 overlay 失败: {e}")
     
     def _showAllChannelOverlays(self):
         """显示所有通道的 InfoOverlay（对话框关闭后调用）"""
@@ -1511,7 +1515,7 @@ class ChannelPanelHandler:
                         if hasattr(panel, '_is_connected') and panel._is_connected:
                             panel.showOverlay()
         except Exception as e:
-            print(f"[WARNING] 显示 overlay 失败: {e}")
+            self.logger.debug(f"[WARNING] 显示 overlay 失败: {e}")
     
     def _loadChannelSettings(self, channel_id):
         """
@@ -1610,14 +1614,14 @@ class ChannelPanelHandler:
             channel_id: 通道ID
             hwnd: 预先获取的窗口句柄
         """
-        print(f"[视频流] {channel_id} 开始启动视频显示, hwnd={hwnd}")
+        self.logger.debug(f"[视频流] {channel_id} 开始启动视频显示, hwnd={hwnd}")
         
         if channel_id not in self._channel_captures:
-            print(f"[视频流] {channel_id} 不在 _channel_captures 中")
+            self.logger.debug(f"[视频流] {channel_id} 不在 _channel_captures 中")
             return
         
         cap = self._channel_captures[channel_id]
-        print(f"[视频流] 获取到 capture 对象: {cap}")
+        self.logger.debug(f"[视频流] 获取到 capture 对象: {cap}")
         
         # 无论是否有HWND，都启动帧数据存储线程（供标注功能使用）
         # 注释掉帧存储功能 - 不需要存储帧
@@ -1627,9 +1631,9 @@ class ChannelPanelHandler:
         if hwnd and hasattr(cap, 'start_render'):
             try:
                 cap.start_render()
-                print(f"[视频流] {channel_id} HWND直接渲染已启动")
+                self.logger.debug(f"[视频流] {channel_id} HWND直接渲染已启动")
             except Exception as e:
-                print(f"[视频流] {channel_id} HWND渲染启动失败: {e}")
+                self.logger.debug(f"[视频流] {channel_id} HWND渲染启动失败: {e}")
         else:
             # 如果没有HWND或不支持直接渲染，启动Qt显示线程
             self._startQtVideoDisplay(channel_id)
@@ -1647,9 +1651,9 @@ class ChannelPanelHandler:
                 if not context:
                     # 创建通道上下文
                     context = self.thread_manager.create_channel_context(channel_id)
-                    print(f"[帧存储] {channel_id} 创建了新的通道上下文")
+                    self.logger.debug(f"[帧存储] {channel_id} 创建了新的通道上下文")
                 else:
-                    print(f"[帧存储] {channel_id} 使用现有通道上下文")
+                    self.logger.debug(f"[帧存储] {channel_id} 使用现有通道上下文")
             
             # 创建帧缓冲队列（兼容旧代码）
             if not hasattr(self, '_frame_buffers'):
@@ -1668,10 +1672,10 @@ class ChannelPanelHandler:
             )
             storage_thread.start()
             
-            print(f"[帧存储] {channel_id} 帧存储线程已启动")
+            self.logger.debug(f"[帧存储] {channel_id} 帧存储线程已启动")
             
         except Exception as e:
-            print(f"[帧存储] {channel_id} 帧存储线程启动失败: {e}")
+            self.logger.debug(f"[帧存储] {channel_id} 帧存储线程启动失败: {e}")
     
     def _frameStorageLoop(self, channel_id):
         """帧存储循环线程（专门为标注功能提供帧数据）
@@ -1679,7 +1683,7 @@ class ChannelPanelHandler:
         Args:
             channel_id: 通道ID
         """
-        print(f"[帧存储] {channel_id} 开始运行")
+        self.logger.debug(f"[帧存储] {channel_id} 开始运行")
         
         frame_count = 0
         last_frame_time = time.time()
@@ -1711,7 +1715,7 @@ class ChannelPanelHandler:
                     # 每5秒统计一次帧率
                     if current_time - last_frame_time >= 5.0:
                         fps = frame_count / (current_time - last_frame_time)
-                        print(f"[帧存储] {channel_id} 存储帧率: {fps:.1f} fps")
+                        self.logger.debug(f"[帧存储] {channel_id} 存储帧率: {fps:.1f} fps")
                         frame_count = 0
                         last_frame_time = current_time
                     
@@ -1743,10 +1747,10 @@ class ChannelPanelHandler:
                     time.sleep(0.05)
                     
             except Exception as e:
-                print(f"[帧存储] {channel_id} 异常: {e}")
+                self.logger.debug(f"[帧存储] {channel_id} 异常: {e}")
                 time.sleep(0.1)
         
-        print(f"[帧存储] {channel_id} 已停止")
+        self.logger.debug(f"[帧存储] {channel_id} 已停止")
     
     def _startQtVideoDisplay(self, channel_id):
         """启动Qt视频显示线程
@@ -1772,10 +1776,10 @@ class ChannelPanelHandler:
             )
             display_thread.start()
             
-            print(f"[视频流] {channel_id} Qt显示线程已启动")
+            self.logger.debug(f"[视频流] {channel_id} Qt显示线程已启动")
             
         except Exception as e:
-            print(f"[视频流] {channel_id} Qt显示线程启动失败: {e}")
+            self.logger.debug(f"[视频流] {channel_id} Qt显示线程启动失败: {e}")
     
     def _qtDisplayLoop(self, channel_id):
         """Qt视频显示循环线程
@@ -1783,7 +1787,7 @@ class ChannelPanelHandler:
         Args:
             channel_id: 通道ID
         """
-        print(f"[Qt显示] {channel_id} 开始运行")
+        self.logger.debug(f"[Qt显示] {channel_id} 开始运行")
         
         frame_count = 0
         last_frame_time = time.time()
@@ -1805,7 +1809,7 @@ class ChannelPanelHandler:
                     # 每秒统计一次帧率
                     if current_time - last_frame_time >= 1.0:
                         fps = frame_count / (current_time - last_frame_time)
-                        print(f"[Qt显示] {channel_id} 帧率: {fps:.1f} fps")
+                        self.logger.debug(f"[Qt显示] {channel_id} 帧率: {fps:.1f} fps")
                         frame_count = 0
                         last_frame_time = current_time
                     
@@ -1819,10 +1823,10 @@ class ChannelPanelHandler:
                     time.sleep(0.01)
                     
             except Exception as e:
-                print(f"[Qt显示] {channel_id} 异常: {e}")
+                self.logger.debug(f"[Qt显示] {channel_id} 异常: {e}")
                 time.sleep(0.1)
         
-        print(f"[Qt显示] {channel_id} 已停止")
+        self.logger.debug(f"[Qt显示] {channel_id} 已停止")
         
                 
 
@@ -2110,17 +2114,17 @@ class ChannelPanelHandler:
             dict: 液位线位置数据，格式：{area_idx: position_data}
         """
         if channel_id not in self._liquid_line_locks:
-            print(f"[UI-Draw] Step 6: No lock for {channel_id}")
+            self.logger.debug(f"[UI-Draw] Step 6: No lock for {channel_id}")
             return {}
 
         with self._liquid_line_locks[channel_id]:
             positions = self._liquid_line_positions.get(channel_id, {})
             if positions:
-                print(f"[UI-Draw] Step 7: Got {len(positions)} positions from _liquid_line_positions[{channel_id}]")
+                self.logger.debug(f"[UI-Draw] Step 7: Got {len(positions)} positions from _liquid_line_positions[{channel_id}]")
                 for idx, pos in positions.items():
-                    print(f"[UI-Draw]   ROI {idx}: y={pos.get('y')}, height={pos.get('height_mm')}mm")
+                    self.logger.debug(f"[UI-Draw]   ROI {idx}: y={pos.get('y')}, height={pos.get('height_mm')}mm")
             else:
-                print(f"[UI-Draw] Step 7: No positions in _liquid_line_positions[{channel_id}]")
+                self.logger.debug(f"[UI-Draw] Step 7: No positions in _liquid_line_positions[{channel_id}]")
             # 复制后清空，确保每次只绘制最新的检测结果
             self._liquid_line_positions[channel_id] = {}
             return positions.copy()
@@ -2142,7 +2146,7 @@ class ChannelPanelHandler:
         if not liquid_positions:
             return frame
 
-        print(f"[UI-Draw] Step 8: Drawing {len(liquid_positions)} liquid lines on frame")
+        self.logger.debug(f"[UI-Draw] Step 8: Drawing {len(liquid_positions)} liquid lines on frame")
 
         # 复制帧以避免修改原始数据
         display_frame = frame.copy()
@@ -2156,7 +2160,7 @@ class ChannelPanelHandler:
                 y_absolute = position_data.get('y', position_data.get('y_absolute', 0))
                 height_mm = position_data.get('height_mm', 0)
 
-                print(f"[UI-Draw]   ROI {area_idx}: Drawing line from ({left},{y_absolute}) to ({right},{y_absolute}), height={height_mm}mm")
+                self.logger.debug(f"[UI-Draw]   ROI {area_idx}: Drawing line from ({left},{y_absolute}) to ({right},{y_absolute}), height={height_mm}mm")
 
                 # 绘制红色液位线
                 cv2.line(display_frame, (int(left), int(y_absolute)),
@@ -2170,13 +2174,13 @@ class ChannelPanelHandler:
                 cv2.putText(display_frame, text, (int(left) + 5, int(y_absolute) - 10),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-                print(f"[UI-Draw]   ROI {area_idx}: DRAWN successfully")
+                self.logger.debug(f"[UI-Draw]   ROI {area_idx}: DRAWN successfully")
 
             except Exception as e:
-                print(f"[UI-Draw]   ROI {area_idx}: ERROR - {e}")
+                self.logger.debug(f"[UI-Draw]   ROI {area_idx}: ERROR - {e}")
                 continue
 
-        print(f"[UI-Draw] Step 9: Frame drawing complete")
+        self.logger.debug(f"[UI-Draw] Step 9: Frame drawing complete")
         return display_frame
     
     def _updateVideoDisplay(self, channel_id, frame_or_data):
@@ -2196,7 +2200,7 @@ class ChannelPanelHandler:
             if hasattr(self, '_video_display_signal') and self._video_display_signal:
                 self._video_display_signal.update_display.emit(channel_id, frame_or_data)
         except Exception as e:
-            print(f"[ERROR] _updateVideoDisplay 异常: {e}")
+            self.logger.debug(f"[ERROR] _updateVideoDisplay 异常: {e}")
     
     def _updateVideoDisplayUI(self, channel_id, frame_or_data):
         """
@@ -2253,7 +2257,7 @@ class ChannelPanelHandler:
                 # 同步更新放大窗口
                 self._updateAmplifyWindows(channel_id, frame_or_data)
         except Exception as e:
-            print(f"[ERROR] 更新视频显示失败: {e}")
+            self.logger.debug(f"[ERROR] 更新视频显示失败: {e}")
     
     
     def _releaseChannel(self, channel_id):
@@ -2577,7 +2581,7 @@ class ChannelPanelHandler:
     def _reloadChannelConfig(self):
         """重新从服务端加载通道配置"""
         try:
-            print("[DEBUG] 开始从服务端重新加载通道配置")
+            self.logger.debug("[DEBUG] 开始从服务端重新加载通道配置")
             
             # 刷新远程配置缓存
             self._remote_config_manager.refresh_config_cache()
@@ -2589,7 +2593,7 @@ class ChannelPanelHandler:
             # 合并配置
             self._config = {**default_config, **channel_config}
             
-            print("[DEBUG] 成功从服务端重新加载配置")
+            self.logger.debug("[DEBUG] 成功从服务端重新加载配置")
             
             # 更新每个通道面板的名称显示
             for i in range(1, 17):  # 支持16个通道
@@ -2614,12 +2618,12 @@ class ChannelPanelHandler:
                 # 更新面板显示的名称
                 if hasattr(panel, 'setChannelName'):
                     panel.setChannelName(channel_name)
-                    print(f"[DEBUG] 更新通道{i}名称为: {channel_name}")
+                    self.logger.debug(f"[DEBUG] 更新通道{i}名称为: {channel_name}")
             
-            print("[DEBUG] 通道配置重新加载完成")
+            self.logger.debug("[DEBUG] 通道配置重新加载完成")
             
         except Exception as e:
-            print(f"[ERROR] 重新加载通道配置失败: {e}")
+            self.logger.debug(f"[ERROR] 重新加载通道配置失败: {e}")
             import traceback
             traceback.print_exc()
     
@@ -2673,25 +2677,25 @@ class ChannelPanelHandler:
             data: 检测结果数据
         """
         try:
-            print(f"[UI-Draw] Step 1: Received WebSocket detection result")
+            self.logger.debug(f"[UI-Draw] Step 1: Received WebSocket detection result")
 
             # 提取通道ID
             channel_id = data.get('channel_id')
             if not channel_id:
-                print(f"[UI-Draw] ERROR: No channel_id")
+                self.logger.debug(f"[UI-Draw] ERROR: No channel_id")
                 return
 
-            print(f"[UI-Draw] Step 2: Channel ID = {channel_id}")
+            self.logger.debug(f"[UI-Draw] Step 2: Channel ID = {channel_id}")
 
             # 提取检测结果数据
             data_obj = data.get('data', {})
             liquid_line_positions = data_obj.get('liquid_line_positions', {})
 
             if not liquid_line_positions:
-                print(f"[UI-Draw] ERROR: No liquid_line_positions")
+                self.logger.debug(f"[UI-Draw] ERROR: No liquid_line_positions")
                 return
 
-            print(f"[UI-Draw] Step 3: Got liquid_line_positions with {len(liquid_line_positions)} ROIs")
+            self.logger.debug(f"[UI-Draw] Step 3: Got liquid_line_positions with {len(liquid_line_positions)} ROIs")
 
             # 转换key从字符串到整数
             converted_positions = {}
@@ -2699,7 +2703,7 @@ class ChannelPanelHandler:
                 try:
                     int_key = int(key)
                     converted_positions[int_key] = value
-                    print(f"[UI-Draw] Step 4: ROI {int_key} - y={value.get('y')}, height={value.get('height_mm')}mm")
+                    self.logger.debug(f"[UI-Draw] Step 4: ROI {int_key} - y={value.get('y')}, height={value.get('height_mm')}mm")
                 except (ValueError, TypeError):
                     converted_positions[key] = value
 
@@ -2711,12 +2715,12 @@ class ChannelPanelHandler:
             with self._liquid_line_locks[channel_id]:
                 self._liquid_line_positions[channel_id] = converted_positions.copy()
 
-            print(f"[UI-Draw] Step 5: Updated _liquid_line_positions[{channel_id}]")
+            self.logger.debug(f"[UI-Draw] Step 5: Updated _liquid_line_positions[{channel_id}]")
 
             # 🔥 直接更新ChannelPanel的液位线显示（用于HWND模式）
             panel = self._channel_panels_map.get(channel_id)
             if panel:
-                print(f"[UI-Draw] Step 6: Found ChannelPanel for {channel_id}")
+                self.logger.debug(f"[UI-Draw] Step 6: Found ChannelPanel for {channel_id}")
 
                 # 获取视频尺寸（从通道配置或默认值）
                 video_width = 1920  # 默认值，可以从配置读取
@@ -2728,8 +2732,8 @@ class ChannelPanelHandler:
                     video_width = config.get('width', 1920)
                     video_height = config.get('height', 1080)
 
-                print(f"[UI-Draw] Step 7: Video size = {video_width}x{video_height}")
-                print(f"[UI-Draw] Step 8: Calling panel.updateLiquidLines()...")
+                self.logger.debug(f"[UI-Draw] Step 7: Video size = {video_width}x{video_height}")
+                self.logger.debug(f"[UI-Draw] Step 8: Calling panel.updateLiquidLines()...")
 
                 # 调用ChannelPanel的updateLiquidLines方法
                 panel.updateLiquidLines(
@@ -2739,13 +2743,13 @@ class ChannelPanelHandler:
                     video_height=video_height
                 )
 
-                print(f"[UI-Draw] Step 9: panel.updateLiquidLines() called successfully")
-                print(f"[UI-Draw] SUCCESS: Liquid lines should now be visible on UI")
+                self.logger.debug(f"[UI-Draw] Step 9: panel.updateLiquidLines() called successfully")
+                self.logger.debug(f"[UI-Draw] SUCCESS: Liquid lines should now be visible on UI")
             else:
-                print(f"[UI-Draw] WARNING: No ChannelPanel found for {channel_id}")
-                print(f"[UI-Draw] Available panels: {list(self._channel_panels_map.keys())}")
+                self.logger.debug(f"[UI-Draw] WARNING: No ChannelPanel found for {channel_id}")
+                self.logger.debug(f"[UI-Draw] Available panels: {list(self._channel_panels_map.keys())}")
 
         except Exception as e:
-            print(f"[UI-Draw] ERROR: {e}")
+            self.logger.debug(f"[UI-Draw] ERROR: {e}")
             import traceback
             traceback.print_exc()

@@ -16,6 +16,7 @@
 import os
 import json
 import yaml
+import logging
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtCore import Qt
 import cv2
@@ -37,6 +38,7 @@ class GeneralSetPanelHandler:
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.logger = logging.getLogger('client')
         self.general_set_panel = None
         self.annotation_widget = None
         self.annotation_engine = None
@@ -142,10 +144,10 @@ class GeneralSetPanelHandler:
                 widget = self.general_set_panel.model_setting_widget
                 if hasattr(widget, 'setModelList'):
                     widget.setModelList(model_list)
-                    print(f"[Handler] 从服务端加载了 {len(model_list)} 个模型")
+                    self.logger.debug(f"[Handler] 从服务端加载了 {len(model_list)} 个模型")
                     
         except Exception as e:
-            print(f"[Handler] 从服务端刷新模型列表失败: {e}")
+            self.logger.debug(f"[Handler] 从服务端刷新模型列表失败: {e}")
             import traceback
             traceback.print_exc()
             
@@ -170,7 +172,7 @@ class GeneralSetPanelHandler:
         try:
             ssh_manager = remote_config_manager._get_ssh_manager()
             if not ssh_manager:
-                print("[Handler] SSH连接不可用，无法扫描远程模型")
+                self.logger.debug("[Handler] SSH连接不可用，无法扫描远程模型")
                 return model_list
             
             # 服务端模型目录路径
@@ -185,7 +187,7 @@ class GeneralSetPanelHandler:
                 stdout = result['stdout'].strip()
                 
                 if stdout == 'NO_MODELS_FOUND' or not stdout:
-                    print(f"[Handler] 服务端模型目录为空或不存在: {server_model_path}")
+                    self.logger.debug(f"[Handler] 服务端模型目录为空或不存在: {server_model_path}")
                     return model_list
                 
                 # 解析模型文件列表
@@ -236,16 +238,16 @@ class GeneralSetPanelHandler:
                         model_list.append(model_info)
                         
                     except Exception as e:
-                        print(f"[Handler] 解析模型文件信息失败 {model_file}: {e}")
+                        self.logger.debug(f"[Handler] 解析模型文件信息失败 {model_file}: {e}")
                         continue
                 
-                print(f"[Handler] 从服务端扫描到 {len(model_list)} 个模型文件")
+                self.logger.debug(f"[Handler] 从服务端扫描到 {len(model_list)} 个模型文件")
                 
             else:
-                print(f"[Handler] 扫描服务端模型目录失败: {result.get('stderr', '未知错误')}")
+                self.logger.debug(f"[Handler] 扫描服务端模型目录失败: {result.get('stderr', '未知错误')}")
         
         except Exception as e:
-            print(f"[Handler] 扫描远程模型异常: {e}")
+            self.logger.debug(f"[Handler] 扫描远程模型异常: {e}")
             import traceback
             traceback.print_exc()
         
@@ -305,25 +307,25 @@ class GeneralSetPanelHandler:
             if self.general_set_panel:
                 self.general_set_panel.setTaskIdOptions(task_ids)
         except Exception as e:
-            print(f"[Handler] 加载任务ID选项失败: {e}")
+            self.logger.debug(f"[Handler] 加载任务ID选项失败: {e}")
             import traceback
             traceback.print_exc()
     
     def _handleLoadSettings(self):
         """处理加载设置请求 - 从服务端 channel_config.yaml 加载"""
         try:
-            print(f"[DEBUG] _handleLoadSettings 被调用")
+            self.logger.debug(f"[DEBUG] _handleLoadSettings 被调用")
             
             if not self.general_set_panel:
-                print(f"[DEBUG] general_set_panel 为空，退出")
+                self.logger.debug(f"[DEBUG] general_set_panel 为空，退出")
                 return
             
             if not self.general_set_panel.channel_id:
-                print(f"[DEBUG] channel_id 为空，退出")
+                self.logger.debug(f"[DEBUG] channel_id 为空，退出")
                 return
             
             channel_id = self.general_set_panel.channel_id
-            print(f"[DEBUG] 正在为通道 {channel_id} 加载设置")
+            self.logger.debug(f"[DEBUG] 正在为通道 {channel_id} 加载设置")
             
             # 使用远程配置管理器从服务端加载配置
             try:
@@ -335,36 +337,36 @@ class GeneralSetPanelHandler:
                     RemoteConfigManager = None
                     
             if not RemoteConfigManager:
-                print(f"[Handler] 远程配置管理器不可用")
+                self.logger.debug(f"[Handler] 远程配置管理器不可用")
                 if self.general_set_panel:
                     self.general_set_panel.showLoadmission_result(False, "远程配置管理器不可用")
                 return
                 
             remote_config = RemoteConfigManager()
             
-            print(f"[DEBUG] 正在从服务端加载通道配置...")
+            self.logger.debug(f"[DEBUG] 正在从服务端加载通道配置...")
             config = remote_config.load_channel_config()
             
             if not config:
-                print(f"[DEBUG] 服务端通道配置为空")
+                self.logger.debug(f"[DEBUG] 服务端通道配置为空")
                 if self.general_set_panel:
                     self.general_set_panel.showLoadmission_result(False, "无法从服务端加载通道配置")
                 return
             
-            print(f"[DEBUG] 成功从服务端加载通道配置，包含通道: {list(config.keys())}")
+            self.logger.debug(f"[DEBUG] 成功从服务端加载通道配置，包含通道: {list(config.keys())}")
             
             # 获取该通道的配置
             if channel_id not in config:
-                print(f"[DEBUG] 通道 {channel_id} 在服务端配置中不存在")
+                self.logger.debug(f"[DEBUG] 通道 {channel_id} 在服务端配置中不存在")
                 if self.general_set_panel:
                     self.general_set_panel.showLoadmission_result(False, f"通道 {channel_id} 的配置在服务端不存在")
                 return
             
             channel_config = config[channel_id]
-            print(f"[DEBUG] 找到通道 {channel_id} 的配置: {list(channel_config.keys())}")
+            self.logger.debug(f"[DEBUG] 找到通道 {channel_id} 的配置: {list(channel_config.keys())}")
             
             general_config = channel_config.get('general', {})
-            print(f"[DEBUG] 通道 {channel_id} 的通用配置: {general_config}")
+            self.logger.debug(f"[DEBUG] 通道 {channel_id} 的通用配置: {general_config}")
             
             # 🔥 先刷新任务编号选项列表，确保下拉框包含所有任务编号
             self._handleLoadTaskIdOptions()
@@ -387,7 +389,7 @@ class GeneralSetPanelHandler:
                 'logic_config': channel_config.get('logic', {})
             }
             
-            print(f"[DEBUG] 构建的设置: {settings}")
+            self.logger.debug(f"[DEBUG] 构建的设置: {settings}")
             
             #  同时更新widget缓存的area_count
             area_count = general_config.get('area_count', 0)
@@ -396,10 +398,10 @@ class GeneralSetPanelHandler:
             # 设置到面板
             if self.general_set_panel:
                 self.general_set_panel.setSettings(settings)
-                print(f"[DEBUG] 成功设置通道 {channel_id} 的配置到面板")
+                self.logger.debug(f"[DEBUG] 成功设置通道 {channel_id} 的配置到面板")
                 
         except Exception as e:
-            print(f"[DEBUG] 加载设置失败: {str(e)}")
+            self.logger.debug(f"[DEBUG] 加载设置失败: {str(e)}")
             import traceback
             traceback.print_exc()
             if self.general_set_panel:
@@ -420,7 +422,7 @@ class GeneralSetPanelHandler:
             default_config = remote_config_manager.load_default_config()
             
             if not default_config:
-                print(f"[Handler] 无法从服务端加载配置")
+                self.logger.debug(f"[Handler] 无法从服务端加载配置")
                 return
             
             # 获取通道特定的模型路径
@@ -456,12 +458,12 @@ class GeneralSetPanelHandler:
                         model_config, absolute_path, channel_model_key
                     )
             else:
-                print(f"[Handler] 未找到通道 {channel_id} 的模型配置")
+                self.logger.debug(f"[Handler] 未找到通道 {channel_id} 的模型配置")
                 if self.general_set_panel:
                     self.general_set_panel.setModelPathDisplay("")
         
         except Exception as e:
-            print(f"[Handler] 加载模型配置失败: {e}")
+            self.logger.debug(f"[Handler] 加载模型配置失败: {e}")
             import traceback
             traceback.print_exc()
     
@@ -469,7 +471,7 @@ class GeneralSetPanelHandler:
         """处理自动保存模型路径请求 - 使用远程配置管理器"""
         try:
             if not self.general_set_panel or not self.general_set_panel.channel_id:
-                print(f"[Handler] 无法保存：channel_id 为空")
+                self.logger.debug(f"[Handler] 无法保存：channel_id 为空")
                 return
             
             channel_id = self.general_set_panel.channel_id
@@ -486,7 +488,7 @@ class GeneralSetPanelHandler:
             default_config = remote_config_manager.load_default_config()
             
             if not default_config:
-                print(f"[Handler] 无法从服务端加载配置")
+                self.logger.debug(f"[Handler] 无法从服务端加载配置")
                 return
             
             # 获取项目根目录
@@ -512,7 +514,7 @@ class GeneralSetPanelHandler:
             
             # 保存配置到服务端（这里需要实现保存默认配置的功能）
             # 注意：RemoteConfigManager 目前只支持保存通道配置，需要扩展支持默认配置
-            print(f"[Handler] 已更新模型路径配置:")
+            self.logger.debug(f"[Handler] 已更新模型路径配置:")
             print(f"  通道: {channel_id}")
             print(f"  配置键: {channel_model_key}")
             print(f"  绝对路径: {model_path}")
@@ -520,7 +522,7 @@ class GeneralSetPanelHandler:
             print(f"  注意: 当前版本暂不支持保存到服务端，仅在内存中更新")
             
         except Exception as e:
-            print(f"[Handler] 保存模型路径失败: {e}")
+            self.logger.debug(f"[Handler] 保存模型路径失败: {e}")
             import traceback
             traceback.print_exc()
     
@@ -637,10 +639,10 @@ class GeneralSetPanelHandler:
     def _handleDetectionStartRequest(self):
         """处理开始检测请求"""
         try:
-            print(f"[检测启动] 开始处理检测启动请求")
+            self.logger.debug(f"[检测启动] 开始处理检测启动请求")
             
             if not self.general_set_panel or not self.general_set_panel.channel_id:
-                print(f"[检测启动] 通道ID检查失败: panel={self.general_set_panel is not None}, channel_id={getattr(self.general_set_panel, 'channel_id', None)}")
+                self.logger.debug(f"[检测启动] 通道ID检查失败: panel={self.general_set_panel is not None}, channel_id={getattr(self.general_set_panel, 'channel_id', None)}")
                 self._showWarningDialog(
                     self.general_set_panel,
                     "启动失败",
@@ -649,14 +651,14 @@ class GeneralSetPanelHandler:
                 return
             
             channel_id = self.general_set_panel.channel_id
-            print(f"[检测启动] 通道ID: {channel_id}")
+            self.logger.debug(f"[检测启动] 通道ID: {channel_id}")
             
             # 检查网络命令管理器状态
-            print(f"[检测启动] 检查网络命令管理器状态...")
+            self.logger.debug(f"[检测启动] 检查网络命令管理器状态...")
             print(f"  - hasattr(self, 'ws_client'): {hasattr(self, 'ws_client')}")
 
             if not hasattr(self, 'ws_client') or self.ws_client is None:
-                print(f"[检测启动] 网络命令管理器不存在")
+                self.logger.debug(f"[检测启动] 网络命令管理器不存在")
                 QtWidgets.QMessageBox.warning(
                     self.general_set_panel,
                     "启动失败",
@@ -678,15 +680,15 @@ class GeneralSetPanelHandler:
 
             # 尝试发送命令
             if is_connected:
-                print(f"[检测启动] 网络已连接，先订阅通道，再启动检测...")
+                self.logger.debug(f"[检测启动] 网络已连接，先订阅通道，再启动检测...")
 
                 # 步骤1: 订阅通道（必须先订阅才能接收检测结果）
-                print(f"[检测启动] 步骤1: 订阅通道 {channel_id}")
+                self.logger.debug(f"[检测启动] 步骤1: 订阅通道 {channel_id}")
                 if hasattr(self.ws_client, 'send_subscribe_command'):
                     subscribe_success = self.ws_client.send_subscribe_command(channel_id)
-                    print(f"[检测启动] 订阅命令发送结果: {subscribe_success}")
+                    self.logger.debug(f"[检测启动] 订阅命令发送结果: {subscribe_success}")
                 else:
-                    print(f"[检测启动] [WARN] ws_client没有send_subscribe_command方法")
+                    self.logger.debug(f"[检测启动] [WARN] ws_client没有send_subscribe_command方法")
                     subscribe_success = False
 
                 # 等待订阅完成
@@ -694,14 +696,14 @@ class GeneralSetPanelHandler:
                 time.sleep(0.5)
 
                 # 步骤2: 启动检测
-                print(f"[检测启动] 步骤2: 发送启动检测命令")
+                self.logger.debug(f"[检测启动] 步骤2: 发送启动检测命令")
                 if hasattr(self.ws_client, 'send_detection_command'):
                     success = self.ws_client.send_detection_command(channel_id, 'start_detection')
                 else:
                     # 向后兼容旧的接口
                     success = self.ws_client.send_command('start_detection', channel_id=channel_id)
 
-                print(f"[检测启动] 命令发送结果: {success}")
+                self.logger.debug(f"[检测启动] 命令发送结果: {success}")
 
                 if success:
                     QtWidgets.QMessageBox.information(
@@ -710,14 +712,14 @@ class GeneralSetPanelHandler:
                         f"通道 {channel_id} 的检测功能已成功启动！\n\n服务端正在进行液位检测..."
                     )
                 else:
-                    print(f"[检测启动] 命令发送失败")
+                    self.logger.debug(f"[检测启动] 命令发送失败")
                     QtWidgets.QMessageBox.warning(
                         self.general_set_panel,
                         "启动失败",
                         "发送检测启动命令失败"
                     )
             else:
-                print(f"[检测启动] 网络未连接，尝试强制重连...")
+                self.logger.debug(f"[检测启动] 网络未连接，尝试强制重连...")
 
                 # 尝试强制重连
                 if hasattr(self.ws_client, 'force_reconnect'):
@@ -735,19 +737,19 @@ class GeneralSetPanelHandler:
                             is_connected = self.ws_client.is_connected
                         
                         if is_connected:
-                            print(f"[检测启动] 重连成功，先订阅通道，再发送检测命令...")
+                            self.logger.debug(f"[检测启动] 重连成功，先订阅通道，再发送检测命令...")
 
                             # 步骤1: 订阅通道
-                            print(f"[检测启动] 步骤1: 订阅通道 {channel_id}")
+                            self.logger.debug(f"[检测启动] 步骤1: 订阅通道 {channel_id}")
                             if hasattr(self.ws_client, 'send_subscribe_command'):
                                 subscribe_success = self.ws_client.send_subscribe_command(channel_id)
-                                print(f"[检测启动] 订阅命令发送结果: {subscribe_success}")
+                                self.logger.debug(f"[检测启动] 订阅命令发送结果: {subscribe_success}")
 
                             # 等待订阅完成
                             time.sleep(0.5)
 
                             # 步骤2: 启动检测
-                            print(f"[检测启动] 步骤2: 发送启动检测命令")
+                            self.logger.debug(f"[检测启动] 步骤2: 发送启动检测命令")
                             if hasattr(self.ws_client, 'send_detection_command'):
                                 success = self.ws_client.send_detection_command(channel_id, 'start_detection')
                             else:
@@ -785,7 +787,7 @@ class GeneralSetPanelHandler:
                 )
 
         except Exception as e:
-            print(f"[检测启动] 异常: {e}")
+            self.logger.debug(f"[检测启动] 异常: {e}")
             import traceback
             traceback.print_exc()
             if self.general_set_panel:
@@ -957,7 +959,7 @@ class GeneralSetPanelHandler:
                         channel_config = config.get(self.general_set_panel.channel_id, {})
                         video_path = channel_config.get('video_path', '')
                     else:
-                        print("[标注] 无法从服务端加载配置")
+                        self.logger.debug("[标注] 无法从服务端加载配置")
                         video_path = ''
             
             if not video_path or not os.path.exists(video_path):
@@ -977,13 +979,13 @@ class GeneralSetPanelHandler:
                     ret, frame = cap.read()
                     cap.release()
                     if ret:
-                        print(f"[标注] 从视频文件获取帧成功: {video_path}")
+                        self.logger.debug(f"[标注] 从视频文件获取帧成功: {video_path}")
                         return frame
             elif file_ext in image_extensions:
                 # 图片文件：直接读取
                 frame = cv2.imread(video_path)
                 if frame is not None:
-                    print(f"[标注] 从图片文件获取帧成功: {video_path}")
+                    self.logger.debug(f"[标注] 从图片文件获取帧成功: {video_path}")
                     return frame
                 else:
                     # 尝试使用PIL读取（处理中文路径）
@@ -997,10 +999,10 @@ class GeneralSetPanelHandler:
                             frame = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGBA2BGR)
                         else:
                             frame = np.array(pil_image)
-                        print(f"[标注] 使用PIL从图片文件获取帧成功: {video_path}")
+                        self.logger.debug(f"[标注] 使用PIL从图片文件获取帧成功: {video_path}")
                         return frame
                     except Exception as pil_e:
-                        print(f"[标注] PIL读取图片失败: {pil_e}")
+                        self.logger.debug(f"[标注] PIL读取图片失败: {pil_e}")
             elif os.path.isdir(video_path):
                 # 文件夹：读取第一张图片
                 for file in os.listdir(video_path):
@@ -1008,13 +1010,13 @@ class GeneralSetPanelHandler:
                         image_path = os.path.join(video_path, file)
                         frame = cv2.imread(image_path)
                         if frame is not None:
-                            print(f"[标注] 从文件夹获取帧成功: {image_path}")
+                            self.logger.debug(f"[标注] 从文件夹获取帧成功: {image_path}")
                             return frame
             
             return None
             
         except Exception as e:
-            print(f"[标注] 从视频路径获取帧失败: {e}")
+            self.logger.debug(f"[标注] 从视频路径获取帧失败: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -1033,7 +1035,7 @@ class GeneralSetPanelHandler:
                 return
             
             channel_id = self.general_set_panel.channel_id
-            print(f"[标注调试] 开始为通道 {channel_id} 启动标注")
+            self.logger.debug(f"[标注调试] 开始为通道 {channel_id} 启动标注")
             
             # 创建标注管理器（如果还没有）
             if not hasattr(self, '_annotation_manager') or not self._annotation_manager:
@@ -1044,20 +1046,20 @@ class GeneralSetPanelHandler:
                 self._annotation_manager.annotationCompleted.connect(self._on_annotation_manager_completed)
                 self._annotation_manager.annotationFailed.connect(self._on_annotation_manager_failed)
                 
-                print(f"[标注调试] 标注管理器已创建")
+                self.logger.debug(f"[标注调试] 标注管理器已创建")
             
             # 启动标注流程
             success = self._annotation_manager.start_annotation(channel_id)
             
             if success:
-                print(f"[标注调试] 标注流程启动成功")
+                self.logger.debug(f"[标注调试] 标注流程启动成功")
             else:
-                print(f"[标注调试] 标注流程启动失败")
+                self.logger.debug(f"[标注调试] 标注流程启动失败")
             
-            print(f"[标注调试] ========== 标注请求处理完成 ==========\n")
+            self.logger.debug(f"[标注调试] ========== 标注请求处理完成 ==========\n")
             
         except Exception as e:
-            print(f"[标注调试] 标注请求处理异常: {e}")
+            self.logger.debug(f"[标注调试] 标注请求处理异常: {e}")
             import traceback
             traceback.print_exc()
             
@@ -1066,7 +1068,7 @@ class GeneralSetPanelHandler:
                 "标注异常",
                 f"标注功能发生异常：\n{str(e)}"
             )
-            print(f"[标注调试] ========== 标注请求处理异常结束 ==========\n")
+            self.logger.debug(f"[标注调试] ========== 标注请求处理异常结束 ==========\n")
     
     def _on_annotation_manager_completed(self, channel_id, annotation_data):
         """
@@ -1077,7 +1079,7 @@ class GeneralSetPanelHandler:
             annotation_data: 标注数据
         """
         try:
-            print(f"[标注处理] 通道 {channel_id} 标注完成")
+            self.logger.debug(f"[标注处理] 通道 {channel_id} 标注完成")
             
             # 更新面板状态
             if self.general_set_panel:
@@ -1098,12 +1100,12 @@ class GeneralSetPanelHandler:
                         if pixmap:
                             self.general_set_panel.showAnnotationmission_result(pixmap, area_count)
                     except Exception as e:
-                        print(f"[标注处理] 显示标注结果图像失败: {e}")
+                        self.logger.debug(f"[标注处理] 显示标注结果图像失败: {e}")
             
-            print(f"[标注处理] 标注完成处理结束")
+            self.logger.debug(f"[标注处理] 标注完成处理结束")
             
         except Exception as e:
-            print(f"[标注处理] 处理标注完成异常: {e}")
+            self.logger.debug(f"[标注处理] 处理标注完成异常: {e}")
             import traceback
             traceback.print_exc()
     
@@ -1116,7 +1118,7 @@ class GeneralSetPanelHandler:
             error_message: 错误信息
         """
         try:
-            print(f"[标注处理] 通道 {channel_id} 标注失败: {error_message}")
+            self.logger.debug(f"[标注处理] 通道 {channel_id} 标注失败: {error_message}")
             
             QtWidgets.QMessageBox.warning(
                 self.main_window if hasattr(self, 'main_window') else None,
@@ -1125,7 +1127,7 @@ class GeneralSetPanelHandler:
             )
             
         except Exception as e:
-            print(f"[标注处理] 处理标注失败异常: {e}")
+            self.logger.debug(f"[标注处理] 处理标注失败异常: {e}")
             
             # 3. 创建标注界面组件
             annotation_widget = self.showAnnotationWidget(self.general_set_panel)
@@ -1206,13 +1208,13 @@ class GeneralSetPanelHandler:
             else:
                 pass
             
-            print(f"[标注调试] ========== 标注请求处理完成 ==========\n")
+            self.logger.debug(f"[标注调试] ========== 标注请求处理完成 ==========\n")
             
         except Exception as e:
-            print(f"[标注调试] 标注请求处理异常: {e}")
+            self.logger.debug(f"[标注调试] 标注请求处理异常: {e}")
             import traceback
             traceback.print_exc()
-            print(f"[标注调试] ========== 标注请求处理异常结束 ==========\n")
+            self.logger.debug(f"[标注调试] ========== 标注请求处理异常结束 ==========\n")
     
     def _saveAnnotationmission_result(self, channel_id, boxes, bottoms, tops, area_names=None, area_heights=None, init_levels=None, area_states=None):
         """
@@ -1341,17 +1343,17 @@ class GeneralSetPanelHandler:
             import yaml
             
             print(f"\n[DEBUG] ========== 同步到 channel_config.yaml ==========")
-            print(f"[DEBUG] 通道ID: {channel_id}")
-            print(f"[DEBUG] 区域数量: {area_count}")
-            print(f"[DEBUG] 区域配置: {areas_config}")
+            self.logger.debug(f"[DEBUG] 通道ID: {channel_id}")
+            self.logger.debug(f"[DEBUG] 区域数量: {area_count}")
+            self.logger.debug(f"[DEBUG] 区域配置: {areas_config}")
             
             # 配置文件路径（使用统一的项目根目录）
             project_root = get_project_root()
             config_dir = os.path.join(project_root, 'database', 'config')
             config_file = os.path.join(config_dir, 'channel_config.yaml')
             
-            print(f"[DEBUG] 配置文件路径: {config_file}")
-            print(f"[DEBUG] 文件是否存在: {os.path.exists(config_file)}")
+            self.logger.debug(f"[DEBUG] 配置文件路径: {config_file}")
+            self.logger.debug(f"[DEBUG] 文件是否存在: {os.path.exists(config_file)}")
             
             # 确保目录存在
             os.makedirs(config_dir, exist_ok=True)
@@ -1360,28 +1362,28 @@ class GeneralSetPanelHandler:
             if os.path.exists(config_file):
                 with open(config_file, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f) or {}
-                print(f"[DEBUG] 已读取现有配置，包含通道: {list(config.keys())}")
+                self.logger.debug(f"[DEBUG] 已读取现有配置，包含通道: {list(config.keys())}")
             else:
                 config = {}
-                print(f"[DEBUG] 配置文件不存在，创建新配置")
+                self.logger.debug(f"[DEBUG] 配置文件不存在，创建新配置")
             
             # 如果该通道不存在，创建新通道配置
             if channel_id not in config:
-                print(f"[DEBUG] 通道 {channel_id} 不存在，创建新配置")
+                self.logger.debug(f"[DEBUG] 通道 {channel_id} 不存在，创建新配置")
                 config[channel_id] = {}
             else:
-                print(f"[DEBUG] 通道 {channel_id} 已存在")
+                self.logger.debug(f"[DEBUG] 通道 {channel_id} 已存在")
             
             # 确保 general 配置存在
             if 'general' not in config[channel_id]:
-                print(f"[DEBUG] 通道 {channel_id} 的 general 配置不存在，创建新配置")
+                self.logger.debug(f"[DEBUG] 通道 {channel_id} 的 general 配置不存在，创建新配置")
                 config[channel_id]['general'] = {}
             else:
-                print(f"[DEBUG] 通道 {channel_id} 的 general 配置已存在")
+                self.logger.debug(f"[DEBUG] 通道 {channel_id} 的 general 配置已存在")
             
             #  更新区域数量
             config[channel_id]['general']['area_count'] = area_count
-            print(f"[DEBUG] 已更新区域数量: {area_count}")
+            self.logger.debug(f"[DEBUG] 已更新区域数量: {area_count}")
             
             #  更新区域名称和高度
             areas_dict = {}
@@ -1394,17 +1396,17 @@ class GeneralSetPanelHandler:
             config[channel_id]['general']['areas'] = areas_dict
             config[channel_id]['general']['area_heights'] = area_heights_dict
             
-            print(f"[DEBUG] 已更新区域名称: {areas_dict}")
-            print(f"[DEBUG] 已更新区域高度: {area_heights_dict}")
+            self.logger.debug(f"[DEBUG] 已更新区域名称: {areas_dict}")
+            self.logger.debug(f"[DEBUG] 已更新区域高度: {area_heights_dict}")
             
             # 写回配置文件
             with open(config_file, 'w', encoding='utf-8') as f:
                 yaml.dump(config, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
             
-            print(f"[DEBUG] ✓ 已同步到 channel_config.yaml: {channel_id} (区域数: {area_count})\")\n")
+            self.logger.debug(f"[DEBUG] ✓ 已同步到 channel_config.yaml: {channel_id} (区域数: {area_count})\")\n")
             
         except Exception as e:
-            print(f"[DEBUG] ✗ 同步到 channel_config.yaml 失败: {e}\")\n")
+            self.logger.debug(f"[DEBUG] ✗ 同步到 channel_config.yaml 失败: {e}\")\n")
             import traceback
             traceback.print_exc()
     
@@ -1674,18 +1676,18 @@ class GeneralSetPanelHandler:
             bool: 服务端模型加载是否成功
         """
         try:
-            print(f"[DEBUG] _loadModelForAnnotation 开始在服务端加载模型")
+            self.logger.debug(f"[DEBUG] _loadModelForAnnotation 开始在服务端加载模型")
             
             # 获取当前通道ID
             channel_id = None
             if self.general_set_panel and self.general_set_panel.channel_id:
                 channel_id = self.general_set_panel.channel_id
-                print(f"[DEBUG] 从general_set_panel获取通道ID: {channel_id}")
+                self.logger.debug(f"[DEBUG] 从general_set_panel获取通道ID: {channel_id}")
             else:
-                print(f"[DEBUG] 无法获取通道ID，使用默认通道")
+                self.logger.debug(f"[DEBUG] 无法获取通道ID，使用默认通道")
                 channel_id = "channel1"  # 默认通道
             
-            print(f"[DEBUG] 为通道 {channel_id} 在服务端加载模型")
+            self.logger.debug(f"[DEBUG] 为通道 {channel_id} 在服务端加载模型")
             
             # 从服务端配置获取模型路径
             try:
@@ -1697,43 +1699,43 @@ class GeneralSetPanelHandler:
                     RemoteConfigManager = None
                     
             if not RemoteConfigManager:
-                print(f"[DEBUG] 远程配置管理器不可用")
+                self.logger.debug(f"[DEBUG] 远程配置管理器不可用")
                 return False
                 
             remote_config = RemoteConfigManager()
             
-            print(f"[DEBUG] 正在从服务端加载默认配置...")
+            self.logger.debug(f"[DEBUG] 正在从服务端加载默认配置...")
             default_config = remote_config.load_default_config()
             
             if not default_config:
-                print(f"[DEBUG] 无法从服务端加载配置")
+                self.logger.debug(f"[DEBUG] 无法从服务端加载配置")
                 return False
             
-            print(f"[DEBUG] 成功从服务端加载配置，包含键: {list(default_config.keys())}")
+            self.logger.debug(f"[DEBUG] 成功从服务端加载配置，包含键: {list(default_config.keys())}")
             
             # 获取通道特定的模型路径
             model_path_key = f"{channel_id}_model_path"
             model_path = default_config.get(model_path_key)
             
-            print(f"[DEBUG] 查找模型路径键: {model_path_key}")
-            print(f"[DEBUG] 找到模型路径: {model_path}")
+            self.logger.debug(f"[DEBUG] 查找模型路径键: {model_path_key}")
+            self.logger.debug(f"[DEBUG] 找到模型路径: {model_path}")
             
             if not model_path:
-                print(f"[DEBUG] 服务端配置中没有找到 {model_path_key}")
+                self.logger.debug(f"[DEBUG] 服务端配置中没有找到 {model_path_key}")
                 # 尝试从全局model配置获取
                 model_config = default_config.get('model', {})
                 model_path = model_config.get('model_path')
-                print(f"[DEBUG] 尝试从全局model配置获取: {model_path}")
+                self.logger.debug(f"[DEBUG] 尝试从全局model配置获取: {model_path}")
                 
                 if not model_path:
-                    print(f"[DEBUG] 全局model配置中也没有找到model_path")
+                    self.logger.debug(f"[DEBUG] 全局model配置中也没有找到model_path")
                     return False
             
-            print(f"[DEBUG] 最终使用的服务端模型路径: {model_path}")
+            self.logger.debug(f"[DEBUG] 最终使用的服务端模型路径: {model_path}")
             
             # 检查是否有WebSocket客户端
             websocket_available = hasattr(self, 'ws_client') and self.ws_client
-            print(f"[DEBUG] WebSocket可用性: {websocket_available}")
+            self.logger.debug(f"[DEBUG] WebSocket可用性: {websocket_available}")
             
             # 通过WebSocket向服务端发送模型加载请求
             if websocket_available:
@@ -1745,32 +1747,32 @@ class GeneralSetPanelHandler:
                     "purpose": "annotation"  # 标注用途
                 }
                 
-                print(f"[DEBUG] 发送模型加载请求到服务端: {load_model_request}")
+                self.logger.debug(f"[DEBUG] 发送模型加载请求到服务端: {load_model_request}")
                 
                 try:
                     # 发送请求到服务端
                     response = self.ws_client.send_command('load_model', **load_model_request)
-                    print(f"[DEBUG] 服务端响应: {response}")
+                    self.logger.debug(f"[DEBUG] 服务端响应: {response}")
                     
                     if response:
-                        print(f"[DEBUG] 服务端模型加载成功")
+                        self.logger.debug(f"[DEBUG] 服务端模型加载成功")
                         return True
                     else:
-                        print(f"[DEBUG] 服务端模型加载失败")
+                        self.logger.debug(f"[DEBUG] 服务端模型加载失败")
                         # 继续尝试SSH方式
                 except Exception as e:
-                    print(f"[DEBUG] WebSocket请求异常: {e}")
+                    self.logger.debug(f"[DEBUG] WebSocket请求异常: {e}")
                     # 继续尝试SSH方式
             
             # 如果WebSocket不可用或失败，尝试通过SSH直接在服务端执行模型加载
-            print(f"[DEBUG] 尝试通过SSH在服务端加载模型")
+            self.logger.debug(f"[DEBUG] 尝试通过SSH在服务端加载模型")
             
             ssh_manager = remote_config._get_ssh_manager()
             if not ssh_manager:
-                print(f"[DEBUG] SSH连接不可用")
+                self.logger.debug(f"[DEBUG] SSH连接不可用")
                 return False
             
-            print(f"[DEBUG] SSH连接可用，准备执行服务端模型加载命令")
+            self.logger.debug(f"[DEBUG] SSH连接可用，准备执行服务端模型加载命令")
             
             # 构建服务端模型加载命令
             load_cmd = f"""
@@ -1794,23 +1796,23 @@ except Exception as e:
 "
 """
             
-            print(f"[DEBUG] 执行服务端模型加载命令")
+            self.logger.debug(f"[DEBUG] 执行服务端模型加载命令")
             result = ssh_manager.execute_remote_command(load_cmd)
             
-            print(f"[DEBUG] SSH命令执行结果: success={result['success']}")
-            print(f"[DEBUG] SSH命令输出: {result.get('stdout', '')}")
-            print(f"[DEBUG] SSH命令错误: {result.get('stderr', '')}")
+            self.logger.debug(f"[DEBUG] SSH命令执行结果: success={result['success']}")
+            self.logger.debug(f"[DEBUG] SSH命令输出: {result.get('stdout', '')}")
+            self.logger.debug(f"[DEBUG] SSH命令错误: {result.get('stderr', '')}")
             
             if result['success'] and 'SUCCESS' in result['stdout']:
-                print(f"[DEBUG] 通过SSH成功在服务端加载模型到GPU")
+                self.logger.debug(f"[DEBUG] 通过SSH成功在服务端加载模型到GPU")
                 return True
             else:
                 error_msg = result.get('stderr', result.get('stdout', '未知错误'))
-                print(f"[DEBUG] 通过SSH在服务端加载模型失败: {error_msg}")
+                self.logger.debug(f"[DEBUG] 通过SSH在服务端加载模型失败: {error_msg}")
                 return False
             
         except Exception as e:
-            print(f"[DEBUG] 服务端模型加载异常: {e}")
+            self.logger.debug(f"[DEBUG] 服务端模型加载异常: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -1887,21 +1889,21 @@ except Exception as e:
         annotation_debug = False
         
         if not annotation_debug:
-            print(f"[自动标注] annotation_debug=False，跳过自动标注功能")
+            self.logger.debug(f"[自动标注] annotation_debug=False，跳过自动标注功能")
             return
         
         print(f"\n{'='*60}")
-        print(f"[自动标注] ===== 服务端自动标注开始 =====")
+        self.logger.debug(f"[自动标注] ===== 服务端自动标注开始 =====")
         
         try:
             if frame is None or self.annotation_engine is None:
-                print(f"[自动标注] 前置条件不满足! frame={frame is not None}, engine={self.annotation_engine is not None}")
+                self.logger.debug(f"[自动标注] 前置条件不满足! frame={frame is not None}, engine={self.annotation_engine is not None}")
                 return
             
-            print(f"[自动标注] 输入图像: shape={frame.shape}, dtype={frame.dtype}")
+            self.logger.debug(f"[自动标注] 输入图像: shape={frame.shape}, dtype={frame.dtype}")
             
             channel_id = self.general_set_panel.channel_id if self.general_set_panel else None
-            print(f"[自动标注] 通道ID: {channel_id}")
+            self.logger.debug(f"[自动标注] 通道ID: {channel_id}")
             
             # 通过WebSocket向服务端发送自动标注请求
             if hasattr(self, 'ws_client') and self.ws_client:
@@ -1922,7 +1924,7 @@ except Exception as e:
                     "padding": 10
                 }
                 
-                print(f"[自动标注] 发送自动标注请求到服务端")
+                self.logger.debug(f"[自动标注] 发送自动标注请求到服务端")
                 
                 # 发送请求到服务端
                 response = self.ws_client.send_command('auto_annotation', **auto_annotation_request)
@@ -1930,13 +1932,13 @@ except Exception as e:
                 if response:
                     # 注意：由于send_command返回bool，实际的检测数据需要通过其他方式获取
                     # 这里暂时使用模拟数据，实际应该通过消息回调获取
-                    print(f"[自动标注] 服务端自动标注命令发送成功")
+                    self.logger.debug(f"[自动标注] 服务端自动标注命令发送成功")
                     # TODO: 实现通过消息回调获取检测结果的机制
                 else:
-                    print(f"[自动标注] 服务端自动标注命令发送失败")
+                    self.logger.debug(f"[自动标注] 服务端自动标注命令发送失败")
             else:
                 # 如果WebSocket不可用，尝试通过SSH调用服务端自动标注
-                print(f"[自动标注] WebSocket不可用，尝试通过SSH调用服务端自动标注")
+                self.logger.debug(f"[自动标注] WebSocket不可用，尝试通过SSH调用服务端自动标注")
                 
                 try:
                     from ...utils.config import RemoteConfigManager
@@ -1947,14 +1949,14 @@ except Exception as e:
                         RemoteConfigManager = None
                         
                 if not RemoteConfigManager:
-                    print(f"[自动标注] 远程配置管理器不可用")
+                    self.logger.debug(f"[自动标注] 远程配置管理器不可用")
                     return
                     
                 remote_config = RemoteConfigManager()
                 ssh_manager = remote_config._get_ssh_manager()
                 
                 if not ssh_manager:
-                    print(f"[自动标注] SSH连接不可用")
+                    self.logger.debug(f"[自动标注] SSH连接不可用")
                     return
                 
                 # 先将图像保存到临时文件
@@ -2026,7 +2028,7 @@ finally:
 "
 """
                     
-                    print(f"[自动标注] 执行服务端自动标注命令")
+                    self.logger.debug(f"[自动标注] 执行服务端自动标注命令")
                     result = ssh_manager.execute_remote_command(annotation_cmd)
                     
                     if result['success'] and 'SUCCESS:' in result['stdout']:
@@ -2040,7 +2042,7 @@ finally:
                         bottom_points = detection_data.get('bottom_points', [])
                         top_points = detection_data.get('top_points', [])
                         
-                        print(f"[自动标注] 通过SSH检测到 {len(boxes)} 个区域")
+                        self.logger.debug(f"[自动标注] 通过SSH检测到 {len(boxes)} 个区域")
                         
                         # 添加到标注引擎
                         for i, (box, bottom, top) in enumerate(zip(boxes, bottom_points, top_points)):
@@ -2049,10 +2051,10 @@ finally:
                             self.annotation_engine.top_points.append(top)
                             print(f"   区域{i+1}: box{box}, top{top}, bottom{bottom}")
                         
-                        print(f"[自动标注] 完成，已添加 {len(self.annotation_engine.boxes)} 个区域")
+                        self.logger.debug(f"[自动标注] 完成，已添加 {len(self.annotation_engine.boxes)} 个区域")
                     else:
                         error_msg = result.get('stderr', result.get('stdout', '未知错误'))
-                        print(f"[自动标注] 通过SSH自动标注失败: {error_msg}")
+                        self.logger.debug(f"[自动标注] 通过SSH自动标注失败: {error_msg}")
                 
                 # 清理临时文件
                 try:
@@ -2064,7 +2066,7 @@ finally:
             print(f"{'='*60}\n")
             
         except Exception as e:
-            print(f"[自动标注] 异常: {e}")
+            self.logger.debug(f"[自动标注] 异常: {e}")
             import traceback
             traceback.print_exc()
             print(f"{'='*60}\n")

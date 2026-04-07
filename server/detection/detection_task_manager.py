@@ -173,27 +173,38 @@ class DetectionTaskManager:
     def start_task(self, channel_id: str) -> bool:
         """启动检测任务"""
         try:
+            self.logger.info(f"========== start_task被调用 ==========")
+            self.logger.info(f"通道: {channel_id}")
+            self.logger.info(f"现有任务列表: {list(self.tasks.keys())}")
+
             if channel_id not in self.tasks:
                 self.logger.error(f"任务不存在: {channel_id}")
                 return False
 
+            self.logger.info(f"检查检测线程状态...")
             if channel_id in self.detection_threads and self.detection_threads[channel_id].is_alive():
                 self.logger.warning(f"任务已在运行: {channel_id}")
                 return False
 
             # 获取任务配置
             task_config = self.tasks[channel_id]['config']
+            self.logger.info(f"任务配置: {task_config}")
             rtsp_url = task_config.get('rtsp_url')
+            self.logger.info(f"RTSP地址: {rtsp_url}")
 
             if not rtsp_url:
                 self.logger.error(f"RTSP地址未配置: {channel_id}")
+                self.logger.error(f"完整任务配置: {self.tasks[channel_id]}")
                 return False
 
             # 如果模型未加载，尝试加载默认模型
+            self.logger.info(f"检查检测引擎: {channel_id in self.detection_engines}")
             if channel_id not in self.detection_engines:
+                self.logger.warning(f"检测引擎不存在，尝试加载默认模型")
                 default_config = self.config_manager.get_default_config()
                 model_key = f"{channel_id}_model_path"
                 model_path = default_config.get(model_key)
+                self.logger.info(f"默认模型路径: {model_path}")
 
                 if model_path:
                     self.logger.info(f"自动加载默认模型: {channel_id} -> {model_path}")
@@ -203,15 +214,20 @@ class DetectionTaskManager:
                 else:
                     self.logger.error(f"未找到默认模型配置: {model_key}")
                     return False
+            else:
+                self.logger.info(f"检测引擎已存在: {channel_id}")
 
             # 创建视频捕获
+            self.logger.info(f"开始创建视频捕获: {rtsp_url}")
             factory = VideoCaptureFactory()
             video_capture = factory.create_capture(rtsp_url, channel_id)
+            self.logger.info(f"视频捕获创建结果: {video_capture is not None}")
             if not video_capture:
                 self.logger.error(f"视频捕获创建失败: {channel_id}")
                 return False
 
             self.video_captures[channel_id] = video_capture
+            self.logger.info(f"视频捕获已保存到字典")
             
             # 创建停止事件
             stop_event = threading.Event()

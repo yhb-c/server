@@ -307,46 +307,57 @@ class DetectionService:
     def start_detection(self, channel_id: str) -> bool:
         """
         开始检测
-        
+
         Args:
             channel_id: 通道ID
-            
+
         Returns:
             bool: 启动是否成功
         """
         try:
-            self.logger.info(f"开始启动检测 - 通道: {channel_id}")
-            
+            self.logger.info(f"========== 开始启动检测 ==========")
+            self.logger.info(f"通道: {channel_id}")
+
             # 检查通道状态
             if channel_id not in self.channel_status:
                 self.logger.error(f"通道不存在: {channel_id}")
+                self.logger.error(f"现有通道列表: {list(self.channel_status.keys())}")
                 return False
-            
+
             channel_state = self.channel_status[channel_id]
-            
+            self.logger.info(f"通道状态: {channel_state}")
+
             # 检查前置条件
+            self.logger.info(f"检查前置条件 - model_loaded: {channel_state['model_loaded']}")
             if not channel_state['model_loaded']:
                 self.logger.error(f"模型未加载 - 通道: {channel_id}")
+                self.logger.error(f"模型路径: {channel_state.get('model_path')}")
+                self.logger.error(f"配置模型路径: {channel_state.get('config_model_path')}")
                 self._send_status_update(channel_id, 'detection_error', {
                     'success': False,
                     'error': '模型未加载'
                 })
                 return False
-            
+
+            self.logger.info(f"检查前置条件 - configured: {channel_state['configured']}")
             if not channel_state['configured']:
                 self.logger.error(f"通道未配置 - 通道: {channel_id}")
+                self.logger.error(f"配置信息: {channel_state.get('config')}")
                 self._send_status_update(channel_id, 'detection_error', {
                     'success': False,
                     'error': '通道未配置'
                 })
                 return False
-            
+
+            self.logger.info(f"检查前置条件 - detecting: {channel_state['detecting']}")
             if channel_state['detecting']:
                 self.logger.warning(f"检测已在运行 - 通道: {channel_id}")
                 return True
-            
+
             # 启动检测任务
+            self.logger.info(f"调用task_manager.start_task - 通道: {channel_id}")
             success = self.task_manager.start_task(channel_id)
+            self.logger.info(f"task_manager.start_task返回: {success}")
             
             if success:
                 # 更新状态
@@ -602,6 +613,11 @@ class DetectionService:
             detection_result: 检测结果数据
         """
         try:
+            self.logger.info(f"========== _on_detection_result 被调用 ==========")
+            self.logger.info(f"通道: {channel_id}")
+            self.logger.info(f"检测结果键: {list(detection_result.keys())}")
+            self.logger.info(f"liquid_line_positions: {detection_result.get('liquid_line_positions', {})}")
+
             # 保存到CSV文件
             self._save_to_csv(channel_id, detection_result)
 
@@ -613,11 +629,16 @@ class DetectionService:
                 'data': detection_result
             }
 
+            self.logger.info(f"准备推送数据 - 通道: {channel_id}")
+            self.logger.info(f"推送数据键: {list(push_data.keys())}")
+            self.logger.info(f"websocket_server: {self.websocket_server is not None}")
+            self.logger.info(f"event_loop: {self.event_loop is not None}")
+
             # 通过WebSocket推送结果
             self._send_detection_result(channel_id, push_data)
 
             # 记录调试信息
-            self.logger.debug(f"推送检测结果 - 通道: {channel_id}, 帧: {detection_result.get('frame_count', 0)}")
+            self.logger.info(f"推送检测结果完成 - 通道: {channel_id}, 帧: {detection_result.get('frame_count', 0)}")
 
         except Exception as e:
             self.logger.error(f"处理检测结果异常 - 通道: {channel_id}, 错误: {str(e)}")
@@ -668,12 +689,19 @@ class DetectionService:
             result_data: 结果数据
         """
         try:
+            self.logger.info(f"========== _send_detection_result 被调用 ==========")
+            self.logger.info(f"通道: {channel_id}")
+            self.logger.info(f"websocket_server存在: {self.websocket_server is not None}")
+            self.logger.info(f"event_loop存在: {self.event_loop is not None}")
+
             if self.websocket_server and self.event_loop:
+                self.logger.info(f"准备调用broadcast_to_channel - 通道: {channel_id}")
                 # 从同步线程安全地调度到异步事件循环
-                asyncio.run_coroutine_threadsafe(
+                future = asyncio.run_coroutine_threadsafe(
                     self.websocket_server.broadcast_to_channel(channel_id, result_data),
                     self.event_loop
                 )
+                self.logger.info(f"broadcast_to_channel已调度 - 通道: {channel_id}")
             else:
                 if not self.websocket_server:
                     self.logger.warning(f"[{channel_id}] WebSocket服务器未设置，无法发送检测结果")

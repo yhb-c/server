@@ -123,7 +123,7 @@ class ModelSettingHandler:
                     model_config = channel_config[channel_id]['model'].copy()
                     model_path = model_config.get('model_path', '')
                     config_source = f"channel_config.yaml → {channel_id} → model"
-                    print(f"[channel_config.yaml] 加载通道 {channel_id} 的模型配置: {model_path}")
+                    self.logger.debug(f"[channel_config.yaml] 加载通道 {channel_id} 的模型配置: {model_path}")
                 else:
                     # 从 default_config.yaml 获取通道特定的模型路径
                     channel_model_key = f"{channel_id}_model_path"
@@ -139,10 +139,10 @@ class ModelSettingHandler:
                         # 使用全局模型配置
                         model_config = default_config.get('model', {}).copy()
                         config_source = f"default_config.yaml → model (未找到 {channel_id} 的特定配置)"
-                        print(f"[Handler] 未找到通道 {channel_id} 的特定配置，使用全局配置")
+                        self.logger.debug(f"[Handler] 未找到通道 {channel_id} 的特定配置，使用全局配置")
                         print(f"  model_config['model_path'] = {model_config.get('model_path', 'None')}")
                 
-                print(f"[Handler] 返回配置: model_path = {model_config.get('model_path', 'None')}")
+                self.logger.debug(f"[Handler] 返回配置: model_path = {model_config.get('model_path', 'None')}")
                 return model_config, config_source
             else:
                 # 使用全局配置
@@ -150,14 +150,14 @@ class ModelSettingHandler:
                 if 'model' in channel_config:
                     model_config = channel_config['model'].copy()
                     config_source = "channel_config.yaml → model"
-                    print(f"[Handler] 加载全局模型配置 (channel_config.yaml)")
+                    self.logger.debug(f"[Handler] 加载全局模型配置 (channel_config.yaml)")
                 else:
                     # 从 default_config.yaml 获取
                     model_config = default_config.get('model', {}).copy()
                     config_source = "default_config.yaml → model"
-                    print(f"[Handler] 加载全局模型配置 (default_config.yaml)")
+                    self.logger.debug(f"[Handler] 加载全局模型配置 (default_config.yaml)")
                 
-                print(f"[Handler] 返回全局配置: model_path = {model_config.get('model_path', 'None')}")
+                self.logger.debug(f"[Handler] 返回全局配置: model_path = {model_config.get('model_path', 'None')}")
                 return model_config, config_source
         
         except Exception as e:
@@ -213,14 +213,14 @@ class ModelSettingHandler:
             bool: 保存是否成功
         """
         try:
-            print(f"[DEBUG] _saveModelConfig 被调用，channel_id={channel_id}")
-            print(f"[DEBUG] model_config={model_config}")
+            self.logger.debug(f"[DEBUG] _saveModelConfig 被调用，channel_id={channel_id}")
+            self.logger.debug(f"[DEBUG] model_config={model_config}")
             
             # 使用远程配置管理器
             channel_config = self._remote_config.load_channel_config()
             
             if not channel_config:
-                print(f"[DEBUG] 无法从服务端加载通道配置")
+                self.logger.debug(f"[DEBUG] 无法从服务端加载通道配置")
                 QtWidgets.QMessageBox.warning(
                     self,
                     self.tr("保存失败"),
@@ -228,7 +228,7 @@ class ModelSettingHandler:
                 )
                 return False
             
-            print(f"[DEBUG] 成功从服务端加载通道配置")
+            self.logger.debug(f"[DEBUG] 成功从服务端加载通道配置")
             
             # 如果指定了通道ID，则保存到对应通道的model部分
             if channel_id:
@@ -242,23 +242,23 @@ class ModelSettingHandler:
                 channel_config[channel_id]['model'].update(model_config)
                 
                 model_path = model_config.get('model_path', '')
-                print(f"[DEBUG] 保存模型配置到通道 {channel_id}")
-                print(f"[DEBUG]   - model_path: {model_path}")
+                self.logger.debug(f"[DEBUG] 保存模型配置到通道 {channel_id}")
+                self.logger.debug(f"[DEBUG]   - model_path: {model_path}")
             else:
                 # 保存到全局配置
                 if 'model' not in channel_config:
                     channel_config['model'] = {}
                 channel_config['model'].update(model_config)
-                print(f"[DEBUG] 保存模型配置到全局配置")
+                self.logger.debug(f"[DEBUG] 保存模型配置到全局配置")
             
             # 保存回服务端配置文件
             success = self._remote_config.save_channel_config(channel_config)
             
             if success:
-                print(f"[DEBUG] 模型配置已成功保存到服务端")
+                self.logger.debug(f"[DEBUG] 模型配置已成功保存到服务端")
                 return True
             else:
-                print(f"[DEBUG] 保存模型配置到服务端失败")
+                self.logger.debug(f"[DEBUG] 保存模型配置到服务端失败")
                 QtWidgets.QMessageBox.warning(
                     self,
                     self.tr("保存失败"),
@@ -267,7 +267,7 @@ class ModelSettingHandler:
                 return False
         
         except Exception as e:
-            print(f"[DEBUG] 保存模型配置异常: {e}")
+            self.logger.debug(f"[DEBUG] 保存模型配置异常: {e}")
             import traceback
             traceback.print_exc()
             QtWidgets.QMessageBox.warning(
@@ -318,14 +318,14 @@ class ModelSettingHandler:
             model_base_path = model_config.get('model_base_path', '')
             
             if model_base_path:
-                print(f"[channel_config.yaml] 使用服务端模型基础路径: {model_base_path}")
+                self.logger.debug(f"[channel_config.yaml] 使用服务端模型基础路径: {model_base_path}")
                 return model_base_path
             
             # 2. 尝试从服务端 default_config.yaml 读取
             default_config = self._remote_config.load_default_config()
             model_base_path = default_config.get('model_base_path', '')
             if model_base_path:
-                print(f"[default_config.yaml] 使用服务端模型基础路径: {model_base_path}")
+                self.logger.debug(f"[default_config.yaml] 使用服务端模型基础路径: {model_base_path}")
                 return model_base_path
             
             # 3. 使用服务端默认路径
@@ -471,7 +471,7 @@ class ModelSettingHandler:
             models_list: 模型信息列表
         """
         self._available_models_from_panel = models_list
-        print(f"[MODEL_SETTINGS] 已接收 {len(models_list)} 个模型信息")
+        self.logger.debug(f"[MODEL_SETTINGS] 已接收 {len(models_list)} 个模型信息")
         
         # 如果有正在显示的模型设置对话框，更新其模型列表
         self._updateActiveDialogModelList()

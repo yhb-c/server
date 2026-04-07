@@ -437,12 +437,12 @@ class ChannelPanel(QtWidgets.QWidget):
             self._ensureInfoOverlay()
             self._infoOverlay.show()
             self._infoOverlay.update_position()
-            print(f"[ChannelPanel] HWND渲染模式已启用，InfoOverlay已显示")
+            self.logger.debug(f"[ChannelPanel] HWND渲染模式已启用，InfoOverlay已显示")
         else:
             self._overlayLabel.show()
             if self._infoOverlay:
                 self._infoOverlay.hide()
-            print(f"[ChannelPanel] Qt渲染模式已启用")
+            self.logger.debug(f"[ChannelPanel] Qt渲染模式已启用")
     
     def showOverlay(self):
         """显示叠加层"""
@@ -588,7 +588,7 @@ class ChannelPanel(QtWidgets.QWidget):
                 self.displayFrame(pixmap)
                 
         except Exception as e:
-            print(f"[ChannelPanel] displayFrame异常: {e}")
+            self.logger.debug(f"[ChannelPanel] displayFrame异常: {e}")
     
     def clearDisplay(self):
         """清空显示区域"""

@@ -743,7 +743,10 @@ class EnhancedWebSocketServer:
             channel_id: 通道ID
             data: 要发送的数据
         """
-        self.logger.debug(f"[{channel_id}] broadcast_to_channel被调用，数据类型: {data.get('type')}")
+        self.logger.info(f"========== broadcast_to_channel 被调用 ==========")
+        self.logger.info(f"通道: {channel_id}")
+        self.logger.info(f"数据类型: {data.get('type')}")
+        self.logger.info(f"数据键: {list(data.keys())}")
 
         # 记录检测结果数据的关键信息（INFO级别）
         if data.get('type') == 'detection_result':
@@ -753,14 +756,15 @@ class EnhancedWebSocketServer:
 
         if channel_id not in self.channel_subscribers:
             self.logger.warning(f"[{channel_id}] 通道没有订阅者字典，无法推送数据")
+            self.logger.warning(f"当前所有通道订阅: {list(self.channel_subscribers.keys())}")
             return
 
         # 记录复制前的订阅者数量
         original_count = len(self.channel_subscribers[channel_id])
-        self.logger.debug(f"[{channel_id}] 复制前订阅者数量: {original_count}")
+        self.logger.info(f"[{channel_id}] 订阅者数量: {original_count}")
 
         subscribers = self.channel_subscribers[channel_id].copy()
-        self.logger.debug(f"[{channel_id}] 复制后订阅者数量: {len(subscribers)}")
+        self.logger.info(f"[{channel_id}] 复制后订阅者数量: {len(subscribers)}")
 
         # 详细记录订阅者信息
         if subscribers:

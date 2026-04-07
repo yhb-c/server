@@ -66,3 +66,4 @@ WebSocket服务：启动 /home/lqj/liquid/server/websocket/start_websocket_serve
 
 使用sshpass自动登录远程服务器
 在远程服务器上执行启动命令
+/home/lqj/liquid/logs，生成log自动覆盖，只有四个log，client.log,server.log,api.log,websocket.log
