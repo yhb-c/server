@@ -109,25 +109,25 @@ class NetworkCommandManager(QtCore.QObject):
     def _init_websocket(self):
         """初始化WebSocket客户端"""
         try:
-            print(f"[CommandManager] ========== Initialize WebSocket ==========")
+            # print(f"[CommandManager] ========== Initialize WebSocket ==========")
             self.ws_client = WebSocketClient(self.server_url, self)
 
             # 连接WebSocket信号
-            print(f"[CommandManager] Connecting connection_status signal...")
+            # print(f"[CommandManager] Connecting connection_status signal...")
             self.ws_client.connection_status.connect(self._on_connection_status)
-            print(f"[CommandManager] [OK] connection_status signal connected")
+            # print(f"[CommandManager] [OK] connection_status signal connected")
 
-            print(f"[CommandManager] Connecting detection_result signal...")
+            # print(f"[CommandManager] Connecting detection_result signal...")
             self.ws_client.detection_result.connect(self._on_detection_result)
-            print(f"[CommandManager] [OK] detection_result signal connected")
+            # print(f"[CommandManager] [OK] detection_result signal connected")
 
-            print(f"[CommandManager] WebSocket client initialized: {self.server_url}")
-            print(f"[CommandManager] ==========================================\n")
+            # print(f"[CommandManager] WebSocket client initialized: {self.server_url}")
+            # print(f"[CommandManager] ==========================================\n")
 
         except Exception as e:
-            print(f"[CommandManager] WebSocket initialization failed: {e}")
+            # print(f"[CommandManager] WebSocket initialization failed: {e}")
             import traceback
-            print(f"[CommandManager] Exception traceback: {traceback.format_exc()}")
+            # print(f"[CommandManager] Exception traceback: {traceback.format_exc()}")
             self.ws_client = None
     
     def start_connection(self):
@@ -154,16 +154,16 @@ class NetworkCommandManager(QtCore.QObject):
         Returns:
             bool: 发送是否成功
         """
-        print(f"[CommandManager] === 发送检测命令 ===")
-        print(f"[CommandManager] 通道ID: {channel_id}")
-        print(f"[CommandManager] 动作: {action}")
+        # print(f"[CommandManager] === 发送检测命令 ===")
+        # print(f"[CommandManager] 通道ID: {channel_id}")
+        # print(f"[CommandManager] 动作: {action}")
         
         if not self.ws_client:
-            print(f"[CommandManager] 错误: WebSocket客户端未初始化")
+            # print(f"[CommandManager] 错误: WebSocket客户端未初始化")
             return False
         
         if not self.is_connected:
-            print(f"[CommandManager] 警告: WebSocket未连接，尝试重新连接...")
+            # print(f"[CommandManager] 警告: WebSocket未连接，尝试重新连接...")
             self.ws_client.force_reconnect()
             
             # 等待连接建立
@@ -171,20 +171,14 @@ class NetworkCommandManager(QtCore.QObject):
             for i in range(20):  # 最多等待2秒
                 time.sleep(0.1)
                 if self.is_connected:
-                    print(f"[CommandManager] 重连成功")
+                    # print(f"[CommandManager] 重连成功")
                     break
             else:
-                print(f"[CommandManager] 错误: 重连失败，无法发送命令")
+                # print(f"[CommandManager] 错误: 重连失败，无法发送命令")
                 return False
 
         # 发送命令
-        print(f"[CommandManager] Sending WebSocket command...")
         success = self.ws_client.send_command(action, channel_id=channel_id)
-
-        if success:
-            print(f"[CommandManager] [OK] Detection command sent: {action}, channel: {channel_id}")
-        else:
-            print(f"[CommandManager] [FAIL] Detection command failed: {action}, channel: {channel_id}")
 
         return success
     
@@ -201,7 +195,7 @@ class NetworkCommandManager(QtCore.QObject):
             bool: 发送是否成功
         """
         if not self.ws_client or not self.is_connected:
-            print(f"[CommandManager] WebSocket未连接，无法发送模型加载命令")
+            # print(f"[CommandManager] WebSocket未连接，无法发送模型加载命令")
             return False
         
         success = self.ws_client.send_command(
@@ -211,12 +205,7 @@ class NetworkCommandManager(QtCore.QObject):
             device=device,
             purpose='detection'
         )
-        
-        if success:
-            print(f"[CommandManager] 模型加载命令发送成功: {model_path}")
-        else:
-            print(f"[CommandManager] 模型加载命令发送失败: {model_path}")
-        
+
         return success
     
     def send_annotation_command(self, channel_id, frame_data, conf_threshold=0.5):
@@ -232,7 +221,7 @@ class NetworkCommandManager(QtCore.QObject):
             bool: 发送是否成功
         """
         if not self.ws_client or not self.is_connected:
-            print(f"[CommandManager] WebSocket未连接，无法发送标注命令")
+            # print(f"[CommandManager] WebSocket未连接，无法发送标注命令")
             return False
         
         success = self.ws_client.send_command(
@@ -243,12 +232,7 @@ class NetworkCommandManager(QtCore.QObject):
             min_area=50,
             padding=10
         )
-        
-        if success:
-            print(f"[CommandManager] 自动标注命令发送成功")
-        else:
-            print(f"[CommandManager] 自动标注命令发送失败")
-        
+
         return success
     
     def send_configure_channel_command(self, channel_id, config):
@@ -269,7 +253,7 @@ class NetworkCommandManager(QtCore.QObject):
             bool: 发送是否成功
         """
         if not self.ws_client or not self.is_connected:
-            print(f"[CommandManager] WebSocket未连接，无法发送配置通道命令")
+            # print(f"[CommandManager] WebSocket未连接，无法发送配置通道命令")
             return False
         
         success = self.ws_client.send_command(
@@ -277,12 +261,7 @@ class NetworkCommandManager(QtCore.QObject):
             channel_id=channel_id,
             config=config
         )
-        
-        if success:
-            print(f"[CommandManager] 配置通道命令发送成功: {channel_id}")
-        else:
-            print(f"[CommandManager] 配置通道命令发送失败: {channel_id}")
-        
+
         return success
     
     def send_subscribe_command(self, channel_id):
@@ -296,7 +275,7 @@ class NetworkCommandManager(QtCore.QObject):
             bool: 发送是否成功
         """
         if not self.ws_client or not self.is_connected:
-            print(f"[CommandManager] WebSocket未连接，无法发送订阅命令")
+            # print(f"[CommandManager] WebSocket未连接，无法发送订阅命令")
             return False
 
         success = self.ws_client.send_command(
@@ -307,9 +286,6 @@ class NetworkCommandManager(QtCore.QObject):
         if success:
             # 记录已订阅的通道
             self.subscribed_channels.add(channel_id)
-            print(f"[CommandManager] 订阅通道命令发送成功: {channel_id}")
-        else:
-            print(f"[CommandManager] 订阅通道命令发送失败: {channel_id}")
 
         return success
     
@@ -328,14 +304,13 @@ class NetworkCommandManager(QtCore.QObject):
             channel_id: 通道ID
         """
         if self.csv_writer:
-            print(f"[CommandManager] 通道 {channel_id} CSV存储已启用")
+            pass
         else:
-            print(f"[CommandManager] CSV写入器未初始化")
+            pass
 
     def disable_csv_storage(self):
         """禁用CSV存储"""
         self.enable_csv_storage = False
-        print(f"[CommandManager] CSV存储已禁用")
 
     def get_csv_filepath(self, channel_id: str):
         """
@@ -355,28 +330,25 @@ class NetworkCommandManager(QtCore.QObject):
         """关闭所有CSV文件"""
         if self.csv_writer:
             self.csv_writer.close_all()
-            print(f"[CommandManager] 所有CSV文件已关闭")
+            # print(f"[CommandManager] 所有CSV文件已关闭")
     
     def _on_connection_status(self, is_connected, message):
         """WebSocket连接状态变化处理"""
         was_connected = self.is_connected
         self.is_connected = is_connected
-        print(f"[CommandManager] 连接状态变化: {'已连接' if is_connected else '未连接'} - {message}")
+        # print(f"[CommandManager] 连接状态变化: {'已连接' if is_connected else '未连接'} - {message}")
 
         # 如果是重连成功，自动重新订阅之前订阅的通道
         if is_connected and not was_connected and self.auto_resubscribe and self.subscribed_channels:
-            print(f"[CommandManager] 检测到重连成功，自动重新订阅 {len(self.subscribed_channels)} 个通道...")
+            # print(f"[CommandManager] 检测到重连成功，自动重新订阅 {len(self.subscribed_channels)} 个通道...")
             import time
             time.sleep(0.5)  # 等待连接稳定
 
             for channel_id in list(self.subscribed_channels):
                 try:
                     self.send_subscribe_command(channel_id)
-                    print(f"[CommandManager] 重新订阅成功: {channel_id}")
                 except Exception as e:
-                    print(f"[CommandManager] 重新订阅失败: {channel_id}, 错误: {e}")
-
-            print(f"[CommandManager] 自动重新订阅完成")
+                    pass
 
         # 转发连接状态信号
         self.connectionStatusChanged.emit(is_connected, message)

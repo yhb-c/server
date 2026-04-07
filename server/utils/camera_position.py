@@ -10,20 +10,8 @@ import logging
 import os
 from datetime import datetime
 
-# 配置日志
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-_LOG_DIR = os.path.join(_PROJECT_ROOT, 'logs')
-os.makedirs(_LOG_DIR, exist_ok=True)
-_LOG_FILE = os.path.join(_LOG_DIR, f'cameraposition_{datetime.now().strftime("%Y%m%d")}.log')
-
-_camera_logger = logging.getLogger('cameraposition')
-_camera_logger.setLevel(logging.DEBUG)
-# 避免重复添加handler
-if not _camera_logger.handlers:
-    _file_handler = logging.FileHandler(_LOG_FILE, encoding='utf-8')
-    _file_handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s'))
-    _camera_logger.addHandler(_file_handler)
-    _camera_logger.propagate = False  # 不传播到根logger
+# 配置日志 - 不生成独立日志文件，使用服务端统一日志
+_camera_logger = logging.getLogger('server')  # 使用服务端日志记录器
 
 
 class CameraPositionDetector:

@@ -457,11 +457,11 @@ class RemoteConfigManager:
             bool: 是否成功推送
         """
         try:
-            print(f"[远程配置] 推送通道 {channel_id} 的标注配置到服务器")
+            # print(f"[远程配置] 推送通道 {channel_id} 的标注配置到服务器")
             
             ssh_manager = self._get_ssh_manager()
             if not ssh_manager:
-                print(f"[远程配置] SSH连接不可用")
+                # print(f"[远程配置] SSH连接不可用")
                 return False
             
             # 构建服务器端配置文件路径（按照原系统路径）
@@ -478,7 +478,7 @@ class RemoteConfigManager:
                     import yaml
                     existing_config = yaml.safe_load(result['stdout']) or {}
                 except Exception as e:
-                    print(f"[远程配置] 解析现有配置失败: {e}")
+                    # print(f"[远程配置] 解析现有配置失败: {e}")
                     existing_config = {}
             
             # 更新配置（按照原系统格式）
@@ -499,10 +499,10 @@ class RemoteConfigManager:
                 upload_success = ssh_manager.upload_file(tmp_file_path, annotation_config_file)
                 
                 if upload_success:
-                    print(f"[远程配置] 标注配置已成功推送到服务器: {annotation_config_file}")
+                    # print(f"[远程配置] 标注配置已成功推送到服务器: {annotation_config_file}")
                     return True
                 else:
-                    print(f"[远程配置] 上传标注配置文件失败")
+                    # print(f"[远程配置] 上传标注配置文件失败")
                     return False
                     
             finally:
@@ -513,7 +513,7 @@ class RemoteConfigManager:
                     pass
             
         except Exception as e:
-            print(f"[远程配置] 推送标注配置异常: {e}")
+            # print(f"[远程配置] 推送标注配置异常: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -529,11 +529,11 @@ class RemoteConfigManager:
             dict: 标注配置数据
         """
         try:
-            print(f"[远程配置] 从服务器加载标注配置")
+            # print(f"[远程配置] 从服务器加载标注配置")
             
             ssh_manager = self._get_ssh_manager()
             if not ssh_manager:
-                print(f"[远程配置] SSH连接不可用")
+                # print(f"[远程配置] SSH连接不可用")
                 return {}
             
             # 服务器端配置文件路径（按照原系统路径）
@@ -557,14 +557,14 @@ class RemoteConfigManager:
                         return config
                         
                 except Exception as e:
-                    print(f"[远程配置] 解析标注配置失败: {e}")
+                    # print(f"[远程配置] 解析标注配置失败: {e}")
                     return {}
             else:
-                print(f"[远程配置] 服务器上没有标注配置文件")
+                # print(f"[远程配置] 服务器上没有标注配置文件")
                 return {}
                 
         except Exception as e:
-            print(f"[远程配置] 加载标注配置异常: {e}")
+            # print(f"[远程配置] 加载标注配置异常: {e}")
             import traceback
             traceback.print_exc()
             return {}
@@ -584,7 +584,7 @@ def load_config(config_path=None, use_remote=False):
     # 首先尝试从服务端加载配置（如果启用）
     if use_remote:
         try:
-            print("[DEBUG] 尝试从服务端加载配置...")
+            # print("[DEBUG] 尝试从服务端加载配置...")
             
             remote_config_manager = RemoteConfigManager()
             
@@ -596,7 +596,7 @@ def load_config(config_path=None, use_remote=False):
             server_config = {**default_config, **channel_config}
             
             if server_config:
-                print("[DEBUG] 成功从服务端加载配置")
+                # print("[DEBUG] 成功从服务端加载配置")
                 
                 # 添加客户端特定的配置
                 client_config = {
@@ -625,13 +625,12 @@ def load_config(config_path=None, use_remote=False):
                 # 合并服务端配置和客户端配置
                 final_config = {**client_config, **server_config}
                 return final_config
-                
+
         except Exception as e:
-            print(f"[DEBUG] 从服务端加载配置失败: {e}")
-    
+            pass
+
     # 如果服务端配置加载失败，尝试加载本地配置文件
     try:
-        print("[DEBUG] 尝试从本地加载配置...")
         local_config_manager = LocalConfigManager()
         
         # 加载本地客户端配置
@@ -651,14 +650,12 @@ def load_config(config_path=None, use_remote=False):
                 'address': channel_info.get('address', '')
             }
         
-        print("[DEBUG] 成功从本地加载配置")
         return final_config
-        
+
     except Exception as e:
-        print(f"[DEBUG] 从本地加载配置失败: {e}")
-    
+        pass
+
     # 如果都失败了，返回默认配置
-    print("[DEBUG] 使用默认配置")
     return {
         'server': {
             'api_url': 'http://192.168.0.121:8084',
@@ -729,9 +726,9 @@ def save_config(config, config_path=None, use_remote=False):
                 remote_success = remote_config_manager.save_channel_config(channel_config)
                 if not remote_success:
                     success = False
-                    print("[DEBUG] 保存远程配置失败")
+                    # print("[DEBUG] 保存远程配置失败")
         except Exception as e:
-            print(f"[DEBUG] 保存远程配置异常: {e}")
+            # print(f"[DEBUG] 保存远程配置异常: {e}")
             success = False
     
     # 保存到本地
@@ -760,10 +757,10 @@ def save_config(config, config_path=None, use_remote=False):
         
         if not (local_client_success and local_camera_success):
             success = False
-            print("[DEBUG] 保存本地配置失败")
+            # print("[DEBUG] 保存本地配置失败")
             
     except Exception as e:
-        print(f"[DEBUG] 保存本地配置异常: {e}")
+        # print(f"[DEBUG] 保存本地配置异常: {e}")
         success = False
     
     return success

@@ -73,7 +73,11 @@ class EnhancedWebSocketServer:
         """启动WebSocket服务器"""
         try:
             self.server_stats['start_time'] = datetime.now().isoformat()
-            
+
+            # 设置检测服务的事件循环
+            self.detection_service.event_loop = asyncio.get_running_loop()
+            self.logger.info("已设置检测服务的事件循环")
+
             self.server = await websockets.serve(
                 self._handle_client,
                 self.host,
@@ -81,9 +85,9 @@ class EnhancedWebSocketServer:
                 ping_interval=None,  # 禁用自动ping
                 ping_timeout=None    # 禁用ping超时
             )
-            
+
             self.logger.info(f"增强WebSocket服务器启动成功: ws://{self.host}:{self.port}")
-            
+
             # 保持服务器运行
             await self.server.wait_closed()
             
@@ -182,41 +186,42 @@ class EnhancedWebSocketServer:
     async def _handle_command(self, websocket, data: dict):
         """
         处理客户端命令
-        
+
         Args:
             websocket: WebSocket连接
             data: 命令数据
         """
-        command = data.get('command')
+        # 兼容两种消息格式：command 和 type
+        command = data.get('command') or data.get('type')
         channel_id = data.get('channel_id')
         client_id = self.clients[websocket]['client_info']['id']
-        
+
         self.logger.info(f"[{client_id}] === 收到命令 ===")
         self.logger.info(f"[{client_id}] 命令: {command}")
         self.logger.info(f"[{client_id}] 通道: {channel_id}")
         self.logger.info(f"[{client_id}] 数据: {data}")
-        
+
         try:
             if command == 'subscribe':
                 # 订阅通道
                 self.logger.info(f"[{client_id}] 处理订阅命令")
                 await self._handle_subscribe(websocket, channel_id)
-                
+
             elif command == 'unsubscribe':
                 # 取消订阅通道
                 self.logger.info(f"[{client_id}] 处理取消订阅命令")
                 await self._handle_unsubscribe(websocket, channel_id)
-                
+
             elif command == 'load_model':
                 # 加载检测模型
                 self.logger.info(f"[{client_id}] 处理模型加载命令")
                 await self._handle_load_model(websocket, data)
-                
+
             elif command == 'configure_channel':
                 # 配置通道
                 self.logger.info(f"[{client_id}] 处理通道配置命令")
                 await self._handle_configure_channel(websocket, data)
-                
+
             elif command == 'start_detection':
                 # 启动检测
                 self.logger.info(f"[{client_id}] 处理启动检测命令")
@@ -241,16 +246,26 @@ class EnhancedWebSocketServer:
                 # 获取状态
                 self.logger.info(f"[{client_id}] 处理状态查询命令")
                 await self._handle_get_status(websocket, channel_id)
-                
+
             elif command == 'ping':
                 # 心跳检测
                 self.logger.info(f"[{client_id}] 处理ping命令")
                 await self._handle_ping(websocket)
-                
+
+            elif command == 'heartbeat':
+                # 心跳消息（客户端定期发送）
+                self.logger.debug(f"[{client_id}] 收到心跳消息")
+                # 不需要响应，只记录日志
+
+            elif command == 'client_init':
+                # 客户端初始化消息
+                self.logger.info(f"[{client_id}] 客户端初始化")
+                # 不需要响应，只记录日志
+
             else:
                 self.logger.warning(f"[{client_id}] 未知命令: {command}")
                 await self._send_error_response(websocket, "未知命令", f"不支持的命令: {command}")
-            
+
             self.logger.info(f"[{client_id}] 命令 {command} 处理完成")
                 
         except Exception as e:

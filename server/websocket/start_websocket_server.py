@@ -22,8 +22,8 @@ sys.path.insert(0, str(utils_dir))
 from enhanced_ws_server import EnhancedWebSocketServer
 from logger import setup_logging
 
-# 配置日志
-logger = setup_logging('websocket', 'DEBUG')
+# 配置日志 - 输出到控制台和文件
+logger = setup_logging('websocket', 'INFO', console_output=True)
 
 
 def signal_handler(signum, frame):

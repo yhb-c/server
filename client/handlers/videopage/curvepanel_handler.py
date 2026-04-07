@@ -268,12 +268,10 @@ class CurvePanelHandler:
         # 🔥 设置曲线线程回调（如果thread_manager存在）
         if hasattr(self, 'thread_manager'):
             self.thread_manager.on_curve_updated = self._onCurveDataUpdated
-            print(f"✅ [CurvePanelHandler] 曲线回调已设置到 thread_manager.on_curve_updated")
-            
 
         else:
-            print(f"⚠️ [CurvePanelHandler] thread_manager 不存在，无法设置曲线回调")
-        
+            pass
+
         # 设置默认保存目录
         self._setDefaultSaveDirectory()
         
@@ -360,11 +358,11 @@ class CurvePanelHandler:
         
         # 🔥 数据验证：确保有数据才更新UI
         if not processed_time or not processed_value:
-            print(f"   - ⚠️ 处理后数据为空，跳过UI更新")
+            # print(f"   - ⚠️ 处理后数据为空，跳过UI更新")
             return
         
         if len(processed_time) != len(processed_value):
-            print(f"   - ⚠️ 处理后数据长度不匹配: time={len(processed_time)}, value={len(processed_value)}")
+            # print(f"   - ⚠️ 处理后数据长度不匹配: time={len(processed_time)}, value={len(processed_value)}")
             return
         
         # 🔥 检查是否有有效数据点（至少有一个非NaN值）
@@ -375,7 +373,7 @@ class CurvePanelHandler:
                 break
         
         if not has_valid_data:
-            print(f"   - ⚠️ 没有有效数据点（全是NaN/Inf），跳过UI更新")
+            # print(f"   - ⚠️ 没有有效数据点（全是NaN/Inf），跳过UI更新")
             return
         
         #  更新UI显示（只更新一次）
@@ -407,9 +405,8 @@ class CurvePanelHandler:
                 max_value = max(channel['value'])
                 self.curve_panel.setYRangeAuto(max_value)
         else:
-            print(f"   - ⚠️ curve_panel不存在，无法更新UI！")
-            
-    
+            pass
+
     def _processTimeGaps(self, time_data, value_data, max_gap_seconds=10):
         """
         处理时间间隔断点：在超过指定时间间隔的数据点之间插入NaN值
@@ -427,7 +424,7 @@ class CurvePanelHandler:
             return [], []
         
         if len(time_data) != len(value_data):
-            print(f"⚠️ [时间间隔处理] 数据长度不匹配: time={len(time_data)}, value={len(value_data)}")
+            # print(f"⚠️ [时间间隔处理] 数据长度不匹配: time={len(time_data)}, value={len(value_data)}")
             return time_data, value_data
         
         if len(time_data) <= 1:
@@ -854,16 +851,16 @@ class CurvePanelHandler:
             
             # 构建完整路径
             mission_folder_path = os.path.join(data_root, 'database', 'mission_result', mission_name)
-            print(f"🔍 [路径构建] 任务名称: {mission_name}")
-            print(f"🔍 [路径构建] 数据根目录: {data_root}")
-            print(f"🔍 [路径构建] 完整路径: {mission_folder_path}")
-            print(f"🔍 [路径构建] 路径是否存在: {os.path.exists(mission_folder_path)}")
+            # print(f"🔍 [路径构建] 任务名称: {mission_name}")
+            # print(f"🔍 [路径构建] 数据根目录: {data_root}")
+            # print(f"🔍 [路径构建] 完整路径: {mission_folder_path}")
+            # print(f"🔍 [路径构建] 路径是否存在: {os.path.exists(mission_folder_path)}")
             
             # 检查路径是否存在
             if os.path.exists(mission_folder_path):
                 return mission_folder_path
             else:
-                print(f"❌ [路径构建] 路径不存在: {mission_folder_path}")
+                # print(f"❌ [路径构建] 路径不存在: {mission_folder_path}")
                 return None
                 
         except Exception as e:
@@ -983,23 +980,23 @@ class CurvePanelHandler:
             self.setCurveLoadMode('history')
             
             # 查找所有CSV文件
-            print(f"\n🔍 [曲线加载] ==================== 开始加载 ====================")
-            print(f"🔍 [曲线加载] 扫描目录: {data_directory}")
-            print(f"🔍 [曲线加载] 目录是否存在: {os.path.exists(data_directory)}")
+            # print(f"\n🔍 [曲线加载] ==================== 开始加载 ====================")
+            # print(f"🔍 [曲线加载] 扫描目录: {data_directory}")
+            # print(f"🔍 [曲线加载] 目录是否存在: {os.path.exists(data_directory)}")
             
             if not os.path.exists(data_directory):
-                print(f"❌ [曲线加载] 目录不存在: {data_directory}")
+                # print(f"❌ [曲线加载] 目录不存在: {data_directory}")
                 return False
             
             # 列出目录中的所有文件
             all_files = os.listdir(data_directory)
-            print(f"🔍 [曲线加载] 目录中所有文件: {all_files}")
+            # print(f"🔍 [曲线加载] 目录中所有文件: {all_files}")
             
             csv_files = [f for f in all_files if f.endswith('.csv')]
-            print(f"🔍 [曲线加载] 找到 {len(csv_files)} 个CSV文件: {csv_files}")
+            # print(f"🔍 [曲线加载] 找到 {len(csv_files)} 个CSV文件: {csv_files}")
             
             if not csv_files:
-                print(f"⚠️ [曲线加载] 未找到CSV文件")
+                # print(f"⚠️ [曲线加载] 未找到CSV文件")
                 return False
             
             # 检查是否需要显示进度条
@@ -1032,16 +1029,16 @@ class CurvePanelHandler:
                 progress_dialog.show()
                 # 🔥 强制刷新UI，确保进度条立即显示
                 QtWidgets.QApplication.processEvents()
-                print(f"✅ [进度条] 已显示进度对话框")
+                # print(f"✅ [进度条] 已显示进度对话框")
             
             # 创建并启动后台加载线程
-            print(f"🧵 [曲线加载] 创建后台加载线程...")
+            # print(f"🧵 [曲线加载] 创建后台加载线程...")
             self._load_thread = CurveDataLoadThread(
                 data_directory=data_directory,
                 csv_files=csv_files,
                 handler=self
             )
-            print(f"🧵 [曲线加载] 后台线程已创建")
+            # print(f"🧵 [曲线加载] 后台线程已创建")
             
             # 连接信号（使用Qt.QueuedConnection确保跨线程安全）
             self._load_thread.progress_updated.connect(
@@ -1059,15 +1056,15 @@ class CurvePanelHandler:
             )
             
             # 启动线程
-            print(f"🚀 [曲线加载] 启动后台线程...")
+            # print(f"🚀 [曲线加载] 启动后台线程...")
             self._load_thread.start()
-            print(f"✅ [曲线数据加载] 后台加载线程已启动")
-            print(f"🔍 [曲线加载] ==================== 加载流程启动完成 ====================\n")
+            # print(f"✅ [曲线数据加载] 后台加载线程已启动")
+            # print(f"🔍 [曲线加载] ==================== 加载流程启动完成 ====================\n")
             
             return True
             
         except Exception as e:
-            print(f"⚠️ [曲线数据加载] 启动失败: {e}")
+            # print(f"⚠️ [曲线数据加载] 启动失败: {e}")
             return False
     
     def _onLoadProgress(self, progress_dialog, value, text):
@@ -1079,15 +1076,15 @@ class CurvePanelHandler:
     
     def _onFileLoaded(self, channel_id, channel_name, window_name, color, data_points):
         """处理单个文件加载完成"""
-        print(f"📥 [文件加载] 收到文件数据:")
-        print(f"   - channel_id: {channel_id}")
-        print(f"   - channel_name: {channel_name}")
-        print(f"   - window_name: {window_name}")
-        print(f"   - 数据点数量: {len(data_points)}")
+        # print(f"📥 [文件加载] 收到文件数据:")
+        # print(f"   - channel_id: {channel_id}")
+        # print(f"   - channel_name: {channel_name}")
+        # print(f"   - window_name: {window_name}")
+        # print(f"   - 数据点数量: {len(data_points)}")
         
         # 添加通道（如果不存在）
         if channel_id not in self.channel_data:
-            print(f"   - 添加新通道: {channel_id}")
+            # print(f"   - 添加新通道: {channel_id}")
             self.addChannelData(
                 channel_id=channel_id,
                 channel_name=channel_name,
@@ -1095,12 +1092,10 @@ class CurvePanelHandler:
                 color=color
             )
         else:
-            print(f"   - 通道已存在: {channel_id}")
-        
+            pass
+
         # 批量更新曲线数据
-        print(f"   - 开始更新曲线数据...")
         self.updateCurveData(channel_id, data_points)
-        print(f"   - 曲线数据更新完成")
     
     def _onLoadFinished(self, progress_dialog, success, count):
         """处理加载完成"""
@@ -1112,10 +1107,10 @@ class CurvePanelHandler:
             # 🔥 延迟关闭进度条，确保用户能看到（至少显示500ms）
             from qtpy.QtCore import QTimer
             QTimer.singleShot(500, progress_dialog.close)
-            print(f"✅ [进度条] 将在500ms后关闭")
+            # print(f"✅ [进度条] 将在500ms后关闭")
         
         if success:
-            print(f"✅ [曲线数据加载] 成功加载 {count} 个文件")
+            # print(f"✅ [曲线数据加载] 成功加载 {count} 个文件")
             # 🔥 设置历史数据已加载标志
             self._history_data_loaded = True
             
@@ -1141,13 +1136,10 @@ class CurvePanelHandler:
                 
                 # 如果有数据，设置视图显示全部范围
                 if min_time is not None and max_time is not None:
-                    print(f"🔄 [历史数据加载完成] 设置视图显示全部数据范围")
-                    print(f"   - 时间范围: [{min_time:.2f}, {max_time:.2f}]")
-                    print(f"   - 数值范围: [0, {max_value:.2f}]")
                     self.curve_panel.setViewAll(min_time, max_time, max_value)
         else:
-            print(f"⚠️ [曲线数据加载] 加载失败")
-    
+            pass
+
     def _readCSVFile(self, csv_path):
         """
         读取CSV文件并解析为数据点列表
@@ -1226,7 +1218,7 @@ class CurvePanelHandler:
             self.curveDataReceived.emit(curve_id, area_idx, new_points)
         except Exception as e:
             import traceback
-            print(f"⚠️ [曲线数据回调] 发射信号失败: {e}")
+            # print(f"⚠️ [曲线数据回调] 发射信号失败: {e}")
             traceback.print_exc()
     
     def _processCurveDataInMainThread(self, curve_id: str, area_idx: int, new_points: list):
@@ -1261,12 +1253,12 @@ class CurvePanelHandler:
             # 检查曲线面板是否存在（兼容两种命名方式）
             curve_panel_obj = getattr(self, 'curvePanel', None) or getattr(self, 'curve_panel', None)
             if curve_panel_obj is None:
-                print(f"⚠️ [曲线数据处理-主线程] 曲线面板不存在，跳过更新")
+                # print(f"⚠️ [曲线数据处理-主线程] 曲线面板不存在，跳过更新")
                 return
             
             # 如果没有数据点，直接返回
             if not new_points:
-                print(f"⚠️ [曲线数据处理-主线程] 数据点为空，跳过更新")
+                # print(f"⚠️ [曲线数据处理-主线程] 数据点为空，跳过更新")
                 return
             
             # 从第一个数据点获取区域名称（作为曲线标签）
@@ -1302,7 +1294,7 @@ class CurvePanelHandler:
         except Exception as e:
             # 静默处理错误，避免干扰主线程
             import traceback
-            print(f"⚠️ [曲线数据更新-主线程] 错误: {e}")
+            # print(f"⚠️ [曲线数据更新-主线程] 错误: {e}")
             traceback.print_exc()
     
     def setCurveLoadMode(self, mode: str):
@@ -1315,13 +1307,13 @@ class CurvePanelHandler:
                 - 'history'：历史回放模式，加载所有数据点，不做限制
         """
         if mode not in ('realtime', 'history'):
-            print(f"⚠️ [曲线加载模式] 无效的模式: {mode}，使用默认模式 'realtime'")
+            # print(f"⚠️ [曲线加载模式] 无效的模式: {mode}，使用默认模式 'realtime'")
             mode = 'realtime'
         
         self.curve_load_mode = mode
         # 🔥 切换模式时重置历史数据加载标志
         self._history_data_loaded = False
-        print(f"✅ [曲线加载模式] 已切换到: {mode}")
+        # print(f"✅ [曲线加载模式] 已切换到: {mode}")
     
     def getCurveLoadMode(self) -> str:
         """

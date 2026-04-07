@@ -31,7 +31,7 @@ class DetectionResultCSVWriter:
                 project_root = get_project_root()
                 save_dir = os.path.join(project_root, 'database', 'mission_result')
             except Exception as e:
-                print(f"[CSVWriter] 获取项目根目录失败: {e}")
+                # print(f"[CSVWriter] 获取项目根目录失败: {e}")
                 save_dir = r"D:\system_client_sever\client\database\mission_result"
 
         self.base_save_dir = Path(save_dir)
@@ -42,7 +42,7 @@ class DetectionResultCSVWriter:
         # 确保基础目录存在
         self.base_save_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"[CSVWriter] 初始化完成，基础保存目录: {self.base_save_dir}")
+        # print(f"[CSVWriter] 初始化完成，基础保存目录: {self.base_save_dir}")
 
     def _get_or_create_writer(self, channel_id: str):
         """
@@ -87,7 +87,7 @@ class DetectionResultCSVWriter:
             self.csv_files[channel_id] = (file_handle, csv_writer)
             self.csv_filepaths[channel_id] = csv_filepath
 
-            print(f"[CSVWriter] 创建CSV文件: {csv_filepath}")
+            # print(f"[CSVWriter] 创建CSV文件: {csv_filepath}")
 
         return self.csv_files[channel_id]
 
@@ -119,7 +119,7 @@ class DetectionResultCSVWriter:
             return None
 
         except Exception as e:
-            print(f"[CSVWriter] 获取通道任务失败 ({channel_id}): {e}")
+            # print(f"[CSVWriter] 获取通道任务失败 ({channel_id}): {e}")
             return None
 
     def write_detection_result(self, channel_id: str, heights: List[float], timestamp: Optional[float] = None):
@@ -132,19 +132,19 @@ class DetectionResultCSVWriter:
             timestamp: 时间戳（可选，默认使用当前时间）
         """
         try:
-            print(f"[CSVWriter] ========== Start Writing CSV ==========")
-            print(f"[CSVWriter] Channel ID: {channel_id}")
-            print(f"[CSVWriter] Heights: {heights}")
-            print(f"[CSVWriter] Timestamp: {timestamp}")
+            # print(f"[CSVWriter] ========== Start Writing CSV ==========")
+            # print(f"[CSVWriter] Channel ID: {channel_id}")
+            # print(f"[CSVWriter] Heights: {heights}")
+            # print(f"[CSVWriter] Timestamp: {timestamp}")
 
             # 获取写入器
-            print(f"[CSVWriter] Getting or creating CSV writer...")
+            # print(f"[CSVWriter] Getting or creating CSV writer...")
             file_handle, csv_writer = self._get_or_create_writer(channel_id)
-            print(f"[CSVWriter] [OK] CSV writer ready")
+            # print(f"[CSVWriter] [OK] CSV writer ready")
 
             # 使用提供的时间戳或当前时间
             ts = timestamp if timestamp else time.time()
-            print(f"[CSVWriter] Using timestamp: {ts}")
+            # print(f"[CSVWriter] Using timestamp: {ts}")
 
             # 写入每个液位高度（每个高度一行）
             write_count = 0
@@ -156,20 +156,16 @@ class DetectionResultCSVWriter:
                     ]
                     csv_writer.writerow(row)
                     write_count += 1
-                    print(f"[CSVWriter] Wrote height #{i+1}: {round(height, 2)} mm")
                 else:
-                    print(f"[CSVWriter] Skipped height #{i+1} (invalid value): {height}")
+                    pass
 
             # 立即刷新到磁盘
             file_handle.flush()
-            print(f"[CSVWriter] [SUCCESS] Wrote {write_count} records to CSV")
-            print(f"[CSVWriter] File path: {self.csv_filepaths.get(channel_id)}")
-            print(f"[CSVWriter] ========== CSV Writing Complete ==========\n")
 
         except Exception as e:
-            print(f"[CSVWriter] [FAIL] Write failed - Channel: {channel_id}, Error: {e}")
+            pass
             import traceback
-            print(f"[CSVWriter] Exception traceback: {traceback.format_exc()}")
+            # print(f"[CSVWriter] Exception traceback: {traceback.format_exc()}")
 
     def write_full_detection_result(self, data: Dict):
         """
@@ -195,7 +191,7 @@ class DetectionResultCSVWriter:
                 self.write_detection_result(channel_id, heights, timestamp)
 
         except Exception as e:
-            print(f"[CSVWriter] 写入完整结果失败: {e}")
+            pass
 
     def close_channel(self, channel_id: str):
         """
@@ -210,14 +206,14 @@ class DetectionResultCSVWriter:
             del self.csv_files[channel_id]
 
             filepath = self.csv_filepaths.get(channel_id)
-            print(f"[CSVWriter] 关闭CSV文件: {filepath}")
+            # print(f"[CSVWriter] 关闭CSV文件: {filepath}")
 
     def close_all(self):
         """关闭所有CSV文件"""
         for channel_id in list(self.csv_files.keys()):
             self.close_channel(channel_id)
 
-        print(f"[CSVWriter] 所有CSV文件已关闭")
+        # print(f"[CSVWriter] 所有CSV文件已关闭")
 
     def get_filepath(self, channel_id: str) -> Optional[Path]:
         """
@@ -254,16 +250,15 @@ if __name__ == "__main__":
     # 或者直接写入高度数据
     csv_writer.write_detection_result('channel2', [100.0, 105.5, 110.2])
 
-    print(f"\nCSV files created:")
+    # print(f"\nCSV files created:")
     for channel_id, filepath in csv_writer.csv_filepaths.items():
-        print(f"  {channel_id}: {filepath}")
+        # print(f"  {channel_id}: {filepath}")
 
         # 显示文件内容
         if filepath.exists():
-            print(f"\n  Content of {filepath.name}:")
             with open(filepath, 'r', encoding='utf-8-sig') as f:
                 for line in f:
-                    print(f"    {line.rstrip()}")
+                    pass
 
     # 关闭所有文件
     csv_writer.close_all()

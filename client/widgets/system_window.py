@@ -314,7 +314,7 @@ class SystemWindow(
     def _loadDefaultConfig(self):
         """从服务端加载配置"""
         try:
-            print("[DEBUG] 开始从服务端加载配置")
+            # print("[DEBUG] 开始从服务端加载配置")
             
             # 初始化远程配置管理器
             if not hasattr(self, '_remote_config_manager'):
@@ -328,15 +328,15 @@ class SystemWindow(
             config = {**default_config, **channel_config}
             
             if config:
-                print(f"[DEBUG] 成功从服务端加载配置")
-                print(f"[DEBUG] 配置的通道: {[k for k in config.keys() if k.startswith('channel')]}")
+                # print(f"[DEBUG] 成功从服务端加载配置")
+                # print(f"[DEBUG] 配置的通道: {[k for k in config.keys() if k.startswith('channel')]}")
                 return config
             else:
-                print("[DEBUG] 服务端配置为空，使用备用配置")
+                # print("[DEBUG] 服务端配置为空，使用备用配置")
                 return self._getFallbackConfig()
                 
         except Exception as e:
-            print(f"[ERROR] 从服务端加载配置失败: {e}")
+            # print(f"[ERROR] 从服务端加载配置失败: {e}")
             import traceback
             traceback.print_exc()
             return self._getFallbackConfig()
@@ -385,13 +385,13 @@ class SystemWindow(
             try:
                 if '__main__' in sys.modules:
                     offline_mode = getattr(sys.modules['__main__'], 'OFFLINE_MODE', False)
-                    print(f"[SystemWindow] 检测到离线模式设置: {offline_mode}")
+                    # print(f"[SystemWindow] 检测到离线模式设置: {offline_mode}")
             except Exception as e:
-                print(f"[SystemWindow] 检查离线模式失败: {e}")
+                # print(f"[SystemWindow] 检查离线模式失败: {e}")
                 pass
 
             if offline_mode:
-                print(f"[SystemWindow] 离线模式 - 跳过WebSocket连接")
+                # print(f"[SystemWindow] 离线模式 - 跳过WebSocket连接")
                 self.command_manager = None
                 self.ws_client = None
                 return
@@ -411,10 +411,10 @@ class SystemWindow(
             # 为了向后兼容，保留ws_client属性
             self.ws_client = self.command_manager
 
-            print(f"[SystemWindow] 网络命令管理器已初始化并启动")
+            # print(f"[SystemWindow] 网络命令管理器已初始化并启动")
 
         except Exception as e:
-            print(f"[SystemWindow] 网络命令管理器初始化失败: {e}")
+            # print(f"[SystemWindow] 网络命令管理器初始化失败: {e}")
             import traceback
             traceback.print_exc()
             self.command_manager = None
@@ -434,10 +434,10 @@ class SystemWindow(
             # 创建CSV写入器，传入主窗口实例以获取通道任务信息
             self.csv_writer = DetectionResultCSVWriter(save_dir=save_dir, main_window=self)
 
-            print(f"[SystemWindow] CSV写入器已初始化，保存目录: {save_dir}")
+            # print(f"[SystemWindow] CSV写入器已初始化，保存目录: {save_dir}")
 
         except Exception as e:
-            print(f"[SystemWindow] CSV写入器初始化失败: {e}")
+            # print(f"[SystemWindow] CSV写入器初始化失败: {e}")
             import traceback
             traceback.print_exc()
             self.csv_writer = None
@@ -451,7 +451,7 @@ class SystemWindow(
             message: 状态消息
         """
         status_text = "已连接" if is_connected else "未连接"
-        print(f"[WebSocket] 连接状态: {status_text} - {message}")
+        # print(f"[WebSocket] 连接状态: {status_text} - {message}")
         
         # 更新状态栏
         if hasattr(self, 'statusBar'):
@@ -463,7 +463,7 @@ class SystemWindow(
         Args:
             data: 检测结果数据
         """
-        print(f"[SystemWindow] 收到检测结果: {data}")
+        # print(f"[SystemWindow] 收到检测结果: {data}")
 
         # 保存检测结果到CSV
         if hasattr(self, 'csv_writer') and self.csv_writer:
@@ -473,23 +473,20 @@ class SystemWindow(
                 timestamp = data.get('timestamp')
 
                 if heights:
-                    print(f"[SystemWindow] 保存检测结果到CSV - 通道: {channel_id}, 液位数: {len(heights)}")
                     self.csv_writer.write_detection_result(channel_id, heights, timestamp)
                 else:
-                    print(f"[SystemWindow] 检测结果无液位数据，跳过保存 - 通道: {channel_id}")
+                    pass
 
             except Exception as e:
-                print(f"[SystemWindow] 保存CSV失败: {e}")
                 import traceback
                 traceback.print_exc()
 
         # 转发给ChannelPanelHandler处理液位线显示
         if hasattr(self, '_onWebSocketDetectionResult'):
-            print(f"[SystemWindow] 转发检测结果给ChannelPanelHandler...")
             self._onWebSocketDetectionResult(data)
         else:
-            print(f"[SystemWindow] [WARN] _onWebSocketDetectionResult方法不存在")
-    
+            pass
+
     def _createPages(self):
         """创建不同的页面"""
         # 页面0：实时检测管理页面（实时检测管理）
@@ -838,7 +835,7 @@ class SystemWindow(
             config_file = os.path.join(project_root, 'database', 'config', 'mission', f"{mission_name}.yaml")
             
             if not os.path.exists(config_file):
-                print(f"[通道筛选] 任务配置文件不存在: {config_file}")
+                # print(f"[通道筛选] 任务配置文件不存在: {config_file}")
                 # 如果没有配置文件，返回空列表
                 return []
             
@@ -847,7 +844,7 @@ class SystemWindow(
                 task_config = yaml.safe_load(f)
             
             if not task_config:
-                print(f"[通道筛选] 任务配置为空: {config_file}")
+                # print(f"[通道筛选] 任务配置为空: {config_file}")
                 return []
             
             #  调试：打印配置文件的所有键
@@ -877,7 +874,7 @@ class SystemWindow(
                                 used_channels.append(f'通道{ch_num}')
                         elif isinstance(ch, int):
                             used_channels.append(f'通道{ch}')
-                    print(f"[通道筛选] 从 channels 读取: {used_channels}")
+                    # print(f"[通道筛选] 从 channels 读取: {used_channels}")
             
             elif 'channel_list' in task_config:
                 # 格式3: channel_list: [1, 2, 3]
@@ -885,14 +882,14 @@ class SystemWindow(
                 if isinstance(channel_list, list):
                     for ch_num in channel_list:
                         used_channels.append(f'通道{ch_num}')
-                    print(f"[通道筛选] 从 channel_list 读取: {used_channels}")
+                    # print(f"[通道筛选] 从 channel_list 读取: {used_channels}")
             
             elif 'task_channels' in task_config:
                 # 格式4: task_channels: '通道1, 通道2'
                 channels_str = task_config['task_channels']
                 if isinstance(channels_str, str):
                     used_channels = [ch.strip() for ch in channels_str.split(',')]
-                    print(f"[通道筛选] 从 task_channels 读取: {used_channels}")
+                    # print(f"[通道筛选] 从 task_channels 读取: {used_channels}")
             
             else:
                 # 如果没有明确的通道配置，尝试从其他字段推断
@@ -901,8 +898,8 @@ class SystemWindow(
                     if f'channel{i}' in task_config:
                         used_channels.append(f'通道{i}')
                 if used_channels:
-                    print(f"[通道筛选] 从 channel 字段推断: {used_channels}")
-            
+                    pass
+
             # 去重并排序
             used_channels = sorted(list(set(used_channels)))
             
@@ -916,7 +913,7 @@ class SystemWindow(
             return used_channels
             
         except Exception as e:
-            print(f"[通道筛选] 获取通道列表失败: {e}")
+            # print(f"[通道筛选] 获取通道列表失败: {e}")
             import traceback
             traceback.print_exc()
             # 出错时返回所有通道
@@ -985,7 +982,7 @@ class SystemWindow(
                 from handlers.modelpage.model_training_handler import ModelTrainingHandler
             except ImportError:
                 ModelTrainingHandler = None
-                print("[WARNING] 无法导入ModelTrainingHandler，训练功能将不可用")
+                # print("[WARNING] 无法导入ModelTrainingHandler，训练功能将不可用")
         
         if ModelTrainingHandler:
             self.training_handler = ModelTrainingHandler()
@@ -1124,7 +1121,7 @@ class SystemWindow(
                 x = screen_geometry.left() + (screen_geometry.width() - size.width()) // 2
                 y = screen_geometry.top() + (screen_geometry.height() - size.height()) // 2
                 position = QtCore.QPoint(max(0, x), max(0, y))
-                print(f"[DEBUG] 窗口位置超出屏幕，重置到: ({position.x()}, {position.y()})")
+                # print(f"[DEBUG] 窗口位置超出屏幕，重置到: ({position.x()}, {position.y()})")
         
         self.move(position)
         
@@ -1260,7 +1257,7 @@ class SystemWindow(
             from handlers.videopage import MissionPanelHandler
             MissionPanelHandler._updateChannelColumnColor(self)
         except Exception as e:
-            print(f"[更新通道列颜色] 失败: {e}")
+            # print(f"[更新通道列颜色] 失败: {e}")
             import traceback
             traceback.print_exc()
     
@@ -1332,18 +1329,16 @@ class SystemWindow(
             # 关闭CSV写入器
             if hasattr(self, 'csv_writer') and self.csv_writer:
                 try:
-                    print("[关闭] 正在关闭CSV写入器...")
                     self.csv_writer.close_all()
-                    print("[关闭] CSV写入器已关闭")
                 except Exception as e:
-                    print(f"[关闭] 关闭CSV写入器失败: {e}")
+                    pass
 
             # 程序退出时，停止全局存储线程并将缓冲区数据写入磁盘
             try:
                 from handlers.videopage.thread_manager.threads.storage_thread import StorageThread
                 StorageThread.stop()  # stop() 内部会调用 flush_all_on_exit()
             except Exception as e:
-                print(f"[关闭] 停止存储线程失败: {e}")
+                pass
             
             # 清理全局检测线程
             if hasattr(self, 'view_handler') and self.view_handler:
@@ -1383,7 +1378,7 @@ def main():
     app.setOrganizationName('Detection')
     
     # 暂时禁用全局字体配置，测试是否解决重复显示问题
-    print(f"[调试] 跳过全局字体应用到应用程序")
+    # print(f"[调试] 跳过全局字体应用到应用程序")
     # FontManager.applyToApplication(app)
     
     # 设置应用样式（可选）

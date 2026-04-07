@@ -49,7 +49,7 @@ def check_port_listening(port):
         output = result.stdout
         return 'LISTEN' in output and str(port) in output
     except Exception as e:
-        print(f"[端口检测] 检测端口 {port} 监听状态失败: {e}")
+        # print(f"[端口检测] 检测端口 {port} 监听状态失败: {e}")
         return False
 
 
@@ -93,7 +93,7 @@ def check_port(host, port, timeout=2, is_websocket=False):
             sock.close()
             return result == 0
     except Exception as e:
-        print(f"[端口检测] 检测 {host}:{port} 失败: {e}")
+        # print(f"[端口检测] 检测 {host}:{port} 失败: {e}")
         return False
 
 
@@ -127,7 +127,7 @@ def ping_host(host, timeout=2):
         return result.returncode == 0
 
     except Exception as e:
-        print(f"[网络检测] Ping {host} 失败: {e}")
+        # print(f"[网络检测] Ping {host} 失败: {e}")
         return False
 
 
@@ -146,10 +146,6 @@ def check_network_connectivity(config):
                 'ws_server': bool    # WebSocket服务器连接状态
             }
     """
-    print("\n" + "="*50)
-    print("网络连接检测")
-    print("="*50)
-
     status = {
         'api_server': False,
         'ws_server': False
@@ -165,64 +161,37 @@ def check_network_connectivity(config):
     ws_port = int(ws_url.split(':')[-1]) if ':' in ws_url else 8085
 
     # 1. 检测 API 服务器
-    print(f"\n[1/2] 检测 API 服务器: {api_host}:{api_port}")
     status['api_server'] = check_port(api_host, api_port)
 
     # 2. 检测 WebSocket 服务器
-    print(f"\n[2/2] 检测 WebSocket 服务器: {ws_host}:{ws_port}")
     status['ws_server'] = check_port(ws_host, ws_port, is_websocket=True)
 
     # 检查本地端口监听状态，避免重复启动
     api_listening = check_port_listening(api_port)
     ws_listening = check_port_listening(ws_port)
 
-    print(f"\n[端口监听] API端口 {api_port}: {'已监听' if api_listening else '未监听'}")
-    print(f"[端口监听] WebSocket端口 {ws_port}: {'已监听' if ws_listening else '未监听'}")
-
     # 自动启动未运行的服务
     if not api_listening or not ws_listening:
-        print(f"\n[自动启动] 检测到服务未启动，正在自动启动...")
-
         # 启动API服务
         if not api_listening:
             if start_api_service(api_host):
-                # 重新检测API服务
                 time.sleep(1)
                 status['api_server'] = check_port(api_host, api_port)
-                if status['api_server']:
-                    print(f"[成功] API服务启动成功")
-                else:
-                    print(f"[警告] API服务启动后仍无法连接")
-            else:
-                print(f"[失败] API服务启动失败")
 
         # 启动WebSocket服务
         if not ws_listening:
             if start_websocket_service(ws_host):
-                # 重新检测WebSocket服务
                 time.sleep(2)
                 status['ws_server'] = check_port(ws_host, ws_port, is_websocket=True)
-                if status['ws_server']:
-                    print(f"[成功] WebSocket服务启动成功")
-                else:
-                    print(f"[警告] WebSocket服务启动后仍无法连接")
-            else:
-                print(f"[失败] WebSocket服务启动失败")
-    else:
-        print(f"\n[状态] 所有服务已在运行")
-
-    print("\n" + "="*50)
-    print("网络检测完成")
-    print("="*50 + "\n")
 
     return status
 
 
 def main():
     """主函数"""
-    print("="*60)
-    print("液位检测系统客户端启动")
-    print("="*60)
+    # print("="*60)
+    # print("液位检测系统客户端启动")
+    # print("="*60)
 
     # 设置高DPI支持(必须在QApplication创建之前)
     if hasattr(Qt, 'AA_EnableHighDpiScaling'):
@@ -242,34 +211,12 @@ def main():
     setup_logging(config.get('log_level', 'INFO'))
 
     # 网络连接检测
-    print("\n[系统启动] 检测服务连接状态...")
     network_status = check_network_connectivity(config)
 
     # 检查关键服务是否可用
-    print("\n[系统启动] 服务状态总结:")
 
-    # API服务状态
-    if network_status['api_server']:
-        print("[API服务] 状态: 服务器连接正常")
-    else:
-        print("[API服务] 状态: 服务器连接异常")
-        print("[警告] API 服务器连接失败，部分功能可能不可用")
-
-    # 推理服务状态
-    if network_status['ws_server']:
-        print("[推理服务] 状态: 服务器连接正常")
-    else:
-        print("[推理服务] 状态: 服务器连接异常")
-        print("[警告] WebSocket 服务器连接失败，实时数据推送功能可能不可用")
-
-    print("\n[系统启动] 启动客户端界面...")
-
-    # 显示登录窗口
     login_window = LoginWindow(config)
     login_window.show()
-
-    print("[系统启动] 客户端界面已启动")
-    print("="*60)
 
     # 启动事件循环
     exit_code = app.exec_()

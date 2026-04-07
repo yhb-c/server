@@ -24,13 +24,14 @@ class FixedLogHandler(logging.FileHandler):
         super().__init__(filename, mode=mode, encoding=encoding, delay=delay)
 
 
-def setup_logging(log_type='server', log_level='INFO'):
+def setup_logging(log_type='server', log_level='INFO', console_output=False):
     """
     配置日志系统
 
     Args:
         log_type: 日志类型 ('client', 'server', 'api', 'websocket')
         log_level: 日志级别
+        console_output: 是否输出到控制台，默认False
 
     Returns:
         logger: 配置好的日志记录器
@@ -67,10 +68,11 @@ def setup_logging(log_type='server', log_level='INFO'):
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
-    # 添加控制台处理器
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    # 只在需要时添加控制台处理器
+    if console_output:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
 
     logger.info(f"{log_type}日志系统初始化完成，日志文件: {log_file}")
 
