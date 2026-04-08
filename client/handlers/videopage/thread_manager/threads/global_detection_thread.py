@@ -305,7 +305,7 @@ class GlobalDetectionThread:
                 self.stats['total_frames_processed'] += len(collected_data)
                 
             except Exception as e:
-                print(f"[DEBUG] 主循环异常: {e}")
+                self.logger.error(f"[DEBUG] 主循环异常: {e}")
                 import traceback
                 traceback.print_exc()
                 time.sleep(0.1)

@@ -4,6 +4,15 @@ import time
 import os
 from datetime import datetime, timedelta
 import logging
+import sys
+from pathlib import Path
+
+# 添加项目路径
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+# 导入日志工具
+from server.utils.logger import get_logger
 
 # 导入HKcapture类 - 使用服务端的海康SDK
 try:
@@ -11,13 +20,11 @@ try:
     from video.hik_capture import HikSDK, PlayM4SDK
     HKcapture = None  # 服务端暂时不使用HKcapture类
 except ImportError as e:
-    print(f"导入海康SDK失败: {e}")
+    logger = get_logger('server')
+    logger.error(f"导入海康SDK失败: {e}")
     HikSDK = None
     PlayM4SDK = None
     HKcapture = None
-
-# 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class VideoRecorder:
     def __init__(self, rtsp_url, save_path, camera_id):
@@ -29,6 +36,7 @@ class VideoRecorder:
         self.is_recording = False
         self.thread = None
         self.file_start_time = None
+        self.logger = get_logger('server')
 
     def start_recording(self):
         if not os.path.exists(self.save_path):
@@ -36,7 +44,7 @@ class VideoRecorder:
         self.is_recording = True
         self.thread = threading.Thread(target=self._record_loop)
         self.thread.start()
-        logging.info(f"相机{self.camera_id}开始录制: {self.rtsp_url}")
+        self.logger.info(f"相机{self.camera_id}开始录制: {self.rtsp_url}")
 
     def stop_recording(self):
         self.is_recording = False
@@ -47,7 +55,7 @@ class VideoRecorder:
             self.cap.release()
         if self.writer:
             self.writer.release()
-        logging.info(f"相机{self.camera_id}停止录制")
+        self.logger.info(f"相机{self.camera_id}停止录制")
 
     def _record_loop(self):
         # 使用HKcapture类初始化
@@ -55,12 +63,12 @@ class VideoRecorder:
         
         # 打开连接
         if not self.cap.open():
-            logging.error(f"无法打开相机{self.camera_id}: {self.rtsp_url}")
+            self.logger.error(f"无法打开相机{self.camera_id}: {self.rtsp_url}")
             return
         
         # 开始捕获
         if not self.cap.start_capture():
-            logging.error(f"无法开始捕获相机{self.camera_id}: {self.rtsp_url}")
+            self.logger.error(f"无法开始捕获相机{self.camera_id}: {self.rtsp_url}")
             return
         
         # 获取视频属性
@@ -102,7 +110,7 @@ class VideoRecorder:
                         
                         # 如果实际帧率与写入帧率差异较大，重新创建writer
                         if abs(actual_fps - fps) > 2:  # 差异超过2fps
-                            logging.info(f"相机{self.camera_id} 检测到帧率变化: {fps:.1f} -> {actual_fps:.1f}")
+                            self.logger.info(f"相机{self.camera_id} 检测到帧率变化: {fps:.1f} -> {actual_fps:.1f}")
                             self.writer.release()
                             fps = max(1, int(actual_fps))  # 确保fps至少为1
                             self._create_new_writer(fourcc, fps, width, height)
@@ -126,10 +134,11 @@ class VideoRecorder:
         timestamp = self.file_start_time.strftime('%Y%m%d_%H%M%S')
         filename = f"{self.save_path}/camera_{self.camera_id}_{timestamp}.avi"
         self.writer = cv2.VideoWriter(filename, fourcc, fps, (width, height))
-        logging.info(f"创建新视频文件: {filename}")
+        self.logger.info(f"创建新视频文件: {filename}")
 
 
 def main():
+    logger = get_logger('server')
     # 相机配置（最多支持4个）
     cameras = [
         {
@@ -170,7 +179,7 @@ def main():
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        logging.info("收到停止信号，正在停止录制...")
+    logger.info("收到停止信号，正在停止录制...")
         for recorder in recorders:
             recorder.stop_recording()
 

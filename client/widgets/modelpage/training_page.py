@@ -1754,7 +1754,7 @@ class TrainingPage(QtWidgets.QWidget):
             print(f"[模板] [成功] 模板{template_num}配置已成功应用到UI")
             
         except Exception as e:
-            print(f"[模板] [错误] 应用配置失败: {e}")
+            self.logger.error(f"[模板] [错误] 应用配置失败: {e}")
             import traceback
             traceback.print_exc()
     
@@ -2305,7 +2305,7 @@ class TrainingPage(QtWidgets.QWidget):
                         self.test_model_combo.setCurrentIndex(index)
             
         except Exception as e:
-            print(f"[错误] 刷新模型列表失败: {e}")
+            self.logger.error(f"[错误] 刷新模型列表失败: {e}")
             import traceback
             traceback.print_exc()
     
@@ -2322,7 +2322,7 @@ class TrainingPage(QtWidgets.QWidget):
             else:
                 print("[警告] ModelSetPage没有modelListChanged信号")
         except Exception as e:
-            print(f"[错误] 连接模型列表变化信号失败: {e}")
+            self.logger.error(f"[错误] 连接模型列表变化信号失败: {e}")
     
     def refreshBaseModelList(self):
         """刷新基础模型下拉菜单（兼容旧接口）"""

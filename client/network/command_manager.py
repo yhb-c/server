@@ -11,20 +11,11 @@ import os
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-# 配置日志
-log_dir = project_root / 'logs'
-log_dir.mkdir(parents=True, exist_ok=True)
-log_file = log_dir / 'client.log'
+# 导入日志工具
+from client.utils.logger import get_logger
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file, encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger('CommandManager')
+# 配置日志 - 只输出到文件
+logger = get_logger('client')
 
 from qtpy import QtCore
 from .websocket_client import WebSocketClient
@@ -355,51 +346,81 @@ class NetworkCommandManager(QtCore.QObject):
     
     def _on_detection_result(self, data):
         """检测结果处理"""
+        logger.info(f"========== _on_detection_result 被调用 ==========")
+        logger.info(f"接收到的数据类型: {data.get('type')}")
+        logger.info(f"数据键: {list(data.keys())}")
+
         if data.get('type') != 'detection_result':
+            logger.warning(f"数据类型不是detection_result，跳过处理")
             return
 
         channel_id = data.get('channel_id')
-        data_obj = data.get('data', {})
-        liquid_line_positions = data_obj.get('liquid_line_positions', {})
+        logger.info(f"通道ID: {channel_id}")
 
-        logger.debug(f"收到检测结果 - 通道: {channel_id}")
+        data_obj = data.get('data', {})
+        logger.info(f"data对象键: {list(data_obj.keys())}")
+
+        liquid_line_positions = data_obj.get('liquid_line_positions', {})
+        logger.info(f"liquid_line_positions类型: {type(liquid_line_positions)}")
+        logger.info(f"liquid_line_positions内容: {liquid_line_positions}")
 
         # 从 liquid_line_positions 提取 heights 用于CSV存储
         heights = []
         if isinstance(liquid_line_positions, dict):
+            logger.info(f"开始提取液位高度，ROI数量: {len(liquid_line_positions)}")
             for key in sorted(liquid_line_positions.keys(), key=lambda x: int(x) if str(x).isdigit() else 0):
                 position_data = liquid_line_positions[key]
+                logger.info(f"ROI {key}: {position_data}")
                 if isinstance(position_data, dict):
                     height_mm = position_data.get('height_mm', 0)
                     heights.append(height_mm)
+                    logger.info(f"ROI {key} 高度: {height_mm}mm")
 
-        logger.debug(f"提取液位高度 - 通道: {channel_id}, 液位数: {len(heights)}, heights: {heights}")
+        logger.info(f"提取液位高度完成 - 通道: {channel_id}, 液位数: {len(heights)}, heights: {heights}")
 
         if channel_id and heights:
+            logger.info(f"通道ID和液位数据都存在，开始处理...")
+
             # 发送液位高度数据信号
+            logger.info(f"发送liquidHeightReceived信号...")
             self.liquidHeightReceived.emit(channel_id, heights)
 
             # 保存到CSV文件
+            logger.info(f"检查CSV写入器: csv_writer={self.csv_writer is not None}")
             if self.csv_writer:
                 try:
                     timestamp = data.get('timestamp')
-                    logger.info(f"准备保存CSV - 通道: {channel_id}, 液位数: {len(heights)}")
+                    logger.info(f"========== 开始保存CSV ==========")
+                    logger.info(f"通道: {channel_id}")
+                    logger.info(f"液位数: {len(heights)}")
+                    logger.info(f"液位值: {heights}")
+                    logger.info(f"时间戳: {timestamp}")
+
                     self.csv_writer.write_detection_result(channel_id, heights, timestamp)
-                    logger.info(f"CSV保存成功 - 通道: {channel_id}, 液位数: {len(heights)}")
+
+                    logger.info(f"========== CSV保存成功 ==========")
                 except Exception as e:
-                    logger.error(f"CSV保存失败 - 通道: {channel_id}, 错误: {e}")
+                    logger.error(f"========== CSV保存失败 ==========")
+                    logger.error(f"通道: {channel_id}")
+                    logger.error(f"错误: {e}")
                     import traceback
                     logger.error(traceback.format_exc())
             else:
                 logger.warning(f"CSV写入器未初始化，无法保存数据 - 通道: {channel_id}")
+                logger.warning(f"enable_csv_storage: {self.enable_csv_storage}")
+                logger.warning(f"DetectionResultCSVWriter: {DetectionResultCSVWriter}")
         else:
+            logger.warning(f"========== 数据不完整，无法保存 ==========")
             if not channel_id:
                 logger.warning("检测结果缺少channel_id")
             if not heights:
                 logger.warning(f"检测结果无液位数据 - 通道: {channel_id}")
+                logger.warning(f"liquid_line_positions: {liquid_line_positions}")
 
         # 将heights添加到data中，方便system_window使用
         data['heights'] = heights
 
         # 转发检测结果信号
+        logger.info(f"发送detectionResultReceived信号...")
         self.detectionResultReceived.emit(data)
+        logger.info(f"========== _on_detection_result 处理完成 ==========")

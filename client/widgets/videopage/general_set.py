@@ -86,14 +86,18 @@ class GeneralSetPanel(QtWidgets.QWidget):
     
     def __init__(self, parent=None):
         super(GeneralSetPanel, self).__init__(parent)
-        
+
+        # 初始化日志
+        from client.utils.logger import get_logger
+        self.logger = get_logger('client')
+
         self.channel_name = None
         self.channel_id = None  # 新增：存储通道ID（如'channel1'）
         self.task_info = None
         self._current_model_config = {}  # 存储当前的模型配置
         self._current_logic_config = {}  # 存储当前的逻辑配置
         self._cached_area_count = 0  #  缓存区域数量（由handler设置）
-        
+
         self._initUI()
         self._connectSignals()
     

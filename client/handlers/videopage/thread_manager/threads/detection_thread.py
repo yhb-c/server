@@ -52,13 +52,13 @@ class DetectionThread:
         
         # 决定使用批处理还是单帧处理
         if use_batch:
-            print(f"[{channel_id}] 启用批处理模式（批大小={batch_size}）")
+            self.logger.info(f"[{channel_id}] 启用批处理模式（批大小={batch_size}）")
             DetectionThread._run_batch_mode(
                 context, detection_engine, frame_rate, 
                 batch_size, on_detection_mission_result
             )
         else:
-            print(f"[{channel_id}] 使用单帧模式")
+            self.logger.info(f"[{channel_id}] 使用单帧模式")
             DetectionThread._run_single_mode(
                 context, detection_engine, frame_rate, on_detection_mission_result
             )
@@ -146,7 +146,7 @@ class DetectionThread:
         last_batch_time = time.time()
         max_wait_time = 0.05  # 最大等待50ms，防止延迟过高
         
-        print(f"[{channel_id}] 批处理模式启动")
+        self.logger.info(f"[{channel_id}] 批处理模式启动")
         print(f"  - 批大小: {batch_size}")
         print(f"  - 目标FPS: {frame_rate}")
         
@@ -227,7 +227,7 @@ class DetectionThread:
                     time.sleep(sleep_time)
                     
             except Exception as e:
-                print(f"[{channel_id}] 批处理异常: {e}")
+                self.logger.error(f"[{channel_id}] 批处理异常: {e}")
                 batch_frames.clear()
                 batch_timestamps.clear()
                 time.sleep(0.1)
@@ -277,14 +277,14 @@ class DetectionThread:
             # 获取模型路径
             model_path = model_config.get('model_path')
             if not model_path:
-                print(f"[{channel_id}] [ERROR] 模型路径为空")
+                self.logger.error(f"[{channel_id}] [ERROR] 模型路径为空")
                 return None
             
             # 通过SSH在服务端初始化检测引擎
-            print(f"[{channel_id}] [INFO] 正在通过SSH在服务端初始化检测引擎...")
-            print(f"  - 模型路径: {model_path}")
-            print(f"  - 设备: cuda")
-            print(f"  - 批处理大小: {batch_size}")
+            self.logger.info(f"[{channel_id}] [INFO] 正在通过SSH在服务端初始化检测引擎...")
+            self.logger.info(f"  - 模型路径: {model_path}")
+            self.logger.info(f"  - 设备: cuda")
+            self.logger.info(f"  - 批处理大小: {batch_size}")
             
             # 导入远程配置管理器
             try:
@@ -296,14 +296,14 @@ class DetectionThread:
                     RemoteConfigManager = None
                     
             if not RemoteConfigManager:
-                print("[检测线程] 远程配置管理器不可用")
+                self.logger.warning("[检测线程] 远程配置管理器不可用")
                 return None
                 
             remote_config = RemoteConfigManager()
             ssh_manager = remote_config._get_ssh_manager()
             
             if not ssh_manager:
-                print(f"[{channel_id}] [ERROR] SSH连接不可用")
+                self.logger.error(f"[{channel_id}] [ERROR] SSH连接不可用")
                 return None
             
             # 构建服务端检测引擎初始化命令
@@ -332,10 +332,10 @@ except Exception as e:
             
             if not result['success'] or 'SUCCESS' not in result['stdout']:
                 error_msg = result.get('stderr', result.get('stdout', '未知错误'))
-                print(f"[{channel_id}] [ERROR] 服务端检测引擎初始化失败: {error_msg}")
+                self.logger.error(f"[{channel_id}] [ERROR] 服务端检测引擎初始化失败: {error_msg}")
                 return None
             
-            print(f"[{channel_id}] [OK] 服务端检测引擎初始化成功")
+            self.logger.info(f"[{channel_id}] [OK] 服务端检测引擎初始化成功")
             
             # 返回一个标识对象，表示服务端引擎已准备就绪
             class ServerDetectionEngine:
@@ -357,7 +357,7 @@ except Exception as e:
             return engine
             
         except Exception as e:
-            print(f"[{channel_id}] [ERROR] 初始化检测引擎失败: {str(e)}")
+            self.logger.error(f"[{channel_id}] [ERROR] 初始化检测引擎失败: {str(e)}")
             import traceback
             traceback.print_exc()
             return None
@@ -383,7 +383,7 @@ except Exception as e:
             config = remote_config_manager.load_default_config()
             
             if not config:
-                print(f"[{channel_id}] 无法从服务端加载配置")
+                self.logger.warning(f"[{channel_id}] 无法从服务端加载配置")
                 return None
             
             # 从 Model Configuration 节读取模型路径
@@ -559,15 +559,15 @@ except Exception as e:
             # areas配置中包含init_status字段：0=默认, 1=满, 2=空
             annotation_initstatus = []
             areas = annotation_config.get('areas', {})
-            print(f"[DEBUG] 读取areas配置: {areas}")
+            self.logger.debug(f"[DEBUG] 读取areas配置: {areas}")
             for i in range(len(boxes)):
                 area_key = f'area_{i+1}'
                 area_info = areas.get(area_key, {})
                 init_status = area_info.get('init_status', 0)
                 annotation_initstatus.append(init_status)
-                print(f"[DEBUG] {area_key}: init_status={init_status}")
-            
-            print(f"[DEBUG] annotation_initstatus列表: {annotation_initstatus}")
+                self.logger.debug(f"[DEBUG] {area_key}: init_status={init_status}")
+
+            self.logger.debug(f"[DEBUG] annotation_initstatus列表: {annotation_initstatus}")
             
             # 如果没有实际高度数据，使用默认值
             if not actual_heights:

@@ -326,7 +326,7 @@ class GeneralSetPanelHandler:
             
             channel_id = self.general_set_panel.channel_id
             self.logger.debug(f"[DEBUG] 正在为通道 {channel_id} 加载设置")
-            
+
             # 使用远程配置管理器从服务端加载配置
             try:
                 from ...utils.config import RemoteConfigManager
@@ -335,35 +335,45 @@ class GeneralSetPanelHandler:
                     from utils.config import RemoteConfigManager
                 except ImportError:
                     RemoteConfigManager = None
-                    
+
             if not RemoteConfigManager:
                 self.logger.debug(f"[Handler] 远程配置管理器不可用")
                 if self.general_set_panel:
                     self.general_set_panel.showLoadmission_result(False, "远程配置管理器不可用")
                 return
-                
+
             remote_config = RemoteConfigManager()
-            
+
             self.logger.debug(f"[DEBUG] 正在从服务端加载通道配置...")
             config = remote_config.load_channel_config()
-            
+
             if not config:
                 self.logger.debug(f"[DEBUG] 服务端通道配置为空")
                 if self.general_set_panel:
                     self.general_set_panel.showLoadmission_result(False, "无法从服务端加载通道配置")
                 return
-            
+
             self.logger.debug(f"[DEBUG] 成功从服务端加载通道配置，包含通道: {list(config.keys())}")
-            
+
+            # 标准化通道ID格式为字符串 'channelN'
+            if isinstance(channel_id, int):
+                channel_key = f'channel{channel_id}'
+            elif isinstance(channel_id, str) and not channel_id.startswith('channel'):
+                channel_key = f'channel{channel_id}'
+            else:
+                channel_key = channel_id
+
+            self.logger.debug(f"[DEBUG] 标准化后的通道键: {channel_key}")
+
             # 获取该通道的配置
-            if channel_id not in config:
-                self.logger.debug(f"[DEBUG] 通道 {channel_id} 在服务端配置中不存在")
+            if channel_key not in config:
+                self.logger.debug(f"[DEBUG] 通道 {channel_key} 在服务端配置中不存在")
                 if self.general_set_panel:
                     self.general_set_panel.showLoadmission_result(False, f"通道 {channel_id} 的配置在服务端不存在")
                 return
-            
-            channel_config = config[channel_id]
-            self.logger.debug(f"[DEBUG] 找到通道 {channel_id} 的配置: {list(channel_config.keys())}")
+
+            channel_config = config[channel_key]
+            self.logger.debug(f"[DEBUG] 找到通道 {channel_key} 的配置: {list(channel_config.keys())}")
             
             general_config = channel_config.get('general', {})
             self.logger.debug(f"[DEBUG] 通道 {channel_id} 的通用配置: {general_config}")
@@ -534,25 +544,33 @@ class GeneralSetPanelHandler:
                 return
             
             channel_id = self.general_set_panel.channel_id
-            
+
+            # 标准化通道ID格式为字符串 'channelN'
+            if isinstance(channel_id, int):
+                channel_key = f'channel{channel_id}'
+            elif isinstance(channel_id, str) and not channel_id.startswith('channel'):
+                channel_key = f'channel{channel_id}'
+            else:
+                channel_key = channel_id
+
             # 配置文件路径（使用统一的项目根目录）
             project_root = get_project_root()
             config_dir = os.path.join(project_root, 'database', 'config')
             config_file = os.path.join(config_dir, 'channel_config.yaml')
-            
+
             # 确保目录存在
             os.makedirs(config_dir, exist_ok=True)
-            
+
             # 读取现有配置
             if os.path.exists(config_file):
                 with open(config_file, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f) or {}
             else:
                 config = {}
-            
+
             # 如果该通道不存在，创建空配置
-            if channel_id not in config:
-                config[channel_id] = {}
+            if channel_key not in config:
+                config[channel_key] = {}
             
             #  从标注结果获取区域配置
             area_count = settings.get('area_count', 0)
@@ -566,8 +584,8 @@ class GeneralSetPanelHandler:
                     with open(annotation_file, 'r', encoding='utf-8') as f:
                         annotation_data = yaml.safe_load(f)
                     
-                    if annotation_data and channel_id in annotation_data:
-                        areas_config = annotation_data[channel_id].get('areas', {})
+                    if annotation_data and channel_key in annotation_data:
+                        areas_config = annotation_data[channel_key].get('areas', {})
                         for area_key, area_info in areas_config.items():
                             areas_dict[area_key] = area_info.get('name', '')
                             area_heights_dict[area_key] = area_info.get('height', '20mm')
@@ -680,30 +698,109 @@ class GeneralSetPanelHandler:
 
             # 尝试发送命令
             if is_connected:
-                self.logger.debug(f"[检测启动] 网络已连接，先订阅通道，再启动检测...")
+                self.logger.info(f"[检测启动] ========== 开始完整启动流程 ==========")
+                self.logger.info(f"[检测启动] 通道ID: {channel_id}")
+
+                import time
 
                 # 步骤1: 订阅通道（必须先订阅才能接收检测结果）
-                self.logger.debug(f"[检测启动] 步骤1: 订阅通道 {channel_id}")
+                self.logger.info(f"[检测启动] ========== 步骤1: 订阅通道 ==========")
                 if hasattr(self.ws_client, 'send_subscribe_command'):
                     subscribe_success = self.ws_client.send_subscribe_command(channel_id)
-                    self.logger.debug(f"[检测启动] 订阅命令发送结果: {subscribe_success}")
+                    self.logger.info(f"[检测启动] 订阅命令发送结果: {subscribe_success}")
                 else:
-                    self.logger.debug(f"[检测启动] [WARN] ws_client没有send_subscribe_command方法")
+                    self.logger.error(f"[检测启动] ws_client没有send_subscribe_command方法")
                     subscribe_success = False
 
-                # 等待订阅完成
-                import time
-                time.sleep(0.5)
+                time.sleep(0.3)
 
-                # 步骤2: 启动检测
-                self.logger.debug(f"[检测启动] 步骤2: 发送启动检测命令")
+                # 步骤2: 加载模型
+                self.logger.info(f"[检测启动] ========== 步骤2: 加载模型 ==========")
+                # 从配置文件获取模型路径
+                try:
+                    import yaml
+                    import os
+
+                    # 使用绝对路径
+                    config_path = '/home/lqj/liquid/server/database/config/default_config.yaml'
+                    self.logger.info(f"[检测启动] 配置文件路径: {config_path}")
+                    self.logger.info(f"[检测启动] 配置文件存在: {os.path.exists(config_path)}")
+
+                    if os.path.exists(config_path):
+                        with open(config_path, 'r', encoding='utf-8') as f:
+                            config = yaml.safe_load(f)
+                            model_path_key = f"{channel_id}_model_path"
+                            model_path = config.get(model_path_key, '')
+
+                            self.logger.info(f"[检测启动] 模型路径键: {model_path_key}")
+                            self.logger.info(f"[检测启动] 模型路径值: {model_path}")
+
+                            if model_path:
+                                self.logger.info(f"[检测启动] 开始发送load_model命令...")
+                                self.logger.info(f"[检测启动] 参数: channel_id={channel_id}, model_path={model_path}, device=cuda")
+
+                                load_success = self.ws_client.ws_client.send_command('load_model',
+                                    channel_id=channel_id,
+                                    model_path=model_path,
+                                    device='cuda')
+
+                                self.logger.info(f"[检测启动] 模型加载命令发送结果: {load_success}")
+                                time.sleep(1.0)  # 等待模型加载完成
+                            else:
+                                self.logger.error(f"[检测启动] 未找到模型路径配置: {model_path_key}")
+                    else:
+                        self.logger.error(f"[检测启动] 配置文件不存在: {config_path}")
+                except Exception as e:
+                    self.logger.error(f"[检测启动] 加载模型配置失败: {e}")
+                    import traceback
+                    self.logger.error(traceback.format_exc())
+
+                # 步骤3: 配置通道
+                self.logger.info(f"[检测启动] ========== 步骤3: 配置通道 ==========")
+                try:
+                    # 从annotation_result.yaml加载ROI配置
+                    annotation_file = '/home/lqj/liquid/server/database/config/annotation_result.yaml'
+                    self.logger.info(f"[检测启动] ROI配置文件路径: {annotation_file}")
+                    self.logger.info(f"[检测启动] ROI配置文件存在: {os.path.exists(annotation_file)}")
+
+                    if os.path.exists(annotation_file):
+                        with open(annotation_file, 'r', encoding='utf-8') as f:
+                            all_annotations = yaml.safe_load(f)
+                            annotation_config = all_annotations.get(channel_id, {})
+
+                            self.logger.info(f"[检测启动] ROI配置: {annotation_config}")
+
+                            config = {
+                                'detection_config': {
+                                    'confidence_threshold': 0.5,
+                                    'iou_threshold': 0.45
+                                },
+                                'annotation_config': annotation_config
+                            }
+
+                            self.logger.info(f"[检测启动] 开始发送configure_channel命令...")
+                            config_success = self.ws_client.ws_client.send_command('configure_channel',
+                                channel_id=channel_id,
+                                config=config)
+                            self.logger.info(f"[检测启动] 通道配置命令发送结果: {config_success}")
+                            time.sleep(0.5)
+                    else:
+                        self.logger.error(f"[检测启动] ROI配置文件不存在: {annotation_file}")
+                except Exception as e:
+                    self.logger.error(f"[检测启动] 配置通道失败: {e}")
+                    import traceback
+                    self.logger.error(traceback.format_exc())
+
+                # 步骤4: 启动检测
+                self.logger.info(f"[检测启动] ========== 步骤4: 启动检测 ==========")
                 if hasattr(self.ws_client, 'send_detection_command'):
                     success = self.ws_client.send_detection_command(channel_id, 'start_detection')
                 else:
                     # 向后兼容旧的接口
                     success = self.ws_client.send_command('start_detection', channel_id=channel_id)
 
-                self.logger.debug(f"[检测启动] 命令发送结果: {success}")
+                self.logger.info(f"[检测启动] start_detection命令发送结果: {success}")
+                self.logger.info(f"[检测启动] ========== 启动流程完成 ==========")
 
                 if success:
                     QtWidgets.QMessageBox.information(
@@ -1342,7 +1439,7 @@ class GeneralSetPanelHandler:
             import os
             import yaml
             
-            print(f"\n[DEBUG] ========== 同步到 channel_config.yaml ==========")
+            self.logger.debug(f"[DEBUG] ========== 同步到 channel_config.yaml ==========")
             self.logger.debug(f"[DEBUG] 通道ID: {channel_id}")
             self.logger.debug(f"[DEBUG] 区域数量: {area_count}")
             self.logger.debug(f"[DEBUG] 区域配置: {areas_config}")

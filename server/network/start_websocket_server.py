@@ -20,20 +20,12 @@ sys.path.insert(0, str(server_dir))
 from network.enhanced_ws_server import EnhancedWebSocketServer
 
 
-# 配置日志
-log_dir = project_root / 'logs'
-log_dir.mkdir(exist_ok=True)
+# 导入日志工具
+sys.path.insert(0, str(project_root))
+from server.utils.logger import setup_logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler(log_dir / 'websocket_server.log', encoding='utf-8')
-    ]
-)
-
-logger = logging.getLogger(__name__)
+# 配置日志 - 只输出到文件
+logger = setup_logging('websocket', log_level='INFO', console_output=False)
 
 
 def signal_handler(signum, frame):

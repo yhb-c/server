@@ -1745,7 +1745,7 @@ class ModelSetPage(QtWidgets.QWidget):
             ssh_manager = remote_config._get_ssh_manager()
             
             if not ssh_manager:
-                print("[错误] SSH连接不可用，无法获取服务端检测模型")
+                self.logger.error("[错误] SSH连接不可用，无法获取服务端检测模型")
                 return models
             
             # 服务端模型目录路径
@@ -1764,7 +1764,7 @@ class ModelSetPage(QtWidgets.QWidget):
             result = ssh_manager.execute_remote_command(list_cmd)
             
             if not result['success']:
-                print(f"[错误] 获取服务端模型目录失败: {result.get('stderr', '未知错误')}")
+                self.logger.error(f"[错误] 获取服务端模型目录失败: {result.get('stderr', '未知错误')}")
                 return models
             
             subdirs = result['stdout'].strip().split('\n') if result['stdout'].strip() else []
@@ -1857,11 +1857,11 @@ class ModelSetPage(QtWidgets.QWidget):
                     print(f"[信息] 找到服务端检测模型: {model_name} ({file_size})")
                     
                 except Exception as e:
-                    print(f"[错误] 处理服务端模型目录 {subdir_path} 时出错: {e}")
+                    self.logger.error(f"[错误] 处理服务端模型目录 {subdir_path} 时出错: {e}")
                     continue
         
         except Exception as e:
-            print(f"[错误] 获取服务端detection_model模型失败: {e}")
+            self.logger.error(f"[错误] 获取服务端detection_model模型失败: {e}")
         
         return models
     

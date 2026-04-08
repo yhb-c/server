@@ -16,8 +16,14 @@ from pathlib import Path
 # 导入动态路径获取函数
 from database.config import get_temp_models_dir
 
+# 导入日志工具
+from client.utils.logger import get_logger
+
 # 全局调试日志开关
 DEBUG_LOG_ENABLED = True
+
+# 初始化logger
+logger = get_logger('client')
 
 
 def validate_device(device):
@@ -58,34 +64,34 @@ def validate_model_file(model_path):
         file_size = os.path.getsize(model_path)
         if file_size < 1024:  # 小于1KB的文件可能无效
             if DEBUG_LOG_ENABLED:
-                print(f"⚠️ [检测引擎] 模型文件过小: {file_size} bytes")
+                logger.warning(f"[检测引擎] 模型文件过小: {file_size} bytes")
             return False
-        
+
         # 检查文件扩展名（支持 .pt, .pth, .engine）
         valid_extensions = ('.pt', '.pth', '.engine')
         if not model_path.endswith(valid_extensions):
             if DEBUG_LOG_ENABLED:
-                print(f"⚠️ [检测引擎] 不支持的模型格式: {model_path}")
+                logger.warning(f"[检测引擎] 不支持的模型格式: {model_path}")
             return False
-        
+
         # 尝试读取文件头部
         try:
             with open(model_path, 'rb') as f:
                 header = f.read(8)
                 if len(header) < 8:
                     if DEBUG_LOG_ENABLED:
-                        print(f"⚠️ [检测引擎] 模型文件头部不完整")
+                        logger.warning(f"[检测引擎] 模型文件头部不完整")
                     return False
         except Exception as e:
             if DEBUG_LOG_ENABLED:
-                print(f"⚠️ [检测引擎] 无法读取模型文件: {e}")
+                logger.warning(f"[检测引擎] 无法读取模型文件: {e}")
             return False
-        
+
         return True
-        
+
     except Exception as e:
         if DEBUG_LOG_ENABLED:
-            print(f"❌ [检测引擎] 模型文件验证异常: {e}")
+            logger.error(f"[检测引擎] 模型文件验证异常: {e}")
         return False
 
 
@@ -171,14 +177,14 @@ def _print_gpu_memory(stage=""):
                 )
                 if result.returncode == 0:
                     used_mb, total_mb = map(int, result.stdout.strip().split(','))
-                    print(f"📊 [显存监控] {stage}: PyTorch分配 {allocated:.2f}GB / 系统实际使用 {used_mb/1024:.2f}GB / 总计 {total:.2f}GB")
+                    logger.debug(f"[显存监控] {stage}: PyTorch分配 {allocated:.2f}GB / 系统实际使用 {used_mb/1024:.2f}GB / 总计 {total:.2f}GB")
                     return
             except:
                 pass
             
-            print(f"📊 [显存监控] {stage}: PyTorch分配 {allocated:.2f}GB / 预留 {reserved:.2f}GB / 总计 {total:.2f}GB")
+            logger.debug(f"[显存监控] {stage}: PyTorch分配 {allocated:.2f}GB / 预留 {reserved:.2f}GB / 总计 {total:.2f}GB")
     except Exception as e:
-        print(f"⚠️ [显存监控] 无法获取显存信息: {e}")
+        logger.warning(f"[显存监控] 无法获取显存信息: {e}")
 
 
 def load_model(model_path, device='cuda'):
@@ -195,7 +201,7 @@ def load_model(model_path, device='cuda'):
     try:
         if not os.path.exists(model_path):
             if DEBUG_LOG_ENABLED:
-                print(f"❌ [检测引擎] 模型文件不存在: {model_path}")
+                logger.error(f"[检测引擎] 模型文件不存在: {model_path}")
             return None, None
         
         # 如果是 .dat 文件，先解码
@@ -203,7 +209,7 @@ def load_model(model_path, device='cuda'):
             decoded_path = decode_dat_model(model_path)
             if decoded_path is None:
                 if DEBUG_LOG_ENABLED:
-                    print(f"❌ [检测引擎] .dat 文件解码失败: {model_path}")
+                    logger.error(f"[检测引擎] .dat 文件解码失败: {model_path}")
                 return None, None
             model_path = decoded_path
         
@@ -213,7 +219,7 @@ def load_model(model_path, device='cuda'):
         # 验证模型文件完整性（.engine文件只检查基本有效性）
         if not validate_model_file(model_path):
             if DEBUG_LOG_ENABLED:
-                print(f"❌ [检测引擎] 模型文件验证失败: {model_path}")
+                logger.error(f"[检测引擎] 模型文件验证失败: {model_path}")
             return None, None
         
         # 设置离线模式
@@ -227,7 +233,7 @@ def load_model(model_path, device='cuda'):
             import torch
             if device.startswith('cuda') or device == '0':
                 if not torch.cuda.is_available():
-                    print(f"⚠️ [检测引擎] CUDA不可用，回退到CPU")
+                    logger.warning(f"[检测引擎] CUDA不可用，回退到CPU")
                     actual_device = 'cpu'
                 else:
                     # 🔥 预先初始化CUDA，捕获可能的崩溃
@@ -235,14 +241,14 @@ def load_model(model_path, device='cuda'):
                         torch.cuda.init()
                         # 测试CUDA是否正常工作
                         _ = torch.zeros(1).cuda()
-                        print(f"✅ [检测引擎] CUDA初始化成功")
+                        logger.info(f"[检测引擎] CUDA初始化成功")
                     except Exception as cuda_err:
-                        print(f"⚠️ [检测引擎] CUDA初始化失败: {cuda_err}，回退到CPU")
+                        logger.warning(f"[检测引擎] CUDA初始化失败: {cuda_err}，回退到CPU")
                         actual_device = 'cpu'
         except ImportError:
-            print(f"⚠️ [检测引擎] PyTorch未安装，使用默认设备")
+            logger.warning(f"[检测引擎] PyTorch未安装，使用默认设备")
         except Exception as torch_err:
-            print(f"⚠️ [检测引擎] PyTorch检查失败: {torch_err}，回退到CPU")
+            logger.warning(f"[检测引擎] PyTorch检查失败: {torch_err}，回退到CPU")
             actual_device = 'cpu'
         
         # 📊 加载前显存监控
@@ -250,24 +256,24 @@ def load_model(model_path, device='cuda'):
         
         # 延迟导入
         if DEBUG_LOG_ENABLED:
-            print(f"🔄 [检测引擎] 正在导入ultralytics...")
+            logger.debug(f"[检测引擎] 正在导入ultralytics...")
         from ultralytics import YOLO
         
         if DEBUG_LOG_ENABLED:
-            print(f"🔄 [检测引擎] 正在加载模型: {model_path}")
+            logger.debug(f"[检测引擎] 正在加载模型: {model_path}")
         
         try:
             # TensorRT模型需要明确指定task类型，否则会被当作detect处理
             if is_tensorrt:
                 model = YOLO(model_path, task='segment')
                 if DEBUG_LOG_ENABLED:
-                    print(f"✅ [检测引擎] TensorRT模型以segment任务加载: {model_path}")
+                    logger.info(f"[检测引擎] TensorRT模型以segment任务加载: {model_path}")
             else:
                 model = YOLO(model_path)
                 if DEBUG_LOG_ENABLED:
-                    print(f"✅ [检测引擎] PyTorch模型加载: {model_path}")
+                    logger.info(f"[检测引擎] PyTorch模型加载: {model_path}")
         except Exception as load_err:
-            print(f"❌ [检测引擎] YOLO模型加载异常: {load_err}")
+            logger.error(f"[检测引擎] YOLO模型加载异常: {load_err}")
             import traceback
             traceback.print_exc()
             _print_gpu_memory("YOLO加载失败后")
@@ -280,7 +286,7 @@ def load_model(model_path, device='cuda'):
         if is_tensorrt:
             # 🔥 验证TensorRT模型是否正确加载：执行一次warmup推理
             if DEBUG_LOG_ENABLED:
-                print(f"🔄 [检测引擎] TensorRT模型warmup测试...")
+                logger.debug(f"[检测引擎] TensorRT模型warmup测试...")
             try:
                 import numpy as np
                 # 创建测试图像 (640x640 RGB)
@@ -292,55 +298,55 @@ def load_model(model_path, device='cuda'):
                     result = warmup_results[0]
                     has_boxes = result.boxes is not None
                     has_masks = result.masks is not None
-                    print(f"✅ [检测引擎] TensorRT warmup成功 (boxes={has_boxes}, masks={has_masks})")
-                    
-                    # 🔥 打印TensorRT模型详细信息
-                    print(f"📋 [检测引擎] TensorRT模型信息:")
-                    print(f"   - 模型路径: {model_path}")
-                    print(f"   - 模型任务: {getattr(model, 'task', 'unknown')}")
-                    print(f"   - 模型类型: TensorRT Engine")
+                    logger.info(f"[检测引擎] TensorRT warmup成功 (boxes={has_boxes}, masks={has_masks})")
+
+                    # 打印TensorRT模型详细信息
+                    logger.debug(f"[检测引擎] TensorRT模型信息:")
+                    logger.debug(f"   - 模型路径: {model_path}")
+                    logger.debug(f"   - 模型任务: {getattr(model, 'task', 'unknown')}")
+                    logger.debug(f"   - 模型类型: TensorRT Engine")
                     
                     # 检查模型内部状态
                     if hasattr(model, 'model'):
                         inner_model = model.model
-                        print(f"   - 内部模型类型: {type(inner_model).__name__}")
+                        logger.debug(f"   - 内部模型类型: {type(inner_model).__name__}")
                         if hasattr(inner_model, 'device'):
-                            print(f"   - 设备: {inner_model.device}")
+                            logger.debug(f"   - 设备: {inner_model.device}")
                     
                     _print_gpu_memory("TensorRT warmup后")
                 else:
-                    print(f"⚠️ [检测引擎] TensorRT warmup返回空结果")
+                    logger.warning(f"[检测引擎] TensorRT warmup返回空结果")
             except Exception as warmup_err:
-                print(f"❌ [检测引擎] TensorRT warmup失败: {warmup_err}")
+                logger.error(f"[检测引擎] TensorRT warmup失败: {warmup_err}")
                 import traceback
                 traceback.print_exc()
                 # warmup失败可能意味着engine文件有问题
                 return None, None
             
             if DEBUG_LOG_ENABLED:
-                print(f"✅ [检测引擎] TensorRT模型加载成功: {model_path}")
+                logger.info(f"[检测引擎] TensorRT模型加载成功: {model_path}")
             _print_gpu_memory("TensorRT模型加载后")
             return model, model_path
         
         if DEBUG_LOG_ENABLED:
-            print(f"🔄 [检测引擎] 正在将模型移至设备: {actual_device}")
+            logger.debug(f"[检测引擎] 正在将模型移至设备: {actual_device}")
         
         try:
             model.to(actual_device)
         except RuntimeError as to_err:
             error_msg = str(to_err).lower()
             if 'out of memory' in error_msg or 'cuda' in error_msg:
-                print(f"⚠️ [检测引擎] GPU显存不足，尝试使用CPU: {to_err}")
+                logger.warning(f"[检测引擎] GPU显存不足，尝试使用CPU: {to_err}")
                 _print_gpu_memory("显存不足")
                 try:
                     # 清理GPU缓存后重试CPU
                     import torch
                     torch.cuda.empty_cache()
                     model.to('cpu')
-                    print(f"✅ [检测引擎] 回退到CPU加载成功")
+                    logger.info(f"[检测引擎] 回退到CPU加载成功")
                     return model, model_path
                 except Exception as cpu_err:
-                    print(f"❌ [检测引擎] CPU回退也失败: {cpu_err}")
+                    logger.error(f"[检测引擎] CPU回退也失败: {cpu_err}")
                     return None, None
             else:
                 raise to_err
@@ -349,7 +355,7 @@ def load_model(model_path, device='cuda'):
         _print_gpu_memory("模型移至设备后")
         
         if DEBUG_LOG_ENABLED:
-            print(f"✅ [检测引擎] 模型加载成功: {model_path}")
+            logger.info(f"[检测引擎] 模型加载成功: {model_path}")
         
         return model, model_path
         
@@ -358,36 +364,36 @@ def load_model(model_path, device='cuda'):
         error_msg = str(e).lower()
         _print_gpu_memory("RuntimeError发生时")
         if 'cuda' in error_msg or 'gpu' in error_msg or 'out of memory' in error_msg:
-            print(f"⚠️ [检测引擎] CUDA错误，尝试使用CPU: {e}")
+            logger.warning(f"[检测引擎] CUDA错误，尝试使用CPU: {e}")
             try:
                 import torch
                 torch.cuda.empty_cache()  # 清理GPU缓存
                 from ultralytics import YOLO
                 model = YOLO(model_path)
                 model.to('cpu')
-                print(f"✅ [检测引擎] 使用CPU加载模型成功")
+                logger.info(f"[检测引擎] 使用CPU加载模型成功")
                 return model, model_path
             except Exception as cpu_err:
-                print(f"❌ [检测引擎] CPU加载也失败: {cpu_err}")
+                logger.error(f"[检测引擎] CPU加载也失败: {cpu_err}")
                 import traceback
                 traceback.print_exc()
                 return None, None
         else:
             if DEBUG_LOG_ENABLED:
-                print(f"❌ [检测引擎] 运行时错误: {e}")
+                logger.error(f"[检测引擎] 运行时错误: {e}")
             import traceback
             traceback.print_exc()
             return None, None
     except MemoryError as e:
         # 🔥 捕获内存不足错误
-        print(f"❌ [检测引擎] 内存不足: {e}")
+        logger.error(f"[检测引擎] 内存不足: {e}")
         _print_gpu_memory("MemoryError发生时")
         import traceback
         traceback.print_exc()
         return None, None
     except Exception as e:
         if DEBUG_LOG_ENABLED:
-            print(f"❌ [检测引擎] 模型加载失败: {e}")
+            logger.error(f"[检测引擎] 模型加载失败: {e}")
         _print_gpu_memory("Exception发生时")
         import traceback
         traceback.print_exc()
