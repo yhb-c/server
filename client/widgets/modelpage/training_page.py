@@ -21,17 +21,17 @@ except ImportError:
 
 # 导入图标工具函数
 try:
-    from ..icons import newIcon, newButton
+    from ..style_manager import newIcon, newButton
 except (ImportError, ValueError):
     try:
-        from widgets.icons import newIcon, newButton
+        from widgets.style_manager import newIcon, newButton
     except ImportError:
         try:
             import sys
             from pathlib import Path
             project_root = Path(__file__).parent.parent.parent
             sys.path.insert(0, str(project_root))
-            from widgets.icons import newIcon, newButton
+            from widgets.style_manager import newIcon, newButton
         except ImportError:
             def newIcon(icon):
                 from qtpy import QtGui
@@ -95,6 +95,11 @@ class TrainingPage(QtWidgets.QWidget):
     
     def __init__(self, parent=None):
         super(TrainingPage, self).__init__(parent)
+
+        # 初始化日志
+        from client.utils.logger import get_logger
+        self.logger = get_logger('client')
+
         self._parent = parent
         self._is_training_stopped = False  # 标记训练是否被中断
         self._last_training_path = None  # 记录上次训练的路径

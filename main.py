@@ -14,6 +14,11 @@ from pathlib import Path
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 
+# 全局日志开关
+# True: 启用日志输出到文件
+# False: 禁用日志输出
+ENABLE_LOGGING = False
+
 # 添加 client 目录到路径
 client_path = Path(__file__).parent / 'client'
 sys.path.insert(0, str(client_path))

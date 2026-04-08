@@ -16,16 +16,16 @@ import os.path as osp
 
 # 导入图标工具和响应式布局（支持相对导入和独立运行）
 try:
-    from ..icons import newIcon
+    from ..style_manager import newIcon
     from ..responsive_layout import ResponsiveLayout, scale_w, scale_h
 except (ImportError, ValueError):
     import sys
     sys.path.insert(0, osp.join(osp.dirname(__file__), '..'))
     try:
-        from icons import newIcon
+        from style_manager import newIcon
         from responsive_layout import ResponsiveLayout, scale_w, scale_h
     except ImportError:
-        def newIcon(icon): 
+        def newIcon(icon):
             return QtGui.QIcon()
         ResponsiveLayout = None
         scale_w = lambda x: x

@@ -743,15 +743,10 @@ class EnhancedWebSocketServer:
             channel_id: 通道ID
             data: 要发送的数据
         """
-        self.logger.info(f"========== broadcast_to_channel 被调用 ==========")
-        self.logger.info(f"通道: {channel_id}")
-        self.logger.info(f"数据类型: {data.get('type')}")
-        self.logger.info(f"数据键: {list(data.keys())}")
-
-        # 记录检测结果数据的关键信息（INFO级别）
+        # 记录检测结果数据的关键信息（仅DEBUG级别）
         if data.get('type') == 'detection_result':
             result_data = data.get('data', {})
-            self.logger.info(f"[{channel_id}] 收到检测结果推送 - 帧号: {result_data.get('frame_count')}, "
+            self.logger.debug(f"[{channel_id}] 收到检测结果推送 - 帧号: {result_data.get('frame_count')}, "
                            f"数据字段: {list(result_data.keys())}")
 
         if channel_id not in self.channel_subscribers:
@@ -759,20 +754,7 @@ class EnhancedWebSocketServer:
             self.logger.warning(f"当前所有通道订阅: {list(self.channel_subscribers.keys())}")
             return
 
-        # 记录复制前的订阅者数量
-        original_count = len(self.channel_subscribers[channel_id])
-        self.logger.info(f"[{channel_id}] 订阅者数量: {original_count}")
-
         subscribers = self.channel_subscribers[channel_id].copy()
-        self.logger.info(f"[{channel_id}] 复制后订阅者数量: {len(subscribers)}")
-
-        # 详细记录订阅者信息
-        if subscribers:
-            for sub in subscribers:
-                client_info = self.clients.get(sub, {}).get('client_info', {})
-                self.logger.debug(f"[{channel_id}] 订阅者: {client_info.get('id', 'unknown')}, state: {sub.state if hasattr(sub, 'state') else 'unknown'}")
-
-        self.logger.debug(f"[{channel_id}] 检查订阅者列表: len={len(subscribers)}, bool={bool(subscribers)}, not={not subscribers}")
 
         if not subscribers:
             self.logger.warning(f"[{channel_id}] 通道订阅者列表为空，无法推送数据")
@@ -783,7 +765,6 @@ class EnhancedWebSocketServer:
         try:
             message = json.dumps(data, ensure_ascii=False)
             self.server_stats['total_broadcasts'] += 1
-            self.logger.debug(f"[{channel_id}] 准备发送消息，长度: {len(message)}")
         except Exception as e:
             self.logger.error(f"[{channel_id}] JSON序列化失败: {e}")
             self.logger.error(f"[{channel_id}] 数据类型: {data.get('type')}, 数据键: {list(data.keys())}")
@@ -797,7 +778,6 @@ class EnhancedWebSocketServer:
         for client in subscribers:
             try:
                 await client.send(message)
-                self.logger.debug(f"[{channel_id}] 消息已发送到客户端")
             except Exception as e:
                 self.logger.warning(f"[{channel_id}] 发送消息到客户端失败: {e}")
                 disconnected.add(client)
@@ -805,8 +785,6 @@ class EnhancedWebSocketServer:
         # 清理断开的连接
         for client in disconnected:
             self._unsubscribe_channel(client, channel_id)
-
-        self.logger.info(f"[{channel_id}] 成功广播到 {len(subscribers) - len(disconnected)} 个客户端")
     
     def get_server_info(self) -> dict:
         """获取服务器信息"""

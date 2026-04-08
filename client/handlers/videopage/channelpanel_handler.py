@@ -320,9 +320,7 @@ class ChannelPanelHandler:
             liquid_level = data.get('liquid_level', 0)
             confidence = data.get('confidence', 0)
             timestamp = data.get('timestamp', '')
-            
-            self.logger.debug(f"[检测结果] {channel_id} 液位: {liquid_level}% 置信度: {confidence}")
-            
+
             # 更新通道面板显示
             panel = self._channel_panels_map.get(channel_id)
             if panel:
@@ -332,7 +330,7 @@ class ChannelPanelHandler:
                 pass
             
         except Exception as e:
-            self.logger.debug(f"[检测结果] 处理异常: {e}")
+            self.logger.error(f"[检测结果] 处理异常: {e}")
             import traceback
             traceback.print_exc()
     
@@ -1545,12 +1543,20 @@ class ChannelPanelHandler:
             # 加载配置
             with open(config_file, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f) or {}
-            
+
+            # 标准化通道ID格式为字符串 'channelN'
+            if isinstance(channel_id, int):
+                channel_key = f'channel{channel_id}'
+            elif isinstance(channel_id, str) and not channel_id.startswith('channel'):
+                channel_key = f'channel{channel_id}'
+            else:
+                channel_key = channel_id
+
             # 获取该通道的配置
-            if channel_id not in config:
+            if channel_key not in config:
                 return None
-            
-            channel_settings = config[channel_id]
+
+            channel_settings = config[channel_key]
             return channel_settings
             
         except Exception as e:
@@ -2114,17 +2120,10 @@ class ChannelPanelHandler:
             dict: 液位线位置数据，格式：{area_idx: position_data}
         """
         if channel_id not in self._liquid_line_locks:
-            self.logger.debug(f"[UI-Draw] Step 6: No lock for {channel_id}")
             return {}
 
         with self._liquid_line_locks[channel_id]:
             positions = self._liquid_line_positions.get(channel_id, {})
-            if positions:
-                self.logger.debug(f"[UI-Draw] Step 7: Got {len(positions)} positions from _liquid_line_positions[{channel_id}]")
-                for idx, pos in positions.items():
-                    self.logger.debug(f"[UI-Draw]   ROI {idx}: y={pos.get('y')}, height={pos.get('height_mm')}mm")
-            else:
-                self.logger.debug(f"[UI-Draw] Step 7: No positions in _liquid_line_positions[{channel_id}]")
             # 复制后清空，确保每次只绘制最新的检测结果
             self._liquid_line_positions[channel_id] = {}
             return positions.copy()
@@ -2146,7 +2145,6 @@ class ChannelPanelHandler:
         if not liquid_positions:
             return frame
 
-        self.logger.debug(f"[UI-Draw] Step 8: Drawing {len(liquid_positions)} liquid lines on frame")
 
         # 复制帧以避免修改原始数据
         display_frame = frame.copy()
@@ -2160,7 +2158,6 @@ class ChannelPanelHandler:
                 y_absolute = position_data.get('y', position_data.get('y_absolute', 0))
                 height_mm = position_data.get('height_mm', 0)
 
-                self.logger.debug(f"[UI-Draw]   ROI {area_idx}: Drawing line from ({left},{y_absolute}) to ({right},{y_absolute}), height={height_mm}mm")
 
                 # 绘制红色液位线
                 cv2.line(display_frame, (int(left), int(y_absolute)),
@@ -2174,13 +2171,10 @@ class ChannelPanelHandler:
                 cv2.putText(display_frame, text, (int(left) + 5, int(y_absolute) - 10),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-                self.logger.debug(f"[UI-Draw]   ROI {area_idx}: DRAWN successfully")
 
             except Exception as e:
-                self.logger.debug(f"[UI-Draw]   ROI {area_idx}: ERROR - {e}")
                 continue
 
-        self.logger.debug(f"[UI-Draw] Step 9: Frame drawing complete")
         return display_frame
     
     def _updateVideoDisplay(self, channel_id, frame_or_data):
@@ -2677,25 +2671,17 @@ class ChannelPanelHandler:
             data: 检测结果数据
         """
         try:
-            self.logger.debug(f"[UI-Draw] Step 1: Received WebSocket detection result")
-
             # 提取通道ID
             channel_id = data.get('channel_id')
             if not channel_id:
-                self.logger.debug(f"[UI-Draw] ERROR: No channel_id")
                 return
-
-            self.logger.debug(f"[UI-Draw] Step 2: Channel ID = {channel_id}")
 
             # 提取检测结果数据
             data_obj = data.get('data', {})
             liquid_line_positions = data_obj.get('liquid_line_positions', {})
 
             if not liquid_line_positions:
-                self.logger.debug(f"[UI-Draw] ERROR: No liquid_line_positions")
                 return
-
-            self.logger.debug(f"[UI-Draw] Step 3: Got liquid_line_positions with {len(liquid_line_positions)} ROIs")
 
             # 转换key从字符串到整数
             converted_positions = {}
@@ -2703,7 +2689,6 @@ class ChannelPanelHandler:
                 try:
                     int_key = int(key)
                     converted_positions[int_key] = value
-                    self.logger.debug(f"[UI-Draw] Step 4: ROI {int_key} - y={value.get('y')}, height={value.get('height_mm')}mm")
                 except (ValueError, TypeError):
                     converted_positions[key] = value
 
@@ -2715,12 +2700,9 @@ class ChannelPanelHandler:
             with self._liquid_line_locks[channel_id]:
                 self._liquid_line_positions[channel_id] = converted_positions.copy()
 
-            self.logger.debug(f"[UI-Draw] Step 5: Updated _liquid_line_positions[{channel_id}]")
-
-            # 🔥 直接更新ChannelPanel的液位线显示（用于HWND模式）
+            # 直接更新ChannelPanel的液位线显示（用于HWND模式）
             panel = self._channel_panels_map.get(channel_id)
             if panel:
-                self.logger.debug(f"[UI-Draw] Step 6: Found ChannelPanel for {channel_id}")
 
                 # 获取视频尺寸（从通道配置或默认值）
                 video_width = 1920  # 默认值，可以从配置读取
@@ -2732,9 +2714,6 @@ class ChannelPanelHandler:
                     video_width = config.get('width', 1920)
                     video_height = config.get('height', 1080)
 
-                self.logger.debug(f"[UI-Draw] Step 7: Video size = {video_width}x{video_height}")
-                self.logger.debug(f"[UI-Draw] Step 8: Calling panel.updateLiquidLines()...")
-
                 # 调用ChannelPanel的updateLiquidLines方法
                 panel.updateLiquidLines(
                     liquid_positions=converted_positions,
@@ -2743,13 +2722,7 @@ class ChannelPanelHandler:
                     video_height=video_height
                 )
 
-                self.logger.debug(f"[UI-Draw] Step 9: panel.updateLiquidLines() called successfully")
-                self.logger.debug(f"[UI-Draw] SUCCESS: Liquid lines should now be visible on UI")
-            else:
-                self.logger.debug(f"[UI-Draw] WARNING: No ChannelPanel found for {channel_id}")
-                self.logger.debug(f"[UI-Draw] Available panels: {list(self._channel_panels_map.keys())}")
-
         except Exception as e:
-            self.logger.debug(f"[UI-Draw] ERROR: {e}")
+            self.logger.error(f"[UI-Draw] ERROR: {e}")
             import traceback
             traceback.print_exc()

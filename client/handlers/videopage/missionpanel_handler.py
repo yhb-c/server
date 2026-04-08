@@ -376,27 +376,35 @@ class MissionPanelHandler:
             # 读取现有配置
             with open(config_file, 'r', encoding='utf-8') as f:
                 channel_config = yaml.safe_load(f) or {}
-            
+
+            # 标准化通道ID格式为字符串 'channelN'
+            if isinstance(channel_id, int):
+                channel_key = f'channel{channel_id}'
+            elif isinstance(channel_id, str) and not channel_id.startswith('channel'):
+                channel_key = f'channel{channel_id}'
+            else:
+                channel_key = channel_id
+
             # 确保通道配置存在
-            if channel_id not in channel_config:
-                channel_config[channel_id] = {}
-            
+            if channel_key not in channel_config:
+                channel_config[channel_key] = {}
+
             # 检查是否有旧的顶层配置结构（如channel1）
             # 如果存在旧结构，同时更新顶层和general
-            if 'task_id' in channel_config[channel_id]:
+            if 'task_id' in channel_config[channel_key]:
                 # 更新顶层配置（向后兼容）
-                channel_config[channel_id]['task_id'] = task_id
-                channel_config[channel_id]['task_name'] = task_name
-                channel_config[channel_id]['save_liquid_data_path'] = save_liquid_data_path
-            
+                channel_config[channel_key]['task_id'] = task_id
+                channel_config[channel_key]['task_name'] = task_name
+                channel_config[channel_key]['save_liquid_data_path'] = save_liquid_data_path
+
             # 确保general配置存在
-            if 'general' not in channel_config[channel_id]:
-                channel_config[channel_id]['general'] = {}
-            
+            if 'general' not in channel_config[channel_key]:
+                channel_config[channel_key]['general'] = {}
+
             # 更新general部分的任务信息
-            channel_config[channel_id]['general']['task_id'] = task_id
-            channel_config[channel_id]['general']['task_name'] = task_name
-            channel_config[channel_id]['general']['save_liquid_data_path'] = save_liquid_data_path
+            channel_config[channel_key]['general']['task_id'] = task_id
+            channel_config[channel_key]['general']['task_name'] = task_name
+            channel_config[channel_key]['general']['save_liquid_data_path'] = save_liquid_data_path
             
             # 保存回配置文件
             with open(config_file, 'w', encoding='utf-8') as f:

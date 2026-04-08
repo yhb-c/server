@@ -37,6 +37,26 @@ def setup_logging(log_type='client', log_level='INFO', console_output=False):
     Returns:
         logger: 配置好的日志记录器
     """
+    # 检查全局日志开关
+    try:
+        import sys
+        main_module = sys.modules.get('__main__')
+        enable_logging = getattr(main_module, 'ENABLE_LOGGING', True)
+    except:
+        enable_logging = True
+
+    # 创建日志记录器
+    logger = logging.getLogger(log_type)
+    logger.setLevel(getattr(logging, log_level.upper()))
+
+    # 清除已有的处理器
+    logger.handlers.clear()
+
+    # 如果日志开关关闭，只添加NullHandler
+    if not enable_logging:
+        logger.addHandler(logging.NullHandler())
+        return logger
+
     # 创建日志目录
     project_root = Path(__file__).parent.parent.parent
     log_dir = project_root / 'logs'
@@ -55,13 +75,6 @@ def setup_logging(log_type='client', log_level='INFO', console_output=False):
     # 配置日志格式
     log_format = '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
     formatter = logging.Formatter(log_format)
-
-    # 创建日志记录器
-    logger = logging.getLogger(log_type)
-    logger.setLevel(getattr(logging, log_level.upper()))
-
-    # 清除已有的处理器
-    logger.handlers.clear()
 
     # 添加文件处理器（覆盖模式）
     file_handler = FixedLogHandler(log_file, mode='w', encoding='utf-8')

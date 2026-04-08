@@ -36,6 +36,26 @@ def setup_logging(log_type='server', log_level='INFO', console_output=False):
     Returns:
         logger: 配置好的日志记录器
     """
+    # 检查全局日志开关
+    try:
+        import sys
+        main_module = sys.modules.get('__main__')
+        enable_logging = getattr(main_module, 'ENABLE_LOGGING', True)
+    except:
+        enable_logging = True
+
+    # 创建日志记录器
+    logger = logging.getLogger(log_type)
+    logger.setLevel(getattr(logging, log_level.upper()))
+
+    # 清除已有的处理器
+    logger.handlers.clear()
+
+    # 如果日志开关关闭，只添加NullHandler
+    if not enable_logging:
+        logger.addHandler(logging.NullHandler())
+        return logger
+
     # 获取项目根目录
     current_file = Path(__file__).resolve()
     project_root = current_file.parent.parent.parent

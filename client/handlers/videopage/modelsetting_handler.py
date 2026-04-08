@@ -229,20 +229,28 @@ class ModelSettingHandler:
                 return False
             
             self.logger.debug(f"[DEBUG] 成功从服务端加载通道配置")
-            
+
             # 如果指定了通道ID，则保存到对应通道的model部分
             if channel_id:
-                if channel_id not in channel_config:
-                    channel_config[channel_id] = {}
-                
-                if 'model' not in channel_config[channel_id]:
-                    channel_config[channel_id]['model'] = {}
-                
+                # 标准化通道ID格式为字符串 'channelN'
+                if isinstance(channel_id, int):
+                    channel_key = f'channel{channel_id}'
+                elif isinstance(channel_id, str) and not channel_id.startswith('channel'):
+                    channel_key = f'channel{channel_id}'
+                else:
+                    channel_key = channel_id
+
+                if channel_key not in channel_config:
+                    channel_config[channel_key] = {}
+
+                if 'model' not in channel_config[channel_key]:
+                    channel_config[channel_key]['model'] = {}
+
                 # 更新通道的model配置
-                channel_config[channel_id]['model'].update(model_config)
-                
+                channel_config[channel_key]['model'].update(model_config)
+
                 model_path = model_config.get('model_path', '')
-                self.logger.debug(f"[DEBUG] 保存模型配置到通道 {channel_id}")
+                self.logger.debug(f"[DEBUG] 保存模型配置到通道 {channel_key}")
                 self.logger.debug(f"[DEBUG]   - model_path: {model_path}")
             else:
                 # 保存到全局配置

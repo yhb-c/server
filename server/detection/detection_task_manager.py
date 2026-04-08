@@ -352,8 +352,6 @@ class DetectionTaskManager:
 
                         if frame_count == 0:
                             self.logger.info(f"[{channel_id}] 回调函数调用完成")
-
-                        self.logger.debug(f"[{channel_id}] 推送检测结果: {len(liquid_positions)}个ROI")
                     else:
                         if frame_count == 0:
                             self.logger.warning(f"[{channel_id}] 第一帧检测失败或无结果")
@@ -361,11 +359,10 @@ class DetectionTaskManager:
                     frame_count += 1
                     fps_counter += 1
 
-                    # 计算FPS
+                    # 计算FPS（仅统计，不输出日志）
                     current_time = time.time()
                     if current_time - last_fps_time >= 1.0:
                         fps = fps_counter / (current_time - last_fps_time)
-                        self.logger.info(f"[{channel_id}] 检测FPS: {fps:.2f}, 总帧数: {frame_count}")
                         fps_counter = 0
                         last_fps_time = current_time
 

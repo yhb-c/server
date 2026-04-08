@@ -47,10 +47,10 @@ except (ImportError, ValueError):
 
 # 导入图标工具函数
 try:
-    from ..icons import newIcon, newButton
+    from ..style_manager import newIcon, newButton
 except (ImportError, ValueError):
     try:
-        from widgets.icons import newIcon, newButton
+        from widgets.style_manager import newIcon, newButton
     except ImportError:
         # 后备方案：如果导入失败，定义空函数
         def newIcon(icon):
@@ -1733,19 +1733,21 @@ class ModelSetPage(QtWidgets.QWidget):
         return models
     
     @staticmethod
-    @staticmethod
     def getDetectionModels():
         """静态方法：获取服务端detection_model目录下的所有模型，供其他页面使用"""
+        from client.utils.logger import get_logger
+        logger = get_logger('client')
+
         models = []
-        
+
         try:
             # 使用远程配置管理器获取服务端模型
             from client.utils.config import RemoteConfigManager
             remote_config = RemoteConfigManager()
             ssh_manager = remote_config._get_ssh_manager()
-            
+
             if not ssh_manager:
-                self.logger.error("[错误] SSH连接不可用，无法获取服务端检测模型")
+                logger.error("[错误] SSH连接不可用，无法获取服务端检测模型")
                 return models
             
             # 服务端模型目录路径
@@ -1764,7 +1766,7 @@ class ModelSetPage(QtWidgets.QWidget):
             result = ssh_manager.execute_remote_command(list_cmd)
             
             if not result['success']:
-                self.logger.error(f"[错误] 获取服务端模型目录失败: {result.get('stderr', '未知错误')}")
+                logger.error(f"[错误] 获取服务端模型目录失败: {result.get('stderr', '未知错误')}")
                 return models
             
             subdirs = result['stdout'].strip().split('\n') if result['stdout'].strip() else []
@@ -1857,11 +1859,11 @@ class ModelSetPage(QtWidgets.QWidget):
                     print(f"[信息] 找到服务端检测模型: {model_name} ({file_size})")
                     
                 except Exception as e:
-                    self.logger.error(f"[错误] 处理服务端模型目录 {subdir_path} 时出错: {e}")
+                    logger.error(f"[错误] 处理服务端模型目录 {subdir_path} 时出错: {e}")
                     continue
         
         except Exception as e:
-            self.logger.error(f"[错误] 获取服务端detection_model模型失败: {e}")
+            logger.error(f"[错误] 获取服务端detection_model模型失败: {e}")
         
         return models
     

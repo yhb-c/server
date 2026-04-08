@@ -36,6 +36,9 @@ class LoginWindow(QtWidgets.QWidget):
         """初始化UI - 参考User Registration设计"""
         self.setWindowTitle('液位检测系统')
         self.setFixedSize(450, 350)
+
+        # 窗口居中显示
+        self._centerWindow()
         
         # 主布局
         main_layout = QtWidgets.QVBoxLayout(self)
@@ -139,7 +142,15 @@ class LoginWindow(QtWidgets.QWidget):
         
         # 回车键登录
         self.password_input.returnPressed.connect(self._onLogin)
-    
+
+    def _centerWindow(self):
+        """将窗口居中显示"""
+        screen = QtWidgets.QApplication.primaryScreen().geometry()
+        window_geometry = self.frameGeometry()
+        center_point = screen.center()
+        window_geometry.moveCenter(center_point)
+        self.move(window_geometry.topLeft())
+
     def _applyStyles(self):
         """应用样式"""
         # 输入框样式

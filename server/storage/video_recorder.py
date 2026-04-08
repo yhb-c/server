@@ -179,7 +179,7 @@ def main():
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-    logger.info("收到停止信号，正在停止录制...")
+        logger.info("收到停止信号，正在停止录制...")
         for recorder in recorders:
             recorder.stop_recording()
 

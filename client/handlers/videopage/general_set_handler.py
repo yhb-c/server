@@ -593,7 +593,7 @@ class GeneralSetPanelHandler:
                 print(f"️ 读取标注结果失败: {e}")
             
             # 转换面板设置为配置文件格式
-            config[channel_id]['general'] = {
+            config[channel_key]['general'] = {
                 'task_id': settings.get('task_id', ''),
                 'task_name': settings.get('task_name', ''),
                 'area_count': area_count,  # 从标注结果获取
@@ -607,14 +607,14 @@ class GeneralSetPanelHandler:
                 'areas': areas_dict,  # 从标注结果获取
                 'area_heights': area_heights_dict  # 从标注结果获取
             }
-            
+
             # 保存模型配置（如果有）
             if 'model_config' in settings and settings['model_config']:
-                config[channel_id]['model'] = settings['model_config']
-            
+                config[channel_key]['model'] = settings['model_config']
+
             # 保存逻辑配置（如果有）
             if 'logic_config' in settings and settings['logic_config']:
-                config[channel_id]['logic'] = settings['logic_config']
+                config[channel_key]['logic'] = settings['logic_config']
             
             # 写入配置文件
             with open(config_file, 'w', encoding='utf-8') as f:
@@ -914,11 +914,19 @@ class GeneralSetPanelHandler:
             
             with open(annotation_file, 'r', encoding='utf-8') as f:
                 annotation_data = yaml.safe_load(f)
-            
-            if not annotation_data or channel_id not in annotation_data:
+
+            # 标准化通道ID格式为字符串 'channelN'
+            if isinstance(channel_id, int):
+                channel_key = f'channel{channel_id}'
+            elif isinstance(channel_id, str) and not channel_id.startswith('channel'):
+                channel_key = f'channel{channel_id}'
+            else:
+                channel_key = channel_id
+
+            if not annotation_data or channel_key not in annotation_data:
                 return None
-            
-            channel_data = annotation_data[channel_id]
+
+            channel_data = annotation_data[channel_key]
             
             # 提取boxes数据 - 格式为 [[cx, cy, size], ...]
             boxes = channel_data.get('boxes', [])
@@ -1405,9 +1413,17 @@ class GeneralSetPanelHandler:
                             fixed_init_levels.append(actual_height_mm / 2)  # 默认中间位置
                     else:
                         fixed_init_levels.append(10.0)  # 默认10mm
-            
+
+            # 标准化通道ID格式为字符串 'channelN'
+            if isinstance(channel_id, int):
+                channel_key = f'channel{channel_id}'
+            elif isinstance(channel_id, str) and not channel_id.startswith('channel'):
+                channel_key = f'channel{channel_id}'
+            else:
+                channel_key = channel_id
+
             # 更新该通道的标注数据
-            config[channel_id] = {
+            config[channel_key] = {
                 'boxes': [list(box) for box in boxes],  # 转换为列表格式
                 'fixed_bottoms': fixed_bottoms,
                 'fixed_tops': fixed_tops,
@@ -1463,35 +1479,43 @@ class GeneralSetPanelHandler:
             else:
                 config = {}
                 self.logger.debug(f"[DEBUG] 配置文件不存在，创建新配置")
-            
+
+            # 标准化通道ID格式为字符串 'channelN'
+            if isinstance(channel_id, int):
+                channel_key = f'channel{channel_id}'
+            elif isinstance(channel_id, str) and not channel_id.startswith('channel'):
+                channel_key = f'channel{channel_id}'
+            else:
+                channel_key = channel_id
+
             # 如果该通道不存在，创建新通道配置
-            if channel_id not in config:
-                self.logger.debug(f"[DEBUG] 通道 {channel_id} 不存在，创建新配置")
-                config[channel_id] = {}
+            if channel_key not in config:
+                self.logger.debug(f"[DEBUG] 通道 {channel_key} 不存在，创建新配置")
+                config[channel_key] = {}
             else:
-                self.logger.debug(f"[DEBUG] 通道 {channel_id} 已存在")
-            
+                self.logger.debug(f"[DEBUG] 通道 {channel_key} 已存在")
+
             # 确保 general 配置存在
-            if 'general' not in config[channel_id]:
-                self.logger.debug(f"[DEBUG] 通道 {channel_id} 的 general 配置不存在，创建新配置")
-                config[channel_id]['general'] = {}
+            if 'general' not in config[channel_key]:
+                self.logger.debug(f"[DEBUG] 通道 {channel_key} 的 general 配置不存在，创建新配置")
+                config[channel_key]['general'] = {}
             else:
-                self.logger.debug(f"[DEBUG] 通道 {channel_id} 的 general 配置已存在")
-            
+                self.logger.debug(f"[DEBUG] 通道 {channel_key} 的 general 配置已存在")
+
             #  更新区域数量
-            config[channel_id]['general']['area_count'] = area_count
+            config[channel_key]['general']['area_count'] = area_count
             self.logger.debug(f"[DEBUG] 已更新区域数量: {area_count}")
-            
+
             #  更新区域名称和高度
             areas_dict = {}
             area_heights_dict = {}
-            
+
             for area_key, area_info in areas_config.items():
                 areas_dict[area_key] = area_info.get('name', '')
                 area_heights_dict[area_key] = area_info.get('height', '20mm')
-            
-            config[channel_id]['general']['areas'] = areas_dict
-            config[channel_id]['general']['area_heights'] = area_heights_dict
+
+            config[channel_key]['general']['areas'] = areas_dict
+            config[channel_key]['general']['area_heights'] = area_heights_dict
             
             self.logger.debug(f"[DEBUG] 已更新区域名称: {areas_dict}")
             self.logger.debug(f"[DEBUG] 已更新区域高度: {area_heights_dict}")

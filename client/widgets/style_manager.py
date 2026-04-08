@@ -785,11 +785,10 @@ def get_project_root():
     """动态获取项目根目录"""
     # 从当前文件位置开始向上查找
     current_dir = osp.dirname(osp.abspath(__file__))
-    
+
     # 标志性文件列表（用于识别项目根目录）
-    # 客户端项目的标志文件
-    marker_files = ['run_client.bat', 'requirements.txt', 'README.md', 'build_client.py']
-    
+    marker_files = ['main.py', 'requirements.txt', 'README.md', 'run_client.bat', 'build_client.py']
+
     # 最多向上查找5层
     for i in range(5):
         # 检查当前目录是否包含标志性文件
@@ -797,13 +796,13 @@ def get_project_root():
             marker_path = osp.join(current_dir, marker)
             if osp.exists(marker_path):
                 return current_dir
-        
+
         # 向上移动一层
         parent_dir = osp.dirname(current_dir)
         if parent_dir == current_dir:  # 已到达根目录
             break
         current_dir = parent_dir
-    
+
     # 如果找不到，返回当前文件的上级目录作为后备方案
     fallback = osp.dirname(osp.dirname(osp.abspath(__file__)))
     return fallback
@@ -828,13 +827,24 @@ here = osp.dirname(osp.abspath(__file__))
 def newIcon(icon):
     """创建图标对象"""
     icons_dir = get_icons_dir()
-    
+
+    # 图标名称映射（处理缺失的图标）
+    icon_mapping = {
+        '删除': '关闭',
+        '刷新': '搜索',
+        '完成': '开始',
+    }
+
+    # 如果图标名称在映射表中，使用映射后的名称
+    if icon in icon_mapping:
+        icon = icon_mapping[icon]
+
     # 尝试不同的图片格式
     for ext in ['.png', '.svg', '.ico']:
         icon_path = osp.join(icons_dir, f"{icon}{ext}")
         if osp.exists(icon_path):
             return QtGui.QIcon(icon_path)
-    
+
     # 如果找不到图标文件，返回空图标（避免程序崩溃）
     return QtGui.QIcon()
 

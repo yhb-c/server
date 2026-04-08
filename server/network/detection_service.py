@@ -604,6 +604,31 @@ class DetectionService:
                 'error': str(e)
             }
 
+    def _convert_numpy_to_list(self, obj):
+        """
+        递归转换numpy数组为Python列表，使其可以JSON序列化
+
+        Args:
+            obj: 要转换的对象
+
+        Returns:
+            转换后的对象
+        """
+        import numpy as np
+
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, dict):
+            return {key: self._convert_numpy_to_list(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_numpy_to_list(item) for item in obj]
+        elif isinstance(obj, tuple):
+            return tuple(self._convert_numpy_to_list(item) for item in obj)
+        elif isinstance(obj, (np.integer, np.floating)):
+            return obj.item()
+        else:
+            return obj
+
     def _on_detection_result(self, channel_id: str, detection_result: dict):
         """
         检测结果回调函数
@@ -613,32 +638,22 @@ class DetectionService:
             detection_result: 检测结果数据
         """
         try:
-            self.logger.info(f"========== _on_detection_result 被调用 ==========")
-            self.logger.info(f"通道: {channel_id}")
-            self.logger.info(f"检测结果键: {list(detection_result.keys())}")
-            self.logger.info(f"liquid_line_positions: {detection_result.get('liquid_line_positions', {})}")
-
             # 保存到CSV文件
             self._save_to_csv(channel_id, detection_result)
+
+            # 转换numpy数组为列表，使其可以JSON序列化
+            detection_result_serializable = self._convert_numpy_to_list(detection_result)
 
             # 构建推送数据（保持完整的检测结果格式）
             push_data = {
                 'type': 'detection_result',
                 'channel_id': channel_id,
                 'timestamp': time.time(),
-                'data': detection_result
+                'data': detection_result_serializable
             }
-
-            self.logger.info(f"准备推送数据 - 通道: {channel_id}")
-            self.logger.info(f"推送数据键: {list(push_data.keys())}")
-            self.logger.info(f"websocket_server: {self.websocket_server is not None}")
-            self.logger.info(f"event_loop: {self.event_loop is not None}")
 
             # 通过WebSocket推送结果
             self._send_detection_result(channel_id, push_data)
-
-            # 记录调试信息
-            self.logger.info(f"推送检测结果完成 - 通道: {channel_id}, 帧: {detection_result.get('frame_count', 0)}")
 
         except Exception as e:
             self.logger.error(f"处理检测结果异常 - 通道: {channel_id}, 错误: {str(e)}")
@@ -673,8 +688,6 @@ class DetectionService:
                     }
                     self.csv_writers[channel_id].write(csv_data)
 
-            self.logger.debug(f"CSV保存成功 - 通道: {channel_id}, 液位数: {len(liquid_line_positions)}")
-
         except Exception as e:
             self.logger.error(f"CSV保存失败 - 通道: {channel_id}, 错误: {str(e)}")
             import traceback
@@ -689,19 +702,12 @@ class DetectionService:
             result_data: 结果数据
         """
         try:
-            self.logger.info(f"========== _send_detection_result 被调用 ==========")
-            self.logger.info(f"通道: {channel_id}")
-            self.logger.info(f"websocket_server存在: {self.websocket_server is not None}")
-            self.logger.info(f"event_loop存在: {self.event_loop is not None}")
-
             if self.websocket_server and self.event_loop:
-                self.logger.info(f"准备调用broadcast_to_channel - 通道: {channel_id}")
                 # 从同步线程安全地调度到异步事件循环
                 future = asyncio.run_coroutine_threadsafe(
                     self.websocket_server.broadcast_to_channel(channel_id, result_data),
                     self.event_loop
                 )
-                self.logger.info(f"broadcast_to_channel已调度 - 通道: {channel_id}")
             else:
                 if not self.websocket_server:
                     self.logger.warning(f"[{channel_id}] WebSocket服务器未设置，无法发送检测结果")
