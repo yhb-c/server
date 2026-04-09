@@ -304,7 +304,11 @@ class ChannelPanel(QtWidgets.QWidget):
         self._channel_number = title.replace("通道", "")
         self._hwnd_render_mode = False
         self._is_connected = False
-        
+
+        # 初始化logger
+        import logging
+        self.logger = logging.getLogger(__name__)
+
         self.setObjectName("ChannelPanel")
         self._initUI()
         self._connectSignals()

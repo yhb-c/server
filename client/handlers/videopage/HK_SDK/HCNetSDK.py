@@ -11,10 +11,20 @@ from enum import Enum
 
 # 导入全局SDK平台配置
 try:
+    import sys
+    import os
+    # 添加项目根目录到路径
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+
     from main import USE_WINDOWS_SDK
-except ImportError:
+    print(f"[HCNetSDK] 成功从main导入USE_WINDOWS_SDK: {USE_WINDOWS_SDK}")
+except ImportError as e:
     # 如果导入失败，自动检测系统平台
+    print(f"[HCNetSDK] 导入main失败: {e}")
     USE_WINDOWS_SDK = (platform.system().lower() == 'windows')
+    print(f"[HCNetSDK] 使用自动检测: USE_WINDOWS_SDK={USE_WINDOWS_SDK}")
 
 
 def get_hk_lib_path():
