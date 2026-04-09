@@ -17,7 +17,7 @@ from qtpy.QtCore import Qt
 # 全局日志开关
 # True: 启用日志输出到文件
 # False: 禁用日志输出
-ENABLE_LOGGING = False
+ENABLE_LOGGING = True
 
 # 添加 client 目录到路径
 client_path = Path(__file__).parent / 'client'

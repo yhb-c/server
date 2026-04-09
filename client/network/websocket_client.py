@@ -163,20 +163,22 @@ class WebSocketClient(QtCore.QObject):
             message: 文本消息
         """
         try:
-            logger.debug(f"收到文本消息，长度: {len(message)}")
+            # logger.debug(f"收到文本消息，长度: {len(message)}")
             data = json.loads(message)
             message_type = data.get('type', '')
-            logger.debug(f"消息类型: {message_type}")
+            # logger.debug(f"消息类型: {message_type}")
 
             if message_type == 'detection_result':
                 # 液位检测结果
                 channel_id = data.get('channel_id', 'unknown')
+                logger.info(f"[WebSocket] 接收检测结果 - 通道: {channel_id}")
                 self.detection_result.emit(data)
 
             elif message_type == 'server_status':
                 # 服务器状态消息
-                logger.debug(f"服务器状态: {data.get('message', '')}")
+                # logger.debug(f"服务器状态: {data.get('message', '')}")
                 # print(f"[WebSocket] Server status: {data.get('message', '')}")
+                pass
 
             elif message_type == 'error':
                 # 错误消息
@@ -187,13 +189,15 @@ class WebSocketClient(QtCore.QObject):
 
             elif message_type == 'command_response':
                 # 命令响应消息
-                logger.debug(f"命令响应: {data.get('command', '')} - {data.get('message', '')}")
+                # logger.debug(f"命令响应: {data.get('command', '')} - {data.get('message', '')}")
                 # print(f"[WebSocket] Command response: {data.get('command', '')} - {data.get('message', '')}")
+                pass
 
             elif message_type == 'detection_status':
                 # 检测状态消息
-                logger.debug(f"检测状态: {data.get('status', '')}")
+                # logger.debug(f"检测状态: {data.get('status', '')}")
                 # print(f"[WebSocket] Detection status: {data.get('status', '')}")
+                pass
 
             elif message_type == 'welcome':
                 # 欢迎消息
@@ -201,7 +205,9 @@ class WebSocketClient(QtCore.QObject):
                 # print(f"[WebSocket] Connected to server")
 
             else:
-                logger.warning(f"未知消息类型: {message_type}")
+                # 忽略status_update等高频消息，避免日志爆炸
+                if message_type not in ['status_update', 'heartbeat']:
+                    logger.warning(f"未知消息类型: {message_type}")
                 # print(f"[WebSocket] Unknown message type: {message_type}")
 
         except json.JSONDecodeError as e:

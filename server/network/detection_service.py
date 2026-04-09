@@ -492,8 +492,9 @@ class DetectionService:
             success = self.task_manager.stop_task(channel_id)
 
             if success:
-                # 关闭CSV写入器
+                # 强制刷新并关闭CSV写入器
                 if channel_id in self.csv_writers:
+                    self.csv_writers[channel_id].force_flush()
                     self.csv_writers[channel_id].close()
                     del self.csv_writers[channel_id]
                     self.logger.info(f"关闭通道 {channel_id} 的CSV写入器")
