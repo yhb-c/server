@@ -299,9 +299,9 @@ class MissionPanel(QtWidgets.QWidget):
         FontManager.applyToWidget(channel_label)
         channel_layout.addWidget(channel_label)
         
-        # 创建复选框（横向排列，16个通道）
+        # 创建复选框（横向排列，8个通道）
         self.new_task_channel_checkboxes = {}
-        for i in range(1, 17):
+        for i in range(1, 9):
             channel_name = f"{i}"
             checkbox = QtWidgets.QCheckBox(channel_name)
             
@@ -388,7 +388,7 @@ class MissionPanel(QtWidgets.QWidget):
         self.channel_file_path_edits = {}  # 文件路径输入框
         self.channel_debug_btns = {}  # 调试按钮
         
-        for i in range(1, 17):
+        for i in range(1, 9):
             # 通道标签
             label = QtWidgets.QLabel(f"通道{i}：")
             # 使用全局字体管理器应用字体
