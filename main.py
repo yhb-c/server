@@ -19,6 +19,11 @@ from qtpy.QtCore import Qt
 # False: 禁用日志输出
 ENABLE_LOGGING = True
 
+# 全局SDK平台配置
+# True: 使用Windows版本SDK（HCNetSDK.dll, PlayCtrl.dll）
+# False: 使用Linux版本SDK（libhcnetsdk.so, libPlayCtrl.so）
+USE_WINDOWS_SDK = False
+
 # 添加 client 目录到路径
 client_path = Path(__file__).parent / 'client'
 sys.path.insert(0, str(client_path))

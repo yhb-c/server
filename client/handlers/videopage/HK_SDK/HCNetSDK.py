@@ -9,6 +9,13 @@ import sys
 from ctypes import *
 from enum import Enum
 
+# 导入全局SDK平台配置
+try:
+    from main import USE_WINDOWS_SDK
+except ImportError:
+    # 如果导入失败，自动检测系统平台
+    USE_WINDOWS_SDK = (platform.system().lower() == 'windows')
+
 
 def get_hk_lib_path():
     """
@@ -29,9 +36,24 @@ def get_hk_lib_path():
 
 
 def system_get_platform_info():
-    sys_platform = platform.system().lower().strip()
+    """
+    获取系统平台信息
+
+    Returns:
+        tuple: (系统平台, Python位数)
+    """
+    # 使用全局配置决定SDK平台
+    if USE_WINDOWS_SDK:
+        sys_platform = 'windows'
+    else:
+        sys_platform = 'linux'
+
     python_bit = platform.architecture()[0]
     python_bit_num = re.findall(r'(\d+)\w*', python_bit)[0]
+
+    print(f"[HCNetSDK] SDK平台配置: USE_WINDOWS_SDK={USE_WINDOWS_SDK}")
+    print(f"[HCNetSDK] 使用SDK平台: {sys_platform}{python_bit_num}")
+
     return sys_platform, python_bit_num
 
 
