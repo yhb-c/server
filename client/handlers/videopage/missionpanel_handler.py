@@ -1284,7 +1284,7 @@ class MissionPanelHandler:
             print("[一键启动] WebSocket连接正常，开始订阅所有通道...")
 
             # 步骤1: 先订阅所有通道（确保能接收检测结果）
-            all_channels = [f'channel{i}' for i in range(1, 17)]  # channel1-channel16
+            all_channels = [f'channel{i}' for i in range(1, 9)]  # channel1-channel8
             subscribe_success_count = 0
 
             for channel_id in all_channels:

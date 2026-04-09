@@ -293,7 +293,7 @@ class ChannelPanel(QtWidgets.QWidget):
     amplifyClicked = QtCore.Signal(str)
     channelNameChanged = QtCore.Signal(str, str)
     
-    def __init__(self, title="通道", parent=None, debug_mode=False):
+    def __init__(self, title="通道", parent=None, debug_mode=False, width=None, height=None):
         super(ChannelPanel, self).__init__(parent)
         self._parent = parent
         self._title = title
@@ -304,6 +304,8 @@ class ChannelPanel(QtWidgets.QWidget):
         self._channel_number = title.replace("通道", "")
         self._hwnd_render_mode = False
         self._is_connected = False
+        self._custom_width = width  # 自定义宽度
+        self._custom_height = height  # 自定义高度
         
         self.setObjectName("ChannelPanel")
         self._initUI()
@@ -311,7 +313,11 @@ class ChannelPanel(QtWidgets.QWidget):
     
     def _initUI(self):
         """初始化UI布局"""
-        self.setFixedSize(scale_w(620), scale_h(465))
+        # 使用自定义尺寸或默认尺寸
+        if self._custom_width and self._custom_height:
+            self.setFixedSize(self._custom_width, self._custom_height)
+        else:
+            self.setFixedSize(scale_w(620), scale_h(465))
         
         self.setAutoFillBackground(True)
         palette = self.palette()

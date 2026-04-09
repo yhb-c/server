@@ -892,7 +892,7 @@ class ChannelPanelHandler:
             
             # 如果 channels 部分没有数据，尝试从 default_config.yaml 读取
             if not channels and default_config:
-                for i in range(1, 17):  # 支持16个通道
+                for i in range(1, 9):  # 支持8个通道
                     channel_key = f'channel{i}'
                     if channel_key in default_config:
                         channel_data = default_config[channel_key]
@@ -910,7 +910,7 @@ class ChannelPanelHandler:
             
             # 如果还是没有数据，尝试从 channel_config.yaml 的根级别读取
             if not channels:
-                for i in range(1, 17):  # 支持16个通道
+                for i in range(1, 9):  # 支持8个通道
                     channel_key = f'channel{i}'
                     if channel_key in channel_config:
                         channel_data = channel_config[channel_key]
@@ -1000,7 +1000,7 @@ class ChannelPanelHandler:
                 current_config['channels'] = {}
             
             # 更新通道配置
-            for i in range(1, 17):  # 支持16个通道
+            for i in range(1, 9):  # 支持8个通道
                 channel_key = f'channel{i}'
                 if i in channels:
                     # 更新已有通道
@@ -2590,7 +2590,7 @@ class ChannelPanelHandler:
             self.logger.debug("[DEBUG] 成功从服务端重新加载配置")
             
             # 更新每个通道面板的名称显示
-            for i in range(1, 17):  # 支持16个通道
+            for i in range(1, 9):  # 支持8个通道
                 channel_id = f'channel{i}'
                 
                 # 获取通道面板

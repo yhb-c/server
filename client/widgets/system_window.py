@@ -535,7 +535,7 @@ class SystemWindow(
         return page
     
     def _createDefaultVideoLayout(self):
-        """创建默认布局：任务表格 + 2x8通道面板（带垂直滚动条）"""
+        """创建默认布局：任务表格 + 中间大预览窗口 + 右侧8个小视频窗口"""
         try:
             from widgets import ChannelPanel, MissionPanel
         except ImportError:
@@ -545,46 +545,59 @@ class SystemWindow(
         app = QtWidgets.QApplication.instance()
         if app is None:
             raise RuntimeError("QApplication 未初始化")
+        
         layout_widget = QtWidgets.QWidget()
         main_layout = QtWidgets.QHBoxLayout(layout_widget)
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(10)
         
-        # === 左侧：任务表格（自动配置） ===
+        # === 左侧：任务表格 ===
         self.missionTable = MissionPanel()
+        self.missionTable.setFixedWidth(550)
         main_layout.addWidget(self.missionTable)
         
-        # === 右侧：带滚动条的通道面板区域（2x8网格，共16个通道） ===
-        self.default_scroll_area = QtWidgets.QScrollArea()
-        self.default_scroll_area.setWidgetResizable(False)
-        self.default_scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.default_scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        self.default_scroll_area.setMinimumWidth(1310)  # 确保滚动区域有足够宽度
+        # === 中间+右侧：视频区域 ===
+        video_area = QtWidgets.QWidget()
+        video_layout = QtWidgets.QHBoxLayout(video_area)
+        video_layout.setContentsMargins(0, 0, 0, 0)
+        video_layout.setSpacing(10)
         
-        # 通道面板容器
-        self.default_channel_container = QtWidgets.QWidget()
-        # 2x8布局：2列 x 8行，每个面板620x465，间距20
-        # 宽度：30 + 620 + 20 + 620 + 30 = 1320
-        # 高度：10 + (465 + 20) * 8 - 20 + 10 = 3880
-        container_height = 10 + (465 + 20) * 8 - 20 + 10
-        self.default_channel_container.setFixedSize(1320, container_height)
+        # === 中间：大预览窗口 ===
+        self.previewPanel = ChannelPanel("预览", parent=video_area, debug_mode=False, width=1200, height=900)
+        self.previewPanel.setObjectName("PreviewPanel")
+        video_layout.addWidget(self.previewPanel)
         
-        # 创建16个通道面板
+        # === 右侧：8个小视频窗口（垂直排列，带滚动条） ===
+        # 创建滚动区域
+        scroll_area = QtWidgets.QScrollArea()
+        scroll_area.setWidgetResizable(False)
+        scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        scroll_area.setFixedWidth(260)  # 240 + 滚动条宽度
+        scroll_area.setFixedHeight(900)
+        
+        # 小视频容器
+        small_videos_container = QtWidgets.QWidget()
+        small_videos_layout = QtWidgets.QVBoxLayout(small_videos_container)
+        small_videos_layout.setContentsMargins(0, 0, 0, 0)
+        small_videos_layout.setSpacing(5)
+        
+        # 创建8个小视频面板（4:3比例）
         self.channelPanels = []
+        small_panel_width = 240
+        small_panel_height = 180  # 240 * 3/4 = 180 (4:3比例)
         
-        # 2x8 网格布局的固定位置（4:3比例，620x465）
-        self.default_channel_positions = []
-        for row in range(8):
-            for col in range(2):
-                x = 30 + col * (620 + 20)  # 30, 670
-                y = 10 + row * (465 + 20)  # 10, 495, 980, ...
-                self.default_channel_positions.append((x, y))
+        # 计算容器总高度：8个面板 + 7个间距
+        container_height = small_panel_height * 8 + 5 * 7  # 1440 + 35 = 1475
+        small_videos_container.setFixedSize(240, container_height)
         
-        for i, (x, y) in enumerate(self.default_channel_positions):
+        for i in range(8):
             channel_id = f'channel{i+1}'
             channel_name = self.getChannelDisplayName(channel_id, i+1)
             
-            channelPanel = ChannelPanel(channel_name, parent=self.default_channel_container, debug_mode=False)
+            # 创建小尺寸的通道面板（4:3比例）
+            channelPanel = ChannelPanel(channel_name, parent=small_videos_container, debug_mode=False, 
+                                       width=small_panel_width, height=small_panel_height)
             channelPanel.setObjectName(f"ChannelPanel_{i+1}")
             
             if hasattr(channelPanel, 'setChannelName'):
@@ -597,28 +610,26 @@ class SystemWindow(
             if hasattr(self, '_connectChannelPanelSignals'):
                 self._connectChannelPanelSignals(channelPanel)
             
-            channelPanel.move(x, y)
+            small_videos_layout.addWidget(channelPanel)
             self.channelPanels.append(channelPanel)
         
-        self.default_scroll_area.setWidget(self.default_channel_container)
-        main_layout.addWidget(self.default_scroll_area)
-        main_layout.setStretch(0, 1)
-        main_layout.setStretch(1, 1)
+        # 将容器放入滚动区域
+        scroll_area.setWidget(small_videos_container)
+        video_layout.addWidget(scroll_area)
         
-        # 连接滚动信号，滚动时更新叠加层位置
-        self.default_scroll_area.verticalScrollBar().valueChanged.connect(self._updateAllOverlayPositions)
+        main_layout.addWidget(video_area)
         
         # 保存第一个面板的引用（兼容现有代码）
         self.channelPanel = self.channelPanels[0] if self.channelPanels else None
         
-        # 创建16个历史视频面板（用于曲线模式布局的历史回放子布局）
+        # 创建8个历史视频面板（用于曲线模式布局的历史回放子布局）
         try:
             from widgets.videopage import HistoryVideoPanel
         except ImportError:
             from widgets.videopage import HistoryVideoPanel
         
         self.historyVideoPanels = []
-        for i in range(16):
+        for i in range(8):
             channel_id = f'channel{i+1}'
             channel_name = self.getChannelDisplayName(channel_id, i+1)
             
@@ -626,7 +637,6 @@ class SystemWindow(
             history_panel = HistoryVideoPanel(title=channel_name, parent=None, debug_mode=False, main_window=self)
             history_panel.setObjectName(f"HistoryVideoPanel_{i+1}")
             self.historyVideoPanels.append(history_panel)
-        
         
         # 通过handler初始化通道面板数据
         if hasattr(self, 'initializeChannelPanels'):
@@ -710,8 +720,8 @@ class SystemWindow(
         # 初始化通道包裹容器列表（同步布局）
         self.channel_widgets_for_curve = []
         
-        # 创建16个通道容器（初始隐藏，等待CSV文件加载）
-        for i in range(16):
+        # 创建8个通道容器（初始隐藏，等待CSV文件加载）
+        for i in range(8):
             wrapper = QtWidgets.QWidget()
             wrapper.setFixedSize(620, 465)
             wrapper.setVisible(False)  # 初始隐藏
@@ -756,8 +766,8 @@ class SystemWindow(
         # 初始化历史视频包裹容器列表（历史回放布局）
         self.history_channel_widgets_for_curve = []
         
-        # 创建16个历史视频容器（初始隐藏，等待CSV文件加载）
-        for i in range(16):
+        # 创建8个历史视频容器（初始隐藏，等待CSV文件加载）
+        for i in range(8):
             wrapper = QtWidgets.QWidget()
             wrapper.setFixedSize(620, 465)
             wrapper.setVisible(False)  # 初始隐藏
@@ -809,7 +819,7 @@ class SystemWindow(
             selected_channels = self._getTaskChannels(mission_name)
         else:
             # 历史回放布局：显示所有通道容器
-            selected_channels = [f'通道{i}' for i in range(1, 17)]
+            selected_channels = [f'通道{i}' for i in range(1, 9)]
         
         self._updateCurveChannelDisplay(selected_channels)
     
@@ -894,7 +904,7 @@ class SystemWindow(
             else:
                 # 如果没有明确的通道配置，尝试从其他字段推断
                 # 检查是否有 channel1, channel2 等键
-                for i in range(1, 17):  # 支持16个通道
+                for i in range(1, 9):  # 支持8个通道
                     if f'channel{i}' in task_config:
                         used_channels.append(f'通道{i}')
                 if used_channels:
@@ -908,7 +918,7 @@ class SystemWindow(
             else:
                 pass
                 # 如果配置中没有通道信息，返回所有通道
-                used_channels = [f'通道{i}' for i in range(1, 17)]
+                used_channels = [f'通道{i}' for i in range(1, 9)]
             
             return used_channels
             
@@ -917,7 +927,7 @@ class SystemWindow(
             import traceback
             traceback.print_exc()
             # 出错时返回所有通道
-            return [f'通道{i}' for i in range(1, 17)]
+            return [f'通道{i}' for i in range(1, 9)]
     
     def _updateCurveChannelDisplay(self, selected_channels):
         """更新曲线布局中显示的通道"""
@@ -939,8 +949,8 @@ class SystemWindow(
         if not target_widgets:
             return
         
-        # 通道名称到索引的映射（支持16个通道）
-        channel_name_to_index = {f'通道{i}': i-1 for i in range(1, 17)}
+        # 通道名称到索引的映射（支持8个通道）
+        channel_name_to_index = {f'通道{i}': i-1 for i in range(1, 9)}
         
         # 首先隐藏所有通道
         for wrapper in target_widgets:
