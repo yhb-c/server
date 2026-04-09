@@ -6,22 +6,26 @@
 
 import os
 import csv
+import sys
 import time
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
 
 class DetectionResultCSVWriter:
-    """检测结果CSV写入器 - 客户端版本"""
+    """检测结果CSV写入器 - 客户端版本（带缓存机制）"""
 
-    def __init__(self, save_dir: str = None, main_window=None):
+    def __init__(self, save_dir: str = None, main_window=None, flush_interval: float = 10.0, max_cache_size: int = 20 * 1024 * 1024):
         """
         初始化CSV写入器
 
         Args:
             save_dir: 保存目录路径（可选，默认使用项目根目录下的database/mission_result）
             main_window: 主窗口实例，用于获取通道任务信息
+            flush_interval: 刷新间隔（秒），默认10秒
+            max_cache_size: 最大缓存大小（字节），默认20MB
         """
         if save_dir is None:
             # 使用项目根目录下的database/mission_result
@@ -38,6 +42,14 @@ class DetectionResultCSVWriter:
         self.main_window = main_window
         self.csv_files = {}  # {channel_id: (file_handle, csv_writer)}
         self.csv_filepaths = {}  # {channel_id: filepath}
+
+        # 缓存配置
+        self.flush_interval = flush_interval
+        self.max_cache_size = max_cache_size
+        self.cache_buffers = {}  # {channel_id: [row1, row2, ...]}
+        self.cache_sizes = {}  # {channel_id: size_in_bytes}
+        self.last_flush_times = {}  # {channel_id: timestamp}
+        self.locks = {}  # {channel_id: threading.Lock()}
 
         # 确保基础目录存在
         self.base_save_dir.mkdir(parents=True, exist_ok=True)
@@ -87,6 +99,12 @@ class DetectionResultCSVWriter:
             self.csv_files[channel_id] = (file_handle, csv_writer)
             self.csv_filepaths[channel_id] = csv_filepath
 
+            # 初始化该通道的缓存
+            self.cache_buffers[channel_id] = []
+            self.cache_sizes[channel_id] = 0
+            self.last_flush_times[channel_id] = time.time()
+            self.locks[channel_id] = threading.Lock()
+
             # print(f"[CSVWriter] 创建CSV文件: {csv_filepath}")
 
         return self.csv_files[channel_id]
@@ -124,7 +142,7 @@ class DetectionResultCSVWriter:
 
     def write_detection_result(self, channel_id: str, heights: List[float], timestamp: Optional[float] = None):
         """
-        写入检测结果（简化版本 - 时间戳和液位高度）
+        写入检测结果到缓存（简化版本 - 时间戳和液位高度）
 
         Args:
             channel_id: 通道ID
@@ -132,40 +150,45 @@ class DetectionResultCSVWriter:
             timestamp: 时间戳（可选，默认使用当前时间）
         """
         try:
-            # print(f"[CSVWriter] ========== Start Writing CSV ==========")
-            # print(f"[CSVWriter] Channel ID: {channel_id}")
-            # print(f"[CSVWriter] Heights: {heights}")
-            # print(f"[CSVWriter] Timestamp: {timestamp}")
-
             # 获取写入器
-            # print(f"[CSVWriter] Getting or creating CSV writer...")
             file_handle, csv_writer = self._get_or_create_writer(channel_id)
-            # print(f"[CSVWriter] [OK] CSV writer ready")
 
             # 使用提供的时间戳或当前时间
             ts = timestamp if timestamp else time.time()
-            # print(f"[CSVWriter] Using timestamp: {ts}")
 
-            # 写入每个液位高度（每个高度一行）
-            write_count = 0
-            for i, height in enumerate(heights):
-                if height is not None and height > 0:
-                    row = [
-                        ts,  # 时间戳
-                        round(height, 2)  # 液位高度
-                    ]
-                    csv_writer.writerow(row)
-                    write_count += 1
-                else:
-                    pass
+            # 获取该通道的锁
+            lock = self.locks.get(channel_id)
+            if not lock:
+                return
 
-            # 立即刷新到磁盘
-            file_handle.flush()
+            with lock:
+                # 写入每个液位高度到缓存（每个高度一行）
+                for i, height in enumerate(heights):
+                    if height is not None and height > 0:
+                        row = [
+                            ts,  # 时间戳
+                            round(height, 2)  # 液位高度
+                        ]
+
+                        # 添加到缓存
+                        self.cache_buffers[channel_id].append(row)
+
+                        # 估算单行数据大小
+                        row_size = sys.getsizeof(str(ts)) + sys.getsizeof(str(row[1])) + 2
+                        self.cache_sizes[channel_id] += row_size
+
+                # 检查是否需要刷新
+                current_time = time.time()
+                time_elapsed = current_time - self.last_flush_times[channel_id]
+
+                # 条件1：缓存大小达到20MB
+                # 条件2：距离上次刷新超过10秒
+                if self.cache_sizes[channel_id] >= self.max_cache_size or time_elapsed >= self.flush_interval:
+                    self._flush_cache(channel_id)
 
         except Exception as e:
             pass
             import traceback
-            # print(f"[CSVWriter] Exception traceback: {traceback.format_exc()}")
 
     def write_full_detection_result(self, data: Dict):
         """
@@ -193,6 +216,52 @@ class DetectionResultCSVWriter:
         except Exception as e:
             pass
 
+    def _flush_cache(self, channel_id: str):
+        """
+        刷新指定通道的缓存到磁盘
+        注意：此方法必须在lock保护下调用
+
+        Args:
+            channel_id: 通道ID
+        """
+        if channel_id not in self.cache_buffers or not self.cache_buffers[channel_id]:
+            return
+
+        try:
+            file_handle, csv_writer = self.csv_files[channel_id]
+
+            # 批量写入所有缓存数据
+            csv_writer.writerows(self.cache_buffers[channel_id])
+            file_handle.flush()
+
+            # 清空缓存
+            cache_count = len(self.cache_buffers[channel_id])
+            cache_size_mb = self.cache_sizes[channel_id] / (1024 * 1024)
+            self.cache_buffers[channel_id].clear()
+            self.cache_sizes[channel_id] = 0
+            self.last_flush_times[channel_id] = time.time()
+
+            # print(f"[CSVWriter] [{channel_id}] 刷新缓存: {cache_count}条数据, {cache_size_mb:.2f}MB")
+
+        except Exception as e:
+            pass
+
+    def force_flush(self, channel_id: str):
+        """
+        强制刷新指定通道的缓存（用于停止检测或程序退出时）
+
+        Args:
+            channel_id: 通道ID
+        """
+        if channel_id in self.locks:
+            with self.locks[channel_id]:
+                self._flush_cache(channel_id)
+
+    def force_flush_all(self):
+        """强制刷新所有通道的缓存"""
+        for channel_id in list(self.cache_buffers.keys()):
+            self.force_flush(channel_id)
+
     def close_channel(self, channel_id: str):
         """
         关闭指定通道的CSV文件
@@ -200,16 +269,33 @@ class DetectionResultCSVWriter:
         Args:
             channel_id: 通道ID
         """
+        # 先强制刷新缓存
+        if channel_id in self.cache_buffers and self.cache_buffers[channel_id]:
+            self.force_flush(channel_id)
+
         if channel_id in self.csv_files:
             file_handle, _ = self.csv_files[channel_id]
             file_handle.close()
             del self.csv_files[channel_id]
+
+            # 清理缓存相关数据
+            if channel_id in self.cache_buffers:
+                del self.cache_buffers[channel_id]
+            if channel_id in self.cache_sizes:
+                del self.cache_sizes[channel_id]
+            if channel_id in self.last_flush_times:
+                del self.last_flush_times[channel_id]
+            if channel_id in self.locks:
+                del self.locks[channel_id]
 
             filepath = self.csv_filepaths.get(channel_id)
             # print(f"[CSVWriter] 关闭CSV文件: {filepath}")
 
     def close_all(self):
         """关闭所有CSV文件"""
+        # 先强制刷新所有缓存
+        self.force_flush_all()
+
         for channel_id in list(self.csv_files.keys()):
             self.close_channel(channel_id)
 
