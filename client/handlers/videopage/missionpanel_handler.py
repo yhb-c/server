@@ -1295,7 +1295,7 @@ class MissionPanelHandler:
                     else:
                         print(f"[一键启动] 订阅通道失败: {channel_id}")
 
-            print(f"[一键启动] 订阅完成: {subscribe_success_count}/16 个通道")
+            print(f"[一键启动] 订阅完成: {subscribe_success_count}/8 个通道")
 
             # 等待订阅完成
             import time
@@ -1307,14 +1307,14 @@ class MissionPanelHandler:
 
             if success:
                 print(f"[一键启动] start_all指令发送成功")
-                print(f"[一键启动] 已订阅 {subscribe_success_count}/16 个通道")
+                print(f"[一键启动] 已订阅 {subscribe_success_count}/8 个通道")
                 print(f"[一键启动] WebSocket连接状态: {self.ws_client.is_connected}")
                 print(f"[一键启动] ========== 一键启动流程完成，保持连接接收数据 ==========")
 
                 # 不显示MessageBox，避免阻塞事件循环
                 # 改为在状态栏显示消息
                 if hasattr(self, 'statusBar'):
-                    self.statusBar().showMessage(f"一键启动成功，已订阅 {subscribe_success_count}/16 个通道", 5000)
+                    self.statusBar().showMessage(f"一键启动成功，已订阅 {subscribe_success_count}/8 个通道", 5000)
 
                 print(f"[一键启动] 提示: 连接将保持活跃，持续接收检测结果")
             else:
