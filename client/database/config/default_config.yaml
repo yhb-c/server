@@ -12,7 +12,7 @@ annotation_debug: false
 batch_processing_enabled: false
 channel1:
   name: 通道1
-  address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+  address: ''
   file_path: C:/Users/admin/Desktop/test video1.mp4
 channel1_model_path: database/model/detection_model/bestmodel/tensor.pt
 channel2:
