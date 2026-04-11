@@ -88,10 +88,14 @@ class ChannelThreadManager:
         
         # 应用配置（用于获取编译模式）
         self.config = None
-        
+
         # 相机报警信号（用于跨线程弹出对话框）
         self._camera_alert_signal = CameraAlertSignal()
         self._camera_alert_signal.alert_triggered.connect(self._on_camera_alert_triggered)
+
+        # 预览面板支持
+        self.preview_panel = None
+        self.preview_hwnd = None
     
     def _on_camera_alert_triggered(self, channel_id: str):
         """相机报警信号槽函数（在主线程中执行）
@@ -275,7 +279,64 @@ class ChannelThreadManager:
     def get_channel_context(self, channel_id: str) -> Optional[ChannelThreadContext]:
         """获取通道上下文"""
         return self.contexts.get(channel_id)
-    
+
+    def set_preview_panel(self, preview_panel, preview_hwnd):
+        """设置预览面板并切换渲染目标
+
+        Args:
+            preview_panel: 预览面板实例
+            preview_hwnd: 预览面板的HWND
+        """
+        self.preview_panel = preview_panel
+        self.preview_hwnd = preview_hwnd
+
+        # 获取当前通道的capture_source并切换HWND
+        context = self.get_channel_context(list(self.contexts.keys())[0]) if self.contexts else None
+        if context and hasattr(context, 'capture_source') and context.capture_source:
+            if hasattr(context.capture_source, 'switch_render_hwnd'):
+                success = context.capture_source.switch_render_hwnd(preview_hwnd)
+                if success:
+                    print(f"[线程管理器] 预览面板已设置并切换渲染: HWND={preview_hwnd}")
+                else:
+                    print(f"[线程管理器] 切换渲染失败")
+        else:
+            print(f"[线程管理器] 预览面板已设置: HWND={preview_hwnd}")
+
+    def switch_channel_to_preview(self, channel_id):
+        """将指定通道的视频切换到预览面板
+
+        Args:
+            channel_id: 通道ID
+
+        Returns:
+            bool: 是否切换成功
+        """
+        if not self.preview_hwnd:
+            print(f"[线程管理器] 预览面板未设置")
+            return False
+
+        context = self.get_channel_context(channel_id)
+        if not context:
+            print(f"[线程管理器] 通道上下文不存在: {channel_id}")
+            return False
+
+        if not hasattr(context, 'capture_source') or not context.capture_source:
+            print(f"[线程管理器] capture_source不存在: {channel_id}")
+            return False
+
+        if not hasattr(context.capture_source, 'switch_render_hwnd'):
+            print(f"[线程管理器] capture_source不支持switch_render_hwnd")
+            return False
+
+        # 切换渲染目标到预览面板
+        success = context.capture_source.switch_render_hwnd(self.preview_hwnd)
+        if success:
+            print(f"[线程管理器] {channel_id} 已切换到预览面板")
+            return True
+        else:
+            print(f"[线程管理器] {channel_id} 切换到预览面板失败")
+            return False
+
     def destroy_channel_context(self, channel_id: str):
         """销毁通道上下文"""
         if channel_id not in self.contexts:

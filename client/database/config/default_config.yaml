@@ -13,22 +13,22 @@ batch_processing_enabled: false
 channel1:
   name: 通道1
   address: ''
-  file_path: C:/Users/admin/Desktop/test video1.mp4
+  file_path: C:/Users/admin/Desktop/yewei_system/lqj/liquid_status/test_vedio/1月8日.mp4
 channel1_model_path: database/model/detection_model/bestmodel/tensor.pt
 channel2:
   name: 通道2
-  address: rtsp://admin:cei345678@192.168.0.28:8000/stream1
-  file_path: ''
+  address: ''
+  file_path: C:/Users/admin/Desktop/yewei_system/lqj/liquid_status/test_vedio/1月9日.mp4
 channel2_model_path: database/model/detection_model/bestmodel/tensor.pt
 channel3:
   name: 通道3
   address: ''
-  file_path: ''
+  file_path: C:/Users/admin/Desktop/yewei_system/lqj/liquid_status/test_vedio/1月20日.mp4
 channel3_model_path: database/model/detection_model/bestmodel/tensor.pt
 channel4:
   name: 通道4
   address: ''
-  file_path: ''
+  file_path: C:/Users/admin/Desktop/yewei_system/lqj/liquid_status/test_vedio/1月21日.mp4
 channel4_model_path: database/model/detection_model/bestmodel/tensor.pt
 crop_frame_rate: 2
 curve_frame_rate: 2

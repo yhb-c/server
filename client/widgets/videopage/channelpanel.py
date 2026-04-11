@@ -6,6 +6,7 @@
 叠加层：InfoOverlay 是独立的透明顶层窗口，叠加在视频上方显示信息
 """
 
+import logging
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
@@ -49,31 +50,73 @@ class InfoOverlay(QtWidgets.QWidget):
     def __init__(self, channel_id="", parent=None):
         super(InfoOverlay, self).__init__(parent)
         self.channel_id = channel_id
-        
-        # 设置为无边框顶层窗口
-        self.setWindowFlags(
-            Qt.FramelessWindowHint | 
-            Qt.Tool |
-            Qt.WindowStaysOnTopHint
-        )
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setAttribute(Qt.WA_ShowWithoutActivating)
-        
+
+        # 不设置为顶层窗口，作为普通子控件
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+
         # 信息数据
         self.channel_name = channel_id
         self.task_name = "未分配任务"
         self.fps = 0.0
         self.resolution = "0x0"
         self.target_widget = None
-        
-        # 🔥 液位线数据
-        self.liquid_positions = {}  # {area_idx: {left, right, y, height_mm, valid, ...}}
-        self.is_new_data = True  # 是否为新数据（影响颜色）
-        self.video_width = 0  # 原始视频宽度
-        self.video_height = 0  # 原始视频高度
-        
+
+        # 液位线数据
+        self.liquid_positions = {}
+        self.is_new_data = True
+        self.video_width = 0
+        self.video_height = 0
+
+        # 创建UI
+        self._initUI()
+
         # 初始隐藏
         self.hide()
+
+    def _initUI(self):
+        """初始化UI - 使用QLabel"""
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(8, 4, 8, 4)
+        layout.setSpacing(10)
+
+        # 顶部信息栏背景
+        self.setStyleSheet("background-color: rgba(0, 0, 0, 180);")
+
+        # 通道名称标签
+        self.channelLabel = QtWidgets.QLabel(self.channel_name)
+        self.channelLabel.setStyleSheet("color: white; font-weight: bold; font-size: 9pt;")
+        layout.addWidget(self.channelLabel)
+
+        # 分隔符
+        sep1 = QtWidgets.QLabel("|")
+        sep1.setStyleSheet("color: rgb(100, 100, 100);")
+        layout.addWidget(sep1)
+
+        # 分辨率标签
+        self.resolutionLabel = QtWidgets.QLabel(self.resolution)
+        self.resolutionLabel.setStyleSheet("color: rgb(255, 255, 0); font-weight: bold; font-size: 9pt;")
+        layout.addWidget(self.resolutionLabel)
+
+        # 分隔符
+        sep2 = QtWidgets.QLabel("|")
+        sep2.setStyleSheet("color: rgb(100, 100, 100);")
+        layout.addWidget(sep2)
+
+        # FPS标签
+        self.fpsLabel = QtWidgets.QLabel(f"FPS: {self.fps:.1f}")
+        self.fpsLabel.setStyleSheet("color: rgb(0, 255, 0); font-weight: bold; font-size: 9pt;")
+        layout.addWidget(self.fpsLabel)
+
+        # 弹簧，将任务名称推到右侧
+        layout.addStretch()
+
+        # 任务名称标签
+        self.taskLabel = QtWidgets.QLabel(self.task_name)
+        self.taskLabel.setStyleSheet("color: rgb(0, 255, 255); font-weight: bold; font-size: 9pt;")
+        layout.addWidget(self.taskLabel)
+
+        # 设置固定高度
+        self.setFixedHeight(28)
     
     def set_target(self, widget):
         """设置要跟随的视频控件"""
@@ -81,22 +124,29 @@ class InfoOverlay(QtWidgets.QWidget):
         self.update_position()
     
     def update_position(self):
-        """更新位置跟随目标控件"""
-        if self.target_widget and self.target_widget.isVisible():
-            pos = self.target_widget.mapToGlobal(QtCore.QPoint(0, 0))
-            self.setGeometry(pos.x(), pos.y(),
-                           self.target_widget.width(), self.target_widget.height())
+        """更新位置 - 固定在父控件顶部"""
+        if self.parent():
+            self.setGeometry(0, 0, self.parent().width(), 28)
+            self.show()
+
+    def _is_widget_in_viewport(self, widget):
+        """检查控件是否在滚动区域的可视范围内 - 已废弃"""
+        return True
     
     def update_info(self, channel_name=None, task_name=None, fps=None, resolution=None):
         """更新显示信息"""
         if channel_name is not None:
             self.channel_name = channel_name
+            self.channelLabel.setText(channel_name)
         if task_name is not None:
             self.task_name = task_name
+            self.taskLabel.setText(task_name)
         if fps is not None:
             self.fps = fps
+            self.fpsLabel.setText(f"FPS: {self.fps:.1f}")
         if resolution is not None:
             self.resolution = resolution
+            self.resolutionLabel.setText(resolution)
             # 解析分辨率
             try:
                 parts = resolution.split('x')
@@ -106,11 +156,10 @@ class InfoOverlay(QtWidgets.QWidget):
             except:
                 pass
         self.update_position()
-        self.repaint()
     
     def update_liquid_lines(self, liquid_positions, is_new_data=True, video_width=0, video_height=0):
         """更新液位线数据
-        
+
         Args:
             liquid_positions: 液位线位置数据 {area_idx: {left, right, y, height_mm, valid, ...}}
             is_new_data: 是否为新数据（True=红色，False=黄色）
@@ -123,121 +172,11 @@ class InfoOverlay(QtWidgets.QWidget):
             self.video_width = video_width
         if video_height > 0:
             self.video_height = video_height
-        self.repaint()
-    
+
     def clear_liquid_lines(self):
         """清空液位线数据"""
         self.liquid_positions = {}
-        self.repaint()
     
-    def paintEvent(self, event):
-        """绑制叠加信息"""
-        painter = QtGui.QPainter(self)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
-        
-        # 顶部信息栏背景
-        painter.fillRect(0, 0, self.width(), 28, QtGui.QColor(0, 0, 0, 180))
-        
-        font = painter.font()
-        font.setPointSize(9)
-        font.setBold(True)
-        painter.setFont(font)
-        
-        x_pos = 8
-        
-        # 通道名称
-        painter.setPen(Qt.white)
-        painter.drawText(x_pos, 19, self.channel_name)
-        x_pos += 80
-        
-        painter.setPen(QtGui.QColor(100, 100, 100))
-        painter.drawText(x_pos, 19, "|")
-        x_pos += 15
-        
-        # 分辨率
-        painter.setPen(QtGui.QColor(255, 255, 0))
-        painter.drawText(x_pos, 19, self.resolution)
-        x_pos += 90
-        
-        painter.setPen(QtGui.QColor(100, 100, 100))
-        painter.drawText(x_pos, 19, "|")
-        x_pos += 15
-        
-        # FPS
-        painter.setPen(QtGui.QColor(0, 255, 0))
-        painter.drawText(x_pos, 19, f"FPS: {self.fps:.1f}")
-        
-        # 任务名称（右侧）
-        painter.setPen(QtGui.QColor(0, 255, 255))
-        task_text = self.task_name if self.task_name else "未分配任务"
-        font_metrics = painter.fontMetrics()
-        task_width = font_metrics.horizontalAdvance(task_text)
-        painter.drawText(self.width() - task_width - 10, 19, task_text)
-        
-        # 🔥 绘制液位线
-        self._draw_liquid_lines(painter)
-    
-    def _draw_liquid_lines(self, painter):
-        """绘制液位线
-        
-        Args:
-            painter: QPainter 对象
-        """
-        if not self.liquid_positions:
-            return
-        
-        # 计算缩放比例（视频坐标 -> 控件坐标）
-        if self.video_width <= 0 or self.video_height <= 0:
-            return
-        
-        scale_x = self.width() / self.video_width
-        scale_y = self.height() / self.video_height
-        
-        # 选择颜色
-        if self.is_new_data:
-            line_color = QtGui.QColor(255, 0, 0)  # 红色 - 新数据
-            text_color = QtGui.QColor(0, 255, 0)  # 绿色文字
-        else:
-            line_color = QtGui.QColor(255, 255, 0)  # 黄色 - 历史数据
-            text_color = QtGui.QColor(255, 255, 0)
-        
-        pen = QtGui.QPen(line_color, 2)
-        painter.setPen(pen)
-        
-        font = painter.font()
-        font.setPointSize(10)
-        font.setBold(True)
-        painter.setFont(font)
-        
-        for area_idx, position_data in self.liquid_positions.items():
-            try:
-                left = position_data.get('left', 0)
-                right = position_data.get('right', 0)
-                y_absolute = position_data.get('y', 0)
-                height_mm = position_data.get('height_mm', 0)
-                valid = position_data.get('valid', True)
-                
-                if not valid:
-                    continue
-                
-                # 坐标转换
-                x1 = int(left * scale_x)
-                x2 = int(right * scale_x)
-                y = int(y_absolute * scale_y)
-                
-                # 绘制液位线
-                painter.setPen(pen)
-                painter.drawLine(x1, y, x2, y)
-                
-                # 绘制高度文字
-                height_mm_int = int(round(height_mm, 0))
-                text = f"{height_mm_int}mm"
-                painter.setPen(text_color)
-                painter.drawText(x1 + 5, y - 10, text)
-                
-            except Exception as e:
-                continue
-
 
 class VideoRenderWidget(QtWidgets.QWidget):
     """视频渲染专用Widget - 支持HWND直接渲染和QPixmap渲染"""
@@ -277,11 +216,11 @@ class VideoRenderWidget(QtWidgets.QWidget):
 class ChannelPanel(QtWidgets.QWidget):
     """
     通道面板组件
-    
+
     用于显示通道视频流和控制按钮
     使用 PlayCtrl SDK 直接渲染 + InfoOverlay 叠加层
     """
-    
+
     # 自定义信号
     channelSelected = QtCore.Signal(dict)
     channelConnected = QtCore.Signal(str)
@@ -292,6 +231,7 @@ class ChannelPanel(QtWidgets.QWidget):
     curveClicked = QtCore.Signal(str)
     amplifyClicked = QtCore.Signal(str)
     channelNameChanged = QtCore.Signal(str, str)
+    panelClicked = QtCore.Signal(str)  # 新增：面板点击信号，传递channel_id
     
     def __init__(self, title="通道", parent=None, debug_mode=False, width=None, height=None):
         super(ChannelPanel, self).__init__(parent)
@@ -306,6 +246,9 @@ class ChannelPanel(QtWidgets.QWidget):
         self._is_connected = False
         self._custom_width = width  # 自定义宽度
         self._custom_height = height  # 自定义高度
+        
+        # 初始化 logger
+        self.logger = logging.getLogger(f"ChannelPanel.{title}")
         
         self.setObjectName("ChannelPanel")
         self._initUI()
@@ -362,6 +305,8 @@ class ChannelPanel(QtWidgets.QWidget):
         buttonPanel = QtWidgets.QWidget()
         buttonPanel.setStyleSheet("background-color: palette(button);")
         buttonPanel.setFixedHeight(scale_h(45))
+        buttonPanel.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        buttonPanel.setAttribute(Qt.WA_StyledBackground, True)  # 确保样式背景生效
         
         buttonLayout = QtWidgets.QHBoxLayout(buttonPanel)
         buttonLayout.setContentsMargins(5, 5, 5, 5)
@@ -419,6 +364,9 @@ class ChannelPanel(QtWidgets.QWidget):
         self.btnEdit.clicked.connect(self._onEditClicked)
         self.btnCurve.clicked.connect(self._onCurveClicked)
         self.btnAmplify.clicked.connect(self._onAmplifyClicked)
+
+        # 视频区域点击事件
+        self.videoWidget.mousePressEvent = self._onVideoWidgetClicked
     
     # ==================== HWND渲染模式API ====================
     
@@ -441,8 +389,7 @@ class ChannelPanel(QtWidgets.QWidget):
             self._overlayLabel.hide()
             # 🔥 启用 InfoOverlay 叠加层
             self._ensureInfoOverlay()
-            self._infoOverlay.show()
-            self._infoOverlay.update_position()
+            self._infoOverlay.update_position()  # 使用update_position来决定是否显示
             self.logger.debug(f"[ChannelPanel] HWND渲染模式已启用，InfoOverlay已显示")
         else:
             self._overlayLabel.show()
@@ -454,8 +401,7 @@ class ChannelPanel(QtWidgets.QWidget):
         """显示叠加层"""
         if self._hwnd_render_mode:
             self._ensureInfoOverlay()
-            self._infoOverlay.show()
-            self._infoOverlay.update_position()
+            self._infoOverlay.update_position()  # 使用update_position来决定是否显示
     
     def hideOverlay(self):
         """隐藏叠加层"""
@@ -564,32 +510,37 @@ class ChannelPanel(QtWidgets.QWidget):
                 # 隐藏未连接提示
                 if self._overlayLabel.isVisible():
                     self._overlayLabel.hide()
-                
+
                 # 显示InfoOverlay
                 if self._infoOverlay:
-                    self._infoOverlay.show()
-                    self._infoOverlay.update_position()
-                
+                    self._infoOverlay.update_position()  # 使用update_position来决定是否显示
+
                 return
             
             # 如果是numpy数组，转换为QPixmap
             if hasattr(frame, 'shape'):
                 import cv2
+                import numpy as np
+
                 height, width, channel = frame.shape
                 bytes_per_line = 3 * width
-                
-                # 转换为QImage
+
+                # BGR转RGB（HKcapture输出BGR格式）
+                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                rgb_frame = np.ascontiguousarray(rgb_frame)
+
+                # 转换为QImage并交换R和B通道
                 q_image = QtGui.QImage(
-                    frame.data,
+                    rgb_frame.data,
                     width,
                     height,
                     bytes_per_line,
                     QtGui.QImage.Format_RGB888
-                )
-                
+                ).rgbSwapped()
+
                 # 转换为QPixmap
                 pixmap = QtGui.QPixmap.fromImage(q_image)
-                
+
                 # 递归调用显示
                 self.displayFrame(pixmap)
                 
@@ -695,7 +646,15 @@ class ChannelPanel(QtWidgets.QWidget):
         if not channel_id:
             channel_id = self._title or "未命名通道"
         self.amplifyClicked.emit(channel_id)
-    
+
+    def _onVideoWidgetClicked(self, event):
+        """视频区域点击事件"""
+        # 只有在连接状态下才响应点击
+        if self._is_connected:
+            channel_id, _ = self.getCurrentChannel()
+            if channel_id:
+                self.panelClicked.emit(channel_id)
+
     def resizeEvent(self, event):
         """窗口大小改变"""
         super(ChannelPanel, self).resizeEvent(event)
@@ -714,8 +673,7 @@ class ChannelPanel(QtWidgets.QWidget):
         """窗口显示"""
         super(ChannelPanel, self).showEvent(event)
         if self._hwnd_render_mode and self._infoOverlay:
-            self._infoOverlay.show()
-            self._infoOverlay.update_position()
+            self._infoOverlay.update_position()  # 使用update_position来决定是否显示
     
     def hideEvent(self, event):
         """窗口隐藏"""

@@ -1,0 +1,18 @@
+# 二维码检测脚本依赖包
+
+# 必需依赖
+opencv-python>=4.5.0
+PyQt5>=5.15.0
+numpy>=1.19.0
+
+# 可选依赖（增强版功能）
+pyzbar>=0.1.9
+
+# 说明：
+# - opencv-python: 图像处理和二维码检测
+# - PyQt5: GUI界面
+# - numpy: 数组处理
+# - pyzbar: 增强的条码/二维码检测（可选）
+#
+# Windows用户使用pyzbar需要额外安装zbar库
+# 下载地址: http://zbar.sourceforge.net/download.html

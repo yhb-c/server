@@ -177,12 +177,88 @@ class HKcapture:
     
     def refresh_hwnd(self, hwnd):
         """刷新渲染窗口句柄（窗口大小改变时调用）
-        
+
         Args:
             hwnd: 新的窗口句柄
         """
         self._hwnd = hwnd
-    
+
+    def switch_render_hwnd(self, new_hwnd):
+        """切换渲染目标HWND（用于预览窗口切换）
+
+        Args:
+            new_hwnd: 新的窗口句柄
+
+        Returns:
+            bool: 是否切换成功
+        """
+        print(f"[HKcapture] switch_render_hwnd 被调用: new_hwnd={new_hwnd}, is_reading={self.is_reading}, is_video_file={self.is_video_file}")
+
+        if not self.is_reading:
+            print(f"[HKcapture] 当前未在播放，无法切换")
+            return False
+
+        try:
+            port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
+            print(f"[HKcapture] 当前Port: {port}, 旧HWND: {self._hwnd}")
+
+            # 对于实时流，不能简单地Stop/Play，需要重新设置播放窗口
+            if not self.is_video_file:
+                print(f"[HKcapture] 实时流模式，使用PlayM4_RefreshPlay切换HWND")
+
+                # 更新HWND
+                old_hwnd = self._hwnd
+                self._hwnd = new_hwnd
+
+                # 使用RefreshPlay刷新播放窗口
+                hwnd_value = new_hwnd if new_hwnd else 0
+                ret = self.playM4SDK.PlayM4_RefreshPlay(c_long(port))
+
+                if ret:
+                    print(f"[HKcapture] RefreshPlay成功")
+                    # 重新设置播放窗口
+                    ret2 = self.playM4SDK.PlayM4_Play(c_long(port), c_void_p(hwnd_value))
+                    if ret2:
+                        print(f"[HKcapture] 已切换渲染到新HWND: {new_hwnd}")
+                        return True
+                    else:
+                        error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
+                        print(f"[HKcapture] Play失败，错误码: {error}")
+                        self._hwnd = old_hwnd
+                        return False
+                else:
+                    print(f"[HKcapture] RefreshPlay失败")
+                    self._hwnd = old_hwnd
+                    return False
+            else:
+                # 本地视频文件，使用Stop/Play方式
+                print(f"[HKcapture] 本地视频模式，使用Stop/Play切换HWND")
+
+                # 停止当前播放
+                self.playM4SDK.PlayM4_Stop(c_long(port))
+                print(f"[HKcapture] PlayM4_Stop完成")
+
+                # 更新HWND
+                self._hwnd = new_hwnd
+
+                # 重新开始播放到新HWND
+                hwnd_value = new_hwnd if new_hwnd else 0
+                ret = self.playM4SDK.PlayM4_Play(c_long(port), c_void_p(hwnd_value))
+
+                if ret:
+                    print(f"[HKcapture] 已切换渲染到新HWND: {new_hwnd}")
+                    return True
+                else:
+                    error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
+                    print(f"[HKcapture] 切换HWND失败，错误码: {error}")
+                    return False
+
+        except Exception as e:
+            print(f"[HKcapture] 切换HWND异常: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
     # ==================== YUV直接传递模式API（高性能检测）====================
     
     def enable_yuv_queue(self, enabled=True, interval=0.1):
@@ -923,68 +999,90 @@ class HKcapture:
             print(f"[HKcapture] 设置解码回调异常: {e}")
     
     def _video_file_decode_callback(self, nPort, pBuf, nSize, pFrameInfo, nUser, nReserved2):
-        """本地视频文件解码回调（用于获取帧尺寸和YUV数据传递）
-        
-        YUV直接传递模式：解码回调直接将YUV数据送入队列，供检测线程使用
+        """本地视频文件解码回调（支持RGB和YUV格式）
+
+        根据解码输出格式自动处理
         """
         try:
             frame_info = pFrameInfo.contents
-            if frame_info.nType == 3:  # YUV数据
-                width = frame_info.nWidth
-                height = frame_info.nHeight
-                
-                # 获取channel_id（如果未设置则使用默认值）
-                channel_id = getattr(self, '_channel_id', 'channel1')
-                
-                # 第一次获取到分辨率时记录视频源信息
-                if hasattr(self, '_debug_logger') and self._debug_logger and not hasattr(self, '_video_info_logged'):
-                    resolution = f"{width}x{height}"
-                    self._debug_logger.log_video_source_info(
-                        channel_id, 
-                        self.source, 
-                        self.target_fps, 
-                        resolution
-                    )
-                    self._video_info_logged = True  # 标记已记录，避免重复
-                
-                # 更新帧尺寸
-                self.frame_width = width
-                self.frame_height = height
-                self.frame_sequence += 1
-                self.last_frame_time = time.time()
-                
-                # 记录解码帧到调试日志（用于FPS统计）
-                if hasattr(self, '_debug_logger') and self._debug_logger:
-                    self._debug_logger.record_decode_frame(channel_id)
-                    
-                    # 在HWND模式下，解码后立即渲染到HWND，所以同时记录渲染FPS
-                    if self._hwnd and self._hwnd != 0:
-                        self._debug_logger.record_render_frame(channel_id)
-                
-                # ========== YUV直接传递模式 ==========
-                # 如果启用YUV队列，按间隔发送YUV数据到队列
-                if self._yuv_queue_enabled:
-                    now = time.time()
-                    if now - self._last_yuv_send_time >= self._yuv_send_interval:
-                        self._last_yuv_send_time = now
-                        
-                        # 计算YUV数据大小（I420格式：Y + U + V = w*h + w*h/4 + w*h/4 = w*h*1.5）
-                        yuv_size = width * height * 3 // 2
-                        
-                        # 从回调缓冲区复制YUV数据
-                        yuv_data = string_at(pBuf, yuv_size)
-                        
-                        # 放入队列（非阻塞，队列满则丢弃旧数据）
-                        try:
-                            if self._yuv_queue.full():
-                                self._yuv_queue.get_nowait()  # 丢弃旧数据
-                            self._yuv_queue.put_nowait((yuv_data, width, height, now))
-                        except:
-                            pass
-                
+            width = frame_info.nWidth
+            height = frame_info.nHeight
+
+            # 获取channel_id（如果未设置则使用默认值）
+            channel_id = getattr(self, '_channel_id', 'channel1')
+
+            # 第一次获取到分辨率时记录视频源信息
+            if hasattr(self, '_debug_logger') and self._debug_logger and not hasattr(self, '_video_info_logged'):
+                resolution = f"{width}x{height}"
+                self._debug_logger.log_video_source_info(
+                    channel_id,
+                    self.source,
+                    self.target_fps,
+                    resolution
+                )
+                self._video_info_logged = True
+
+            # 更新帧尺寸
+            self.frame_width = width
+            self.frame_height = height
+            self.frame_sequence += 1
+            self.last_frame_time = time.time()
+
+            # 记录解码帧到调试日志（用于FPS统计）
+            if hasattr(self, '_debug_logger') and self._debug_logger:
+                self._debug_logger.record_decode_frame(channel_id)
+
+            # 根据nType处理不同格式
+            if frame_info.nType == 2:
+                # RGB32格式（BGRA）
+                try:
+                    rgb_size = width * height * 4
+                    rgb_data = string_at(pBuf, rgb_size)
+                    rgb_array = np.frombuffer(rgb_data, dtype=np.uint8)
+                    frame_bgra = rgb_array.reshape((height, width, 4))
+                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2RGB)
+
+                    if not hasattr(self, '_video_frame_debug_printed'):
+                        self._video_frame_debug_printed = True
+                        print(f"[HKcapture-视频文件-调试] 解码格式: RGB32")
+                        print(f"[HKcapture-视频文件-调试] RGB帧形状: {frame.shape}")
+
+                    with self.frame_lock:
+                        self.current_frame = frame
+                except Exception as e:
+                    print(f"[HKcapture-解码回调] RGB处理失败: {e}")
+
+            elif frame_info.nType == 3:
+                # YUV格式（I420）- 直接转为BGR格式（OpenCV标准）
+                try:
+                    yuv_size = width * height * 3 // 2
+                    yuv_data = string_at(pBuf, yuv_size)
+                    yuv_array = np.frombuffer(yuv_data, dtype=np.uint8)
+                    yuv_frame = yuv_array.reshape((height * 3 // 2, width))
+                    frame = cv2.cvtColor(yuv_frame, cv2.COLOR_YUV2BGR_I420)
+
+                    if not hasattr(self, '_video_frame_debug_printed'):
+                        self._video_frame_debug_printed = True
+                        print(f"[HKcapture-视频文件-调试] 解码格式: YUV I420")
+                        print(f"[HKcapture-视频文件-调试] BGR帧形状: {frame.shape}")
+                        print(f"[HKcapture-视频文件-调试] BGR帧数据类型: {frame.dtype}")
+                        print(f"[HKcapture-视频文件-调试] BGR中心像素值: {frame[height//2, width//2]}")
+
+                    with self.frame_lock:
+                        self.current_frame = frame
+                except Exception as e:
+                    print(f"[HKcapture-解码回调] YUV处理失败: {e}")
+            else:
+                # 未知格式
+                if not hasattr(self, '_video_unknown_type_warned'):
+                    self._video_unknown_type_warned = True
+                    print(f"[HKcapture-警告] 视频文件未知的解码格式 nType={frame_info.nType}")
+
         except Exception as e:
-            pass
-    
+            print(f"[HKcapture-解码回调] 异常: {e}")
+            import traceback
+            traceback.print_exc()
+
     def _rtsp_capture_loop(self):
         """RTSP流捕获循环线程（仅用于非海康RTSP流）"""
         while not self.stop_thread and self.cv_cap and self.cv_cap.isOpened():
@@ -998,80 +1096,80 @@ class HKcapture:
                 time.sleep(0.1)
                 
     def _real_data_callback(self, lPlayHandle, dwDataType, pBuffer, dwBufSize, pUser):
-        """海康威视实时数据回调函数（传统模式：帧抓取）"""
+        """海康威视实时数据回调函数（纯CPU解码模式，无渲染）"""
         if dwDataType == NET_DVR_SYSHEAD:
-            print(f"[HKcapture] 收到系统头数据，准备初始化QSV解码器...")
+            print(f"[HKcapture] 收到系统头数据，初始化纯CPU解码模式（无渲染）...")
             import sys
             sys.stdout.flush()
-            
+
             # 设置流播放模式
             self.playM4SDK.PlayM4_SetStreamOpenMode(self.PlayCtrlPort, 0)
-            
+
             # 打开码流
             if self.playM4SDK.PlayM4_OpenStream(self.PlayCtrlPort, pBuffer, dwBufSize, 1024 * 1024):
-                print(f"[HKcapture] 码流打开成功，启用QSV解码...")
+                print(f"[HKcapture] 码流打开成功，设置CPU软件解码...")
                 sys.stdout.flush()
-                
-                # 启用QSV硬件解码（Intel Quick Sync Video）
-                qsv_enabled = self._try_enable_qsv_decode()
-                
-                if not qsv_enabled:
-                    print(f"[HKcapture] QSV解码启用失败！请检查Intel核显驱动")
-                    sys.stdout.flush()
-                
+
+                # 禁用硬件解码，强制使用CPU软件解码
+                port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
+                self.playM4SDK.PlayM4_SetDecodeEngine(c_long(port), 0)  # 0=软件解码
+                print(f"[HKcapture] 已设置为CPU软件解码模式")
+
+                # 设置解码回调（用于获取解码后的帧数据）
+                self._setup_hikvision_decode_callback()
+
                 # 开始解码播放（不渲染到窗口）
                 self.playM4SDK.PlayM4_Play(self.PlayCtrlPort, None)
-                print(f"[HKcapture] QSV解码播放已启动")
+                print(f"[HKcapture] 纯CPU解码已启动（无渲染）")
                 sys.stdout.flush()
             else:
                 print(f"[HKcapture] 码流打开失败!")
                 sys.stdout.flush()
-                
+
         elif dwDataType == NET_DVR_STREAMDATA:
             # 输入流数据
             self.playM4SDK.PlayM4_InputData(self.PlayCtrlPort, pBuffer, dwBufSize)
     
     def _real_data_callback_hwnd(self, lPlayHandle, dwDataType, pBuffer, dwBufSize, pUser):
-        """海康威视实时数据回调函数（HWND直接渲染模式）
-        
+        """海康威视实时数据回调函数（纯CPU解码模式，无渲染）
+
         数据流：
-        1. 收到系统头：初始化PlayCtrl解码器，设置HWND渲染，设置解码回调
+        1. 收到系统头：初始化PlayCtrl解码器，设置解码回调
         2. 收到流数据：输入到PlayCtrl解码器
-        3. PlayCtrl自动解码并渲染到HWND
-        4. 解码回调获取YUV数据，送入YUV队列供检测线程使用
+        3. PlayCtrl解码后通过回调获取YUV数据
+        4. YUV数据送入队列供检测线程使用
         """
         if dwDataType == NET_DVR_SYSHEAD:
             if self.debug:
-                print(f"[HKcapture] 收到系统头数据，初始化HWND直接渲染...")
+                print(f"[HKcapture] 收到系统头数据，初始化纯CPU解码模式（无渲染）...")
             import sys
             sys.stdout.flush()
-            
+
             # 设置流播放模式
             self.playM4SDK.PlayM4_SetStreamOpenMode(self.PlayCtrlPort, 0)
-            
+
             # 打开码流
             if self.playM4SDK.PlayM4_OpenStream(self.PlayCtrlPort, pBuffer, dwBufSize, 1024 * 1024):
-                # 启用QSV解码（Intel Quick Sync Video）
-                self._try_enable_qsv_decode()
-                
-                # 🔥 设置解码回调（用于获取YUV数据送检测线程）
+                # 禁用硬件解码，强制使用CPU软件解码
+                port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
+                self.playM4SDK.PlayM4_SetDecodeEngine(c_long(port), 0)  # 0=软件解码
+                print(f"[HKcapture] 已设置为CPU软件解码模式")
+
+                # 设置解码回调（用于获取YUV数据送检测线程）
                 self._setup_hikvision_decode_callback()
-                
-                # 获取HWND值
-                hwnd_value = self._hwnd if self._hwnd else 0
-                
-                # 开始播放到HWND（关键：传入窗口句柄）
-                if self.playM4SDK.PlayM4_Play(self.PlayCtrlPort, c_void_p(hwnd_value)):
-                    print(f"[HKcapture] HWND直接渲染已启动，HWND={hwnd_value}")
+
+                # 开始解码播放（不渲染到窗口，传入None）
+                if self.playM4SDK.PlayM4_Play(self.PlayCtrlPort, None):
+                    print(f"[HKcapture] 纯CPU解码已启动（无渲染）")
                     sys.stdout.flush()
                 else:
                     error = self.playM4SDK.PlayM4_GetLastError(self.PlayCtrlPort)
-                    print(f"[HKcapture] HWND渲染启动失败，错误码: {error}")
+                    print(f"[HKcapture] 解码启动失败，错误码: {error}")
                     sys.stdout.flush()
             else:
                 print(f"[HKcapture] 码流打开失败")
                 sys.stdout.flush()
-                
+
         elif dwDataType == NET_DVR_STREAMDATA:
             # 输入流数据到解码器
             self.playM4SDK.PlayM4_InputData(self.PlayCtrlPort, pBuffer, dwBufSize)
@@ -1103,109 +1201,100 @@ class HKcapture:
             print(f"[HKcapture] 设置解码回调异常: {e}")
     
     def _hikvision_decode_callback(self, nPort, pBuf, nSize, pFrameInfo, nUser, nReserved2):
-        """海康威视实时流解码回调（用于获取YUV数据送检测线程）
-        
-        YUV直接传递模式：解码回调直接将YUV数据送入队列，供检测线程使用
-        不阻塞解码线程，转换在检测线程完成
+        """海康威视实时流解码回调（支持RGB和YUV格式）
+
+        根据解码输出格式自动处理
         """
         try:
             frame_info = pFrameInfo.contents
-            if frame_info.nType == 3:  # YUV数据
-                width = frame_info.nWidth
-                height = frame_info.nHeight
-                
-                # 获取channel_id（如果未设置则使用默认值）
-                channel_id = getattr(self, '_channel_id', 'channel1')
-                
-                # 初始化debug_logger（仅首次）
-                if not hasattr(self, '_debug_logger') or self._debug_logger is None:
-                    try:
-                        from utils.debug_logger import get_debug_logger
-                        import yaml
-                        import os
-                        self._debug_logger = get_debug_logger()
-                        config_path = "database/config/default_config.yaml"
-                        if os.path.exists(config_path):
-                            with open(config_path, 'r', encoding='utf-8') as f:
-                                config = yaml.safe_load(f)
-                                if config.get('fps_log', False):
-                                    self._debug_logger.enable(True)
-                    except:
-                        self._debug_logger = None
-                
-                # 第一次获取到分辨率时记录视频源信息
-                if hasattr(self, '_debug_logger') and self._debug_logger and not hasattr(self, '_hik_video_info_logged'):
-                    resolution = f"{width}x{height}"
-                    self._debug_logger.log_video_source_info(
-                        channel_id, 
-                        self.source, 
-                        self.target_fps, 
-                        resolution
-                    )
-                    self._hik_video_info_logged = True
-                
-                # 更新帧尺寸
-                self.frame_width = width
-                self.frame_height = height
-                self.frame_sequence += 1
-                self.last_frame_time = time.time()
-                
-                # 记录解码帧到调试日志（用于FPS统计）
-                if hasattr(self, '_debug_logger') and self._debug_logger:
-                    self._debug_logger.record_decode_frame(channel_id)
-                    
-                    # 在HWND模式下，解码后立即渲染到HWND，所以同时记录渲染FPS
-                    if self._hwnd and self._hwnd != 0:
-                        self._debug_logger.record_render_frame(channel_id)
-                
-                # ========== YUV直接传递模式 ==========
-                # 如果启用YUV队列，按间隔发送YUV数据到队列
-                if self._yuv_queue_enabled:
-                    now = time.time()
-                    if now - self._last_yuv_send_time >= self._yuv_send_interval:
-                        self._last_yuv_send_time = now
+            width = frame_info.nWidth
+            height = frame_info.nHeight
 
-                        # 计算YUV数据大小（I420格式）
-                        yuv_size = width * height * 3 // 2
+            # 获取channel_id（如果未设置则使用默认值）
+            channel_id = getattr(self, '_channel_id', 'channel1')
 
-                        # 从回调缓冲区复制YUV数据
-                        yuv_data = string_at(pBuf, yuv_size)
+            # 初始化debug_logger（仅首次）
+            if not hasattr(self, '_debug_logger') or self._debug_logger is None:
+                try:
+                    from utils.debug_logger import get_debug_logger
+                    import yaml
+                    import os
+                    self._debug_logger = get_debug_logger()
+                    config_path = "database/config/default_config.yaml"
+                    if os.path.exists(config_path):
+                        with open(config_path, 'r', encoding='utf-8') as f:
+                            config = yaml.safe_load(f)
+                            if config.get('fps_log', False):
+                                self._debug_logger.enable(True)
+                except:
+                    self._debug_logger = None
 
-                        # 放入队列（非阻塞，队列满则丢弃旧数据）
-                        try:
-                            if self._yuv_queue.full():
-                                self._yuv_queue.get_nowait()  # 丢弃旧数据
-                            self._yuv_queue.put_nowait((yuv_data, width, height, now))
-                        except:
-                            pass
+            # 第一次获取到分辨率时记录视频源信息
+            if hasattr(self, '_debug_logger') and self._debug_logger and not hasattr(self, '_hik_video_info_logged'):
+                resolution = f"{width}x{height}"
+                self._debug_logger.log_video_source_info(
+                    channel_id,
+                    self.source,
+                    self.target_fps,
+                    resolution
+                )
+                self._hik_video_info_logged = True
 
-                # ========== 更新 current_frame（供标注功能使用）==========
-                # 在 HWND 渲染模式下也需要更新 current_frame，以便标注功能可以获取帧
-                if self._hwnd and self._hwnd != 0:
-                    # 每隔一定时间更新一次 current_frame（避免频繁转换影响性能）
-                    now = time.time()
-                    if not hasattr(self, '_last_frame_update_time'):
-                        self._last_frame_update_time = 0
+            # 更新帧尺寸
+            self.frame_width = width
+            self.frame_height = height
+            self.frame_sequence += 1
+            self.last_frame_time = time.time()
 
-                    # 降低更新频率到每0.2秒一次（提高响应速度）
-                    if now - self._last_frame_update_time >= 0.2:
-                        self._last_frame_update_time = now
+            # 记录解码帧到调试日志（用于FPS统计）
+            if hasattr(self, '_debug_logger') and self._debug_logger:
+                self._debug_logger.record_decode_frame(channel_id)
 
-                        try:
-                            # 计算YUV数据大小（I420格式）
-                            yuv_size = width * height * 3 // 2
-                            yuv_data = string_at(pBuf, yuv_size)
+            # 根据nType处理不同格式
+            if frame_info.nType == 2:
+                # RGB32格式（BGRA）
+                try:
+                    rgb_size = width * height * 4
+                    rgb_data = string_at(pBuf, rgb_size)
+                    rgb_array = np.frombuffer(rgb_data, dtype=np.uint8)
+                    frame_bgra = rgb_array.reshape((height, width, 4))
+                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2RGB)
 
-                            # 转换为 BGR
-                            yuv_array = np.frombuffer(yuv_data, dtype=np.uint8)
-                            yuv_frame = yuv_array.reshape((height * 3 // 2, width))
-                            frame = cv2.cvtColor(yuv_frame, cv2.COLOR_YUV2BGR_I420)
+                    if not hasattr(self, '_hk_frame_debug_printed'):
+                        self._hk_frame_debug_printed = True
+                        print(f"[HKcapture-调试] 解码格式: RGB32")
+                        print(f"[HKcapture-调试] RGB帧形状: {frame.shape}")
 
-                            # 更新 current_frame
-                            with self.frame_lock:
-                                self.current_frame = frame
-                        except Exception as frame_update_error:
-                            print(f"[HKcapture-解码回调] 更新current_frame失败: {frame_update_error}")
+                    with self.frame_lock:
+                        self.current_frame = frame
+                except Exception as e:
+                    print(f"[HKcapture-解码回调] RGB处理失败: {e}")
+
+            elif frame_info.nType == 3:
+                # YUV格式（I420）- 直接转为BGR格式（OpenCV标准）
+                try:
+                    yuv_size = width * height * 3 // 2
+                    yuv_data = string_at(pBuf, yuv_size)
+                    yuv_array = np.frombuffer(yuv_data, dtype=np.uint8)
+                    yuv_frame = yuv_array.reshape((height * 3 // 2, width))
+                    frame = cv2.cvtColor(yuv_frame, cv2.COLOR_YUV2BGR_I420)
+
+                    if not hasattr(self, '_hk_frame_debug_printed'):
+                        self._hk_frame_debug_printed = True
+                        print(f"[HKcapture-调试] 解码格式: YUV I420")
+                        print(f"[HKcapture-调试] BGR帧形状: {frame.shape}")
+                        print(f"[HKcapture-调试] BGR帧数据类型: {frame.dtype}")
+                        print(f"[HKcapture-调试] BGR中心像素值: {frame[height//2, width//2]}")
+
+                    with self.frame_lock:
+                        self.current_frame = frame
+                except Exception as e:
+                    print(f"[HKcapture-解码回调] YUV处理失败: {e}")
+            else:
+                # 未知格式
+                if not hasattr(self, '_unknown_type_warned'):
+                    self._unknown_type_warned = True
+                    print(f"[HKcapture-警告] 未知的解码格式 nType={frame_info.nType}")
 
         except Exception as e:
             print(f"[HKcapture-解码回调] 异常: {e}")
@@ -1554,11 +1643,12 @@ class HKcapture:
     def __enter__(self):
         """支持with语句"""
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """支持with语句"""
         self.release()
-        # 使用示例
+
+# 使用示例
 if __name__ == "__main__":
     import cv2
     

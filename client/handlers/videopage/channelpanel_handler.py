@@ -570,9 +570,34 @@ class ChannelPanelHandler:
             if channel_id not in self._channel_panels_map:
                 self._channel_panels_map[channel_id] = sender
         
-        # 临时方案：跳过配置文件检查，直接使用硬编码配置
-        channel_config = {'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'}
-        self.logger.debug(f"[DEBUG] 使用硬编码配置: {channel_config}")
+        # 从系统窗口读取通道配置（RTSP地址和本地视频文件）
+        channel_config = {}
+
+        # 获取通道编号
+        channel_number = channel_id.replace('channel', '') if 'channel' in channel_id else '1'
+
+        # 尝试从系统窗口获取RTSP地址和本地视频文件路径
+        if hasattr(self, 'channelAddressInputs') and channel_number in self.channelAddressInputs:
+            rtsp_address = self.channelAddressInputs[channel_number].text().strip()
+            if rtsp_address and rtsp_address != 'username:password@ip:port/stream':
+                channel_config['address'] = rtsp_address
+                self.logger.debug(f"[DEBUG] 使用RTSP地址: {rtsp_address}")
+
+        # 如果没有有效的RTSP地址，尝试使用本地视频文件
+        if 'address' not in channel_config:
+            if hasattr(self, 'channelVideoFileInputs') and channel_number in self.channelVideoFileInputs:
+                video_file = self.channelVideoFileInputs[channel_number].text().strip()
+                if video_file and video_file != '选择本地视频文件路径':
+                    channel_config['address'] = video_file
+                    self.logger.debug(f"[DEBUG] 使用本地视频文件: {video_file}")
+
+        # 如果既没有RTSP地址也没有本地视频文件，无法连接
+        if 'address' not in channel_config:
+            self.logger.debug(f"[DEBUG] {channel_id} 没有配置RTSP地址或本地视频文件，无法连接")
+            self._channels_connecting.discard(channel_id)
+            return
+
+        self.logger.debug(f"[DEBUG] 最终使用配置: {channel_config}")
         
         # 读取并设置通道名称到面板（调用业务逻辑方法）
         # 从 channel_id (如 'channel1') 提取通道编号
@@ -584,26 +609,25 @@ class ChannelPanelHandler:
         if panel and hasattr(panel, 'setChannelName'):
             panel.setChannelName(channel_name)
         
-        # 关键修复：在主线程中预先获取HWND和设置渲染模式
-        # 这些Qt UI操作必须在主线程中执行，不能在后台线程中调用
-        hwnd = None
-        if panel and hasattr(panel, 'getVideoHwnd'):
-            hwnd = panel.getVideoHwnd()
-            self.logger.debug(f"[DEBUG] 主线程获取 {channel_id} HWND: {hwnd}")
-            
-            # 设置面板为HWND渲染模式
+        # 关键修复：在主线程中预先获取面板引用
+        # 不再需要HWND，使用Qt渲染模式
+        panel = self._channel_panels_map.get(channel_id)
+        if panel:
+            self.logger.debug(f"[DEBUG] 主线程获取 {channel_id} 面板引用")
+
+            # 设置面板为Qt渲染模式（不使用HWND）
             if hasattr(panel, 'setHwndRenderMode'):
-                panel.setHwndRenderMode(True)
-                self.logger.debug(f"[DEBUG] 主线程设置 {channel_id} HWND渲染模式")
-        
+                panel.setHwndRenderMode(False)
+                self.logger.debug(f"[DEBUG] 主线程设置 {channel_id} Qt渲染模式")
+
         # 切换到视频监控页面
         self.showVideoPage()
-        
+
         # 在后台线程中打开通道（避免阻塞UI）
-        # 将预先获取的HWND传递给后台线程
+        # 不再传递HWND参数
         thread = threading.Thread(
             target=self._connectChannelThread,
-            args=(channel_id, channel_config, hwnd),
+            args=(channel_id, channel_config, None),
             daemon=True
         )
         thread.start()
@@ -1055,34 +1079,34 @@ class ChannelPanelHandler:
     
     def _connectChannelThread(self, channel_id, channel_config, hwnd=None):
         """在后台线程中打开通道（直接连接RTSP相机）
-        
+
         Args:
             channel_id: 通道ID
             channel_config: 通道配置
-            hwnd: 预先获取的窗口句柄
+            hwnd: 窗口句柄（已废弃，不再使用）
         """
         try:
             self.logger.debug(f"[通道连接] {channel_id} 开始连接RTSP相机")
-            
+
             # 解析RTSP地址
             rtsp_url = channel_config.get('address', '')
             username, password, ip, port = self._parseRTSP(rtsp_url)
-            
+
             self.logger.debug(f"[通道连接] RTSP解析结果: {ip}:{port}, 用户: {username}")
-            
+
             # 导入HKcapture
             import sys
             import os
             from pathlib import Path
-            
+
             # 添加HK_SDK路径
             current_dir = Path(__file__).parent
             hk_sdk_path = current_dir / "HK_SDK"
             sys.path.insert(0, str(hk_sdk_path))
-            
+
             from HKcapture import HKcapture
-            
-            # 创建HKcapture对象
+
+            # 创建HKcapture对象（不再设置HWND）
             cap = HKcapture(
                 source=rtsp_url,
                 username=username,
@@ -1092,16 +1116,14 @@ class ChannelPanelHandler:
                 fps=25,
                 debug=True
             )
-            
-            # 设置HWND（如果有）
-            if hwnd:
-                cap.set_hwnd(hwnd)
-                self.logger.debug(f"[通道连接] 设置HWND: {hwnd}")
-            
+
+            # 不再设置HWND，使用纯CPU解码模式
+            self.logger.debug(f"[通道连接] 使用纯CPU解码模式（无渲染）")
+
             # 打开相机连接
             if not cap.open():
                 raise Exception("无法打开相机连接")
-            
+
             self.logger.debug(f"[通道连接] {channel_id} 相机连接成功")
             
             # 开始捕获
@@ -1226,26 +1248,32 @@ class ChannelPanelHandler:
                 # 隐藏"未打开通道"提示
                 if hasattr(panel, '_overlayLabel'):
                     panel._overlayLabel.hide()
-                
+
                 # 更新面板状态
                 if hasattr(panel, 'setConnected'):
                     panel.setConnected(True)
-            
+
             # 更新状态栏
             self.statusBar().showMessage(f"通道 {channel_id} 已连接")
-            
+
             self.logger.debug(f"[UI更新] {channel_id} 连接状态已更新")
-            
+
+            # 如果预览窗口当前没有显示任何通道，自动切换到刚打开的通道
+            if hasattr(self, '_current_preview_channel_id') and self._current_preview_channel_id is None:
+                self.logger.debug(f"[UI更新] 预览窗口为空，自动切换到 {channel_id}")
+                # 延迟100ms执行切换，确保视频流已经稳定
+                QtCore.QTimer.singleShot(100, lambda: self._onSmallPanelClicked(channel_id))
+
         except Exception as e:
             self.logger.debug(f"[UI更新] {channel_id} 更新失败: {e}")
-        
+
         try:
             # 更新通道面板状态
             panel = self._channel_panels_map.get(channel_id)
             if panel:
                 panel.updateChannelStatus(channel_id, 'connected')
                 panel.setConnected(True)
-            
+
             self.statusBar().showMessage(
                 self.tr(" 通道已连接: {} - 视频流已启动").format(channel_id)
             )
@@ -1312,19 +1340,40 @@ class ChannelPanelHandler:
                 if hasattr(panel, '_overlayLabel'):
                     panel._overlayLabel.show()
                     panel._overlayLabel.setText("未打开通道")
-                
+
                 # 更新面板状态
                 if hasattr(panel, 'setConnected'):
                     panel.setConnected(False)
-                
+
                 # 清空显示
                 if hasattr(panel, 'clearDisplay'):
                     panel.clearDisplay()
-                
+
                 # 更新通道状态
                 if hasattr(panel, 'updateChannelStatus'):
                     panel.updateChannelStatus(channel_id, 'disconnected')
-            
+
+            # 如果断开的是当前预览窗口显示的通道，需要处理预览窗口
+            if hasattr(self, '_current_preview_channel_id') and self._current_preview_channel_id == channel_id:
+                self.logger.debug(f"[通道断开] 当前预览通道 {channel_id} 已断开，尝试切换到其他通道")
+                # 清空当前预览通道标记
+                self._current_preview_channel_id = None
+
+                # 尝试切换到其他已连接的通道
+                if hasattr(self, '_channel_captures') and self._channel_captures:
+                    # 找到第一个已连接的通道
+                    for other_channel_id in self._channel_captures.keys():
+                        if other_channel_id != channel_id:
+                            self.logger.debug(f"[通道断开] 切换预览窗口到 {other_channel_id}")
+                            QtCore.QTimer.singleShot(100, lambda cid=other_channel_id: self._onSmallPanelClicked(cid))
+                            break
+                else:
+                    # 没有其他通道，清空预览窗口
+                    if hasattr(self, 'previewPanel'):
+                        self.previewPanel.clearDisplay()
+                        self.previewPanel.setConnected(False)
+                        self.logger.debug(f"[通道断开] 预览窗口已清空")
+
             self.statusBar().showMessage(f"通道 {channel_id} 已断开")
             
         except Exception as e:
@@ -1614,35 +1663,23 @@ class ChannelPanelHandler:
             return False
     
     def _startVideoStream(self, channel_id, hwnd=None):
-        """启动视频流显示（直接使用HKcapture的HWND渲染）
-        
+        """启动视频流显示（使用Qt渲染模式）
+
         Args:
             channel_id: 通道ID
-            hwnd: 预先获取的窗口句柄
+            hwnd: 窗口句柄（已废弃，不再使用）
         """
-        self.logger.debug(f"[视频流] {channel_id} 开始启动视频显示, hwnd={hwnd}")
-        
+        self.logger.debug(f"[视频流] {channel_id} 开始启动视频显示（Qt渲染模式）")
+
         if channel_id not in self._channel_captures:
             self.logger.debug(f"[视频流] {channel_id} 不在 _channel_captures 中")
             return
-        
+
         cap = self._channel_captures[channel_id]
         self.logger.debug(f"[视频流] 获取到 capture 对象: {cap}")
-        
-        # 无论是否有HWND，都启动帧数据存储线程（供标注功能使用）
-        # 注释掉帧存储功能 - 不需要存储帧
-        # self._startFrameStorageThread(channel_id)
-        
-        # 如果有HWND，HKcapture会直接渲染到窗口
-        if hwnd and hasattr(cap, 'start_render'):
-            try:
-                cap.start_render()
-                self.logger.debug(f"[视频流] {channel_id} HWND直接渲染已启动")
-            except Exception as e:
-                self.logger.debug(f"[视频流] {channel_id} HWND渲染启动失败: {e}")
-        else:
-            # 如果没有HWND或不支持直接渲染，启动Qt显示线程
-            self._startQtVideoDisplay(channel_id)
+
+        # 启动Qt显示线程
+        self._startQtVideoDisplay(channel_id)
     
     def _startFrameStorageThread(self, channel_id):
         """启动帧数据存储线程（供标注功能使用）
@@ -2199,12 +2236,12 @@ class ChannelPanelHandler:
     def _updateVideoDisplayUI(self, channel_id, frame_or_data):
         """
         在主线程中更新视频显示
-        
+
         使用节流机制，每200ms最多更新一次 InfoOverlay，避免频繁重绘。
-        
+
         Args:
             channel_id: 通道ID
-            frame_or_data: 
+            frame_or_data:
                 - HWND模式：dict，包含液位线数据
                 - Qt模式：numpy.ndarray，视频帧
         """
@@ -2212,7 +2249,7 @@ class ChannelPanelHandler:
             panel = self._channel_panels_map.get(channel_id)
             if not panel:
                 return
-            
+
             # 判断是 HWND 模式还是 Qt 模式
             if isinstance(frame_or_data, dict):
                 # HWND模式：缓存液位线数据，使用节流更新
@@ -2220,7 +2257,7 @@ class ChannelPanelHandler:
                 is_new_data = frame_or_data.get('is_new_data', True)
                 video_width = frame_or_data.get('video_width', 0)
                 video_height = frame_or_data.get('video_height', 0)
-                
+
                 # 缓存最新数据
                 if not hasattr(self, '_liquid_line_cache'):
                     self._liquid_line_cache = {}
@@ -2230,24 +2267,34 @@ class ChannelPanelHandler:
                     'video_width': video_width,
                     'video_height': video_height
                 }
-                
+
                 # 节流：每200ms最多更新一次
                 import time
                 if not hasattr(self, '_last_overlay_update'):
                     self._last_overlay_update = {}
-                
+
                 current_time = time.time()
                 last_update = self._last_overlay_update.get(channel_id, 0)
-                
+
                 if current_time - last_update >= 0.2:  # 200ms
                     self._last_overlay_update[channel_id] = current_time
                     if hasattr(panel, 'updateLiquidLines'):
                         panel.updateLiquidLines(liquid_positions, is_new_data, video_width, video_height)
+
+                    # 如果当前通道正在预览窗口显示，同步更新预览窗口的液位线
+                    if hasattr(self, '_current_preview_channel_id') and self._current_preview_channel_id == channel_id:
+                        if hasattr(self, 'previewPanel') and hasattr(self.previewPanel, 'updateLiquidLines'):
+                            self.previewPanel.updateLiquidLines(liquid_positions, is_new_data, video_width, video_height)
             else:
                 # Qt模式：显示视频帧
                 if hasattr(panel, 'displayFrame'):
                     panel.displayFrame(frame_or_data)
-                
+
+                # 如果当前通道正在预览窗口显示，同步更新预览窗口的画面
+                if hasattr(self, '_current_preview_channel_id') and self._current_preview_channel_id == channel_id:
+                    if hasattr(self, 'previewPanel') and hasattr(self.previewPanel, 'displayFrame'):
+                        self.previewPanel.displayFrame(frame_or_data)
+
                 # 同步更新放大窗口
                 self._updateAmplifyWindows(channel_id, frame_or_data)
         except Exception as e:

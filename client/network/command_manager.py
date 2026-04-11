@@ -22,7 +22,7 @@ from .websocket_client import WebSocketClient
 
 # 导入CSV写入器
 try:
-    from client.storage.detection_result_csv_writer import DetectionResultCSVWriter
+    from client.handlers.videopage.thread_manager.threads.storage_thread import DetectionResultCSVWriter
 except ImportError:
     DetectionResultCSVWriter = None
     logger.warning("无法导入CSV写入器，数据存储功能将不可用")
