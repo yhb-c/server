@@ -99,7 +99,7 @@ class ModelSettingHandler:
         从服务端配置文件加载模型配置
         
         优先级：
-        1. channel_config.yaml 中的通道特定配置
+        1. default_config.yaml 中的通道特定配置
         2. default_config.yaml 中的通道特定模型路径
         3. default_config.yaml 中的全局模型配置
         
@@ -118,12 +118,12 @@ class ModelSettingHandler:
             
             # 如果指定了通道ID，则从通道配置中获取模型配置
             if channel_id:
-                # 优先从 channel_config.yaml 获取通道配置
+                # 优先从 default_config.yaml 获取通道配置
                 if channel_id in channel_config and 'model' in channel_config[channel_id]:
                     model_config = channel_config[channel_id]['model'].copy()
                     model_path = model_config.get('model_path', '')
-                    config_source = f"channel_config.yaml → {channel_id} → model"
-                    self.logger.debug(f"[channel_config.yaml] 加载通道 {channel_id} 的模型配置: {model_path}")
+                    config_source = f"default_config.yaml → {channel_id} → model"
+                    self.logger.debug(f"[default_config.yaml] 加载通道 {channel_id} 的模型配置: {model_path}")
                 else:
                     # 从 default_config.yaml 获取通道特定的模型路径
                     channel_model_key = f"{channel_id}_model_path"
@@ -146,11 +146,11 @@ class ModelSettingHandler:
                 return model_config, config_source
             else:
                 # 使用全局配置
-                # 优先从 channel_config.yaml 获取
+                # 优先从 default_config.yaml 获取
                 if 'model' in channel_config:
                     model_config = channel_config['model'].copy()
-                    config_source = "channel_config.yaml → model"
-                    self.logger.debug(f"[Handler] 加载全局模型配置 (channel_config.yaml)")
+                    config_source = "default_config.yaml → model"
+                    self.logger.debug(f"[Handler] 加载全局模型配置 (default_config.yaml)")
                 else:
                     # 从 default_config.yaml 获取
                     model_config = default_config.get('model', {}).copy()
@@ -312,7 +312,7 @@ class ModelSettingHandler:
         获取模型基础路径 - 从服务端配置获取
         
         优先级：
-        1. channel_config.yaml 中的 model_base_path
+        1. default_config.yaml 中的 model_base_path
         2. default_config.yaml 中的 model_base_path
         3. 服务端默认路径
         
@@ -320,13 +320,13 @@ class ModelSettingHandler:
             str: 服务端模型基础路径
         """
         try:
-            # 1. 尝试从服务端 channel_config.yaml 读取
+            # 1. 尝试从服务端 default_config.yaml 读取
             channel_config = self._remote_config.load_channel_config()
             model_config = channel_config.get('model', {})
             model_base_path = model_config.get('model_base_path', '')
             
             if model_base_path:
-                self.logger.debug(f"[channel_config.yaml] 使用服务端模型基础路径: {model_base_path}")
+                self.logger.debug(f"[default_config.yaml] 使用服务端模型基础路径: {model_base_path}")
                 return model_base_path
             
             # 2. 尝试从服务端 default_config.yaml 读取

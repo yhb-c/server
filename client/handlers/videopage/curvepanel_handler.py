@@ -843,7 +843,7 @@ class CurvePanelHandler:
             else:
                 # 开发环境：基于配置模块获取
                 try:
-                    from database.config import get_project_root
+                    from client.config import get_project_root
                     data_root = get_project_root()
                 except ImportError:
                     # 后备方案：当前工作目录
@@ -918,7 +918,7 @@ class CurvePanelHandler:
             else:
                 # 开发环境：基于配置模块获取
                 try:
-                    from database.config import get_project_root
+                    from client.config import get_project_root
                     data_root = get_project_root()
                 except ImportError:
                     # 后备方案：当前工作目录

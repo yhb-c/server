@@ -35,9 +35,9 @@ from typing import Callable, Optional, Dict, List
 
 # 导入统一的路径管理函数
 try:
-    from .....database.config import get_project_root
+    from .....config import get_project_root
 except ImportError:
-    from database.config import get_project_root
+    from client.config import get_project_root
 
 
 class CurveThread:
@@ -473,7 +473,7 @@ class CurveThread:
         try:
             # 使用统一的项目根目录获取配置文件路径
             project_root = get_project_root()
-            config_file = os.path.join(project_root, 'database', 'config', 'channel_config.yaml')
+            config_file = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
             
             if not os.path.exists(config_file):
                 return None

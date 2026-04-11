@@ -1,0 +1,46 @@
+{
+  "model_config": {
+    "model_type": "YOLOv8",
+    "model_size": "n",
+    "pretrained": true,
+    "input_size": [640, 640]
+  },
+  "training_config": {
+    "epochs": 100,
+    "batch_size": 16,
+    "learning_rate": 0.01,
+    "optimizer": "SGD",
+    "momentum": 0.937,
+    "weight_decay": 0.0005
+  },
+  "dataset_config": {
+    "num_classes": 3,
+    "class_names": ["liquid", "foam", "background"],
+    "data_yaml": "database/config/train_configs/data.yaml"
+  },
+  "augmentation_config": {
+    "hsv_h": 0.015,
+    "hsv_s": 0.7,
+    "hsv_v": 0.4,
+    "degrees": 0.0,
+    "translate": 0.1,
+    "scale": 0.5,
+    "shear": 0.0,
+    "perspective": 0.0,
+    "flipud": 0.0,
+    "fliplr": 0.5,
+    "mosaic": 1.0,
+    "mixup": 0.0
+  },
+  "validation_config": {
+    "val_interval": 1,
+    "save_period": 10,
+    "patience": 50
+  },
+  "device_config": {
+    "device": "cuda",
+    "workers": 8,
+    "amp": true
+  }
+}
+

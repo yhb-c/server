@@ -1374,7 +1374,7 @@ class TrainingPage(QtWidgets.QWidget):
         self.test_model_combo.clear()
         
         try:
-            from ...database.config import get_project_root
+            from ...config import get_project_root
             project_root = get_project_root()
         except ImportError as e:
             # 如果导入失败，使用相对路径
@@ -1604,7 +1604,7 @@ class TrainingPage(QtWidgets.QWidget):
         """保存当前选择的测试模型到配置文件"""
         try:
             import yaml
-            from ...database.config import get_project_root
+            from ...config import get_project_root
             
             project_root = get_project_root()
             config_path = Path(project_root) / "database" / "config" / "default_config.yaml"

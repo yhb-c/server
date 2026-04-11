@@ -733,7 +733,7 @@ except Exception as e:
                     annotation_data = annotation_config[channel_id]
                     
                     # 读取区域高度数据
-                    channel_config_file = os.path.join(project_root, 'database', 'config', 'channel_config.yaml')
+                    channel_config_file = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
                     actual_heights = []
                     
                     if os.path.exists(channel_config_file):
@@ -955,7 +955,7 @@ except Exception as e:
             annotation_data = annotation_config[channel_id].copy()
             
             # 读取区域高度数据
-            channel_config_file = os.path.join(project_root, 'database', 'config', 'channel_config.yaml')
+            channel_config_file = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
             actual_heights = []
             
             if os.path.exists(channel_config_file):

@@ -14,7 +14,7 @@ import hashlib
 from pathlib import Path
 
 # 导入动态路径获取函数
-from database.config import get_temp_models_dir
+from client.config import get_temp_models_dir
 
 # 导入日志工具
 from client.utils.logger import get_logger

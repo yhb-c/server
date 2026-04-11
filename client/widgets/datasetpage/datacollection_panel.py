@@ -48,7 +48,7 @@ except ImportError:
     delete_folder_to_recycle_bin = None
 
 try:
-    from database.config import get_project_root
+    from client.config import get_project_root
 except Exception:
     def get_project_root():
         return osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
@@ -1360,7 +1360,7 @@ def _loadRTSPConfig(self):
         
         # 从 default_config.yaml 读取配置
         try:
-            from database.config import get_project_root
+            from client.config import get_project_root
             project_root = get_project_root()
             config_path = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
             

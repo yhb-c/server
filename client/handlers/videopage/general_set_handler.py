@@ -25,9 +25,9 @@ from widgets.style_manager import DialogManager
 
 # 导入统一的路径管理函数
 try:
-    from ...database.config import get_project_root
+    from ...config import get_project_root
 except ImportError:
-    from database.config import get_project_root
+    from client.config import get_project_root
 
 class GeneralSetPanelHandler:
     """
@@ -312,7 +312,7 @@ class GeneralSetPanelHandler:
             traceback.print_exc()
     
     def _handleLoadSettings(self):
-        """处理加载设置请求 - 从服务端 channel_config.yaml 加载"""
+        """处理加载设置请求 - 从服务端 default_config.yaml 加载"""
         try:
             self.logger.debug(f"[DEBUG] _handleLoadSettings 被调用")
             
@@ -442,9 +442,9 @@ class GeneralSetPanelHandler:
             if channel_model_path:
                 # 获取项目根目录
                 try:
-                    from ...database.config import get_project_root
+                    from ...config import get_project_root
                 except ImportError:
-                    from database.config import get_project_root
+                    from client.config import get_project_root
                 
                 project_root = get_project_root()
                 
@@ -503,9 +503,9 @@ class GeneralSetPanelHandler:
             
             # 获取项目根目录
             try:
-                from ...database.config import get_project_root
+                from ...config import get_project_root
             except ImportError:
-                from database.config import get_project_root
+                from client.config import get_project_root
             
             project_root = get_project_root()
             
@@ -537,7 +537,7 @@ class GeneralSetPanelHandler:
             traceback.print_exc()
     
     def _handleSaveSettings(self, settings):
-        """处理保存设置请求 - 保存到 channel_config.yaml"""
+        """处理保存设置请求 - 保存到 default_config.yaml"""
         try:
             if not self.general_set_panel or not self.general_set_panel.channel_id:
                 pass
@@ -556,7 +556,7 @@ class GeneralSetPanelHandler:
             # 配置文件路径（使用统一的项目根目录）
             project_root = get_project_root()
             config_dir = os.path.join(project_root, 'database', 'config')
-            config_file = os.path.join(config_dir, 'channel_config.yaml')
+            config_file = os.path.join(config_dir, 'default_config.yaml')
 
             # 确保目录存在
             os.makedirs(config_dir, exist_ok=True)
@@ -722,7 +722,7 @@ class GeneralSetPanelHandler:
                     import os
 
                     # 使用绝对路径
-                    config_path = '/home/lqj/liquid/server/database/config/default_config.yaml'
+                    config_path = '/home/lqj/liquid/server/config/default_config.yaml'
                     self.logger.info(f"[检测启动] 配置文件路径: {config_path}")
                     self.logger.info(f"[检测启动] 配置文件存在: {os.path.exists(config_path)}")
 
@@ -759,7 +759,7 @@ class GeneralSetPanelHandler:
                 self.logger.info(f"[检测启动] ========== 步骤3: 配置通道 ==========")
                 try:
                     # 从annotation_result.yaml加载ROI配置
-                    annotation_file = '/home/lqj/liquid/server/database/config/annotation_result.yaml'
+                    annotation_file = '/home/lqj/liquid/server/config/annotation_result.yaml'
                     self.logger.info(f"[检测启动] ROI配置文件路径: {annotation_file}")
                     self.logger.info(f"[检测启动] ROI配置文件存在: {os.path.exists(annotation_file)}")
 
@@ -1444,7 +1444,7 @@ class GeneralSetPanelHandler:
     
     def _syncAreaInfoToChannelConfig(self, channel_id, area_count, areas_config):
         """
-        同步区域信息到 channel_config.yaml
+        同步区域信息到 default_config.yaml
         
         Args:
             channel_id: 通道ID
@@ -1455,7 +1455,7 @@ class GeneralSetPanelHandler:
             import os
             import yaml
             
-            self.logger.debug(f"[DEBUG] ========== 同步到 channel_config.yaml ==========")
+            self.logger.debug(f"[DEBUG] ========== 同步到 default_config.yaml ==========")
             self.logger.debug(f"[DEBUG] 通道ID: {channel_id}")
             self.logger.debug(f"[DEBUG] 区域数量: {area_count}")
             self.logger.debug(f"[DEBUG] 区域配置: {areas_config}")
@@ -1463,7 +1463,7 @@ class GeneralSetPanelHandler:
             # 配置文件路径（使用统一的项目根目录）
             project_root = get_project_root()
             config_dir = os.path.join(project_root, 'database', 'config')
-            config_file = os.path.join(config_dir, 'channel_config.yaml')
+            config_file = os.path.join(config_dir, 'default_config.yaml')
             
             self.logger.debug(f"[DEBUG] 配置文件路径: {config_file}")
             self.logger.debug(f"[DEBUG] 文件是否存在: {os.path.exists(config_file)}")
@@ -1524,10 +1524,10 @@ class GeneralSetPanelHandler:
             with open(config_file, 'w', encoding='utf-8') as f:
                 yaml.dump(config, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
             
-            self.logger.debug(f"[DEBUG] ✓ 已同步到 channel_config.yaml: {channel_id} (区域数: {area_count})\")\n")
+            self.logger.debug(f"[DEBUG] ✓ 已同步到 default_config.yaml: {channel_id} (区域数: {area_count})\")\n")
             
         except Exception as e:
-            self.logger.debug(f"[DEBUG] ✗ 同步到 channel_config.yaml 失败: {e}\")\n")
+            self.logger.debug(f"[DEBUG] ✗ 同步到 default_config.yaml 失败: {e}\")\n")
             import traceback
             traceback.print_exc()
     

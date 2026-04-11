@@ -492,8 +492,9 @@ class DetectionService:
             success = self.task_manager.stop_task(channel_id)
 
             if success:
-                # 关闭CSV写入器
+                # 强制刷新并关闭CSV写入器
                 if channel_id in self.csv_writers:
+                    self.csv_writers[channel_id].force_flush()
                     self.csv_writers[channel_id].close()
                     del self.csv_writers[channel_id]
                     self.logger.info(f"关闭通道 {channel_id} 的CSV写入器")
@@ -675,18 +676,30 @@ class DetectionService:
             # 从检测结果中提取液位数据
             liquid_line_positions = detection_result.get('liquid_line_positions', {})
 
-            # 遍历每个液位位置并保存
-            for position_key, position_data in liquid_line_positions.items():
-                if isinstance(position_data, dict):
-                    csv_data = {
-                        'height_mm': position_data.get('height_mm', 0),
-                        'liquid_level': position_data.get('liquid_level', 0),
-                        'confidence': position_data.get('confidence', 0),
-                        'timestamp': detection_result.get('timestamp', time.time()),
-                        'status': 'normal',
-                        'note': f'位置{position_key}'
-                    }
-                    self.csv_writers[channel_id].write(csv_data)
+            # 如果有液位数据，遍历每个液位位置并保存
+            if liquid_line_positions:
+                for position_key, position_data in liquid_line_positions.items():
+                    if isinstance(position_data, dict):
+                        csv_data = {
+                            'height_mm': position_data.get('height_mm', 0),
+                            'liquid_level': position_data.get('liquid_level', 0),
+                            'confidence': position_data.get('confidence', 0),
+                            'timestamp': detection_result.get('timestamp', time.time()),
+                            'status': 'normal',
+                            'note': f'位置{position_key}'
+                        }
+                        self.csv_writers[channel_id].write(csv_data)
+            else:
+                # 没有检测到液位线，也记录一条数据（高度为404表示未检测到）
+                csv_data = {
+                    'height_mm': 404,
+                    'liquid_level': 0,
+                    'confidence': 0,
+                    'timestamp': detection_result.get('timestamp', time.time()),
+                    'status': 'no_detection',
+                    'note': '未检测到液位'
+                }
+                self.csv_writers[channel_id].write(csv_data)
 
         except Exception as e:
             self.logger.error(f"CSV保存失败 - 通道: {channel_id}, 错误: {str(e)}")

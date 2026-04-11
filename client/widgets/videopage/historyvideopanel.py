@@ -662,7 +662,7 @@ class HistoryVideoPanel(QtWidgets.QWidget):
             project_root = os.path.dirname(sys.executable)
         else:
             try:
-                from database.config import get_project_root
+                from client.config import get_project_root
                 project_root = get_project_root()
             except ImportError:
                 project_root = os.getcwd()

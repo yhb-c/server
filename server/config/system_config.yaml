@@ -2,8 +2,9 @@ detection:
   batch_size: 1
   confidence_threshold: 0.5
   default_device: cuda
-  fps_limit: 25
+  fps:10
   kalman_enabled: true
+  local_video_loop: false
 logging:
   console_enabled: true
   file_enabled: true

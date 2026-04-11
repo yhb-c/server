@@ -28,16 +28,16 @@ from qtpy.QtCore import QThread
 
 # 导入统一的路径管理函数
 try:
-    from ...database.config import get_project_root, get_temp_models_dir, get_train_dir
+    from ...config import get_project_root, get_temp_models_dir, get_train_dir
 except (ImportError, ValueError):
     try:
-        from database.config import get_project_root, get_temp_models_dir, get_train_dir
+        from client.config import get_project_root, get_temp_models_dir, get_train_dir
     except ImportError:
         import sys
         from pathlib import Path
         project_root = Path(__file__).parent.parent.parent
         sys.path.insert(0, str(project_root))
-        from database.config import get_project_root, get_temp_models_dir, get_train_dir
+        from client.config import get_project_root, get_temp_models_dir, get_train_dir
 
 # 导入模型转换工具
 try:
@@ -105,7 +105,7 @@ class TrainingWorker(QThread):
             if not os.path.exists(config_file_path):
                 # 尝试使用项目根目录
                 try:
-                    from database.config import get_project_root
+                    from client.config import get_project_root
                     project_root = get_project_root()
                     config_file_path = os.path.join(project_root, "database", "config", "train_configs", "default_config.json")
                 except:

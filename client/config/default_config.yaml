@@ -1,0 +1,175 @@
+segment_result_compilation: release
+levelline_compilation: release
+fps_log: true
+fps_debug_log: true
+gpu_decode: false
+kalman_result_compilation: release
+save_result_compilation: release
+camera_position_compilation: release
+camera_position_debug: false
+address_list: ''
+annotation_debug: false
+batch_processing_enabled: false
+channel1:
+  name: 通道1
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/1.mp4
+channel1_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/1.engine
+
+channel2:
+  name: 通道2
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/2.mp4
+channel2_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/2.engine
+
+channel3:
+  name: 通道3
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/3.mp4
+channel3_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/3.engine
+
+channel4:
+  name: 通道4
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/4.mp4
+channel4_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/4.engine
+
+channel5:
+  name: 通道5
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/5.mp4
+channel5_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/5.engine
+
+channel6:
+  name: 通道6
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/6.mp4
+channel6_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/6.engine
+
+channel7:
+  name: 通道7
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/7.mp4
+channel7_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/7.engine
+
+channel8:
+  name: 通道8
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/8.mp4
+channel8_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/8.engine
+
+channel9:
+  name: 通道9
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/9.mp4
+channel9_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/5.engine
+
+channel10:
+  name: 通道10
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/10.mp4
+channel10_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/5.engine
+
+channel11:
+  name: 通道11
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/11.mp4
+channel11_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/6.engine
+
+channel12:
+  name: 通道12
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/12.mp4
+channel12_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/6.engine
+
+channel13:
+  name: 通道13
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/13.mp4
+channel13_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/7.engine
+
+channel14:
+  name: 通道14
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/14.mp4
+channel14_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/7.engine
+
+channel15:
+  name: 通道15
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/15.mp4
+channel15_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/8.engine
+
+channel16:
+  name: 通道16
+  address: ''
+  file_path: /home/lqj/liquid/testvideo/16.mp4
+channel16_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/8.engine
+
+# 检测相关配置
+crop_frame_rate: 2
+curve_frame_rate: 2
+default_batch_size: 4
+default_device: cuda
+default_model: 模型-5-best
+detection_frame_rate: 5
+display_frame_rate: 10
+gpu_enabled: true
+max_batch_wait_time: 0.05
+model:
+  agnostic_nms: false
+  batch_size: 1
+  confidence_threshold: 0.5
+  config_path: null
+  dynamic_shape: false
+  half_precision: false
+  input_size:
+  - 640
+  - 640
+  iou_threshold: 0.45
+  keep_ratio: true
+  max_det: 100
+  model_path: null
+  model_type: YOLOv5
+  multi_label: false
+  profiler: false
+  use_coreml: false
+  use_openvino: false
+  use_tensorrt: false
+  verbose: false
+  visualize_features: false
+model_base_path: database/model/detection_model
+performance:
+  cache_size: 1000
+  enable_cache: true
+  gpu_device: cuda:0
+  num_threads: 4
+  use_gpu: true
+safety_limit:
+  lower_limit: 0.0
+  show_limits: true
+  upper_limit: 20.0
+save_data_rate: 2
+logging:
+  level: INFO
+  console: true
+  file_enabled: true
+  log_dir: logs
+  max_file_size: 10
+  backup_count: 5
+websocket:
+  host: 0.0.0.0
+  port: 8085
+  max_connections: 100
+  heartbeat_interval: 30
+mission:
+  auto_start: false
+  max_missions: 10
+  mission_result_format: json
+  save_mission_results: true
+paths:
+  auto_create_dirs: true
+  export_path: ./exports
+  log_path: ./logs
+  model_path: ./models
+  project_path: ./projects

@@ -172,7 +172,7 @@ class AnnotationHandler:
             
             # 获取项目根目录
             try:
-                from database.config import get_project_root
+                from client.config import get_project_root
                 project_root = get_project_root()
             except ImportError:
                 project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))

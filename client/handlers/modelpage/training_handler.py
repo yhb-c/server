@@ -33,9 +33,9 @@ from qtpy.QtCore import QThread
 
 # 导入统一的路径管理函数
 try:
-    from ...database.config import get_project_root
+    from ...config import get_project_root
 except ImportError:
-    from database.config import get_project_root
+    from client.config import get_project_root
 
 
 class TrainingWorker(QThread):

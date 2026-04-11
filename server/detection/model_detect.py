@@ -14,7 +14,7 @@ import hashlib
 from pathlib import Path
 
 # 导入动态路径获取函数
-from database.config import get_temp_models_dir
+from config import get_temp_models_dir
 
 # 全局调试日志开关
 DEBUG_LOG_ENABLED = True

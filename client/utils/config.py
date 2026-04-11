@@ -238,8 +238,8 @@ class RemoteConfigManager:
     
     def load_channel_config(self) -> Dict[str, Any]:
         """
-        从服务端加载通道配置文件
-        
+        从服务端加载通道配置文件（从default_config.yaml）
+
         Returns:
             dict: 通道配置数据
         """
@@ -248,24 +248,24 @@ class RemoteConfigManager:
             if not ssh_manager:
                 self.logger.error("SSH连接不可用，无法读取远程配置")
                 return self._get_fallback_channel_config()
-            
-            # 读取服务端的通道配置文件
-            remote_file_path = f"{self._server_config_path}/channel_config.yaml"
+
+            # 读取服务端的default_config.yaml文件
+            remote_file_path = f"{self._server_config_path}/default_config.yaml"
             self.logger.info(f"正在从服务端读取配置文件: {remote_file_path}")
-            
+
             # 通过SSH读取远程文件内容
             result = ssh_manager.execute_remote_command(f"cat {remote_file_path}")
             if result['success'] and result['stdout']:
                 config_content = result['stdout']
                 config_data = yaml.safe_load(config_content)
-                
+
                 self.logger.info("成功从服务端加载通道配置")
                 self._config_cache['channel_config'] = config_data
                 return config_data
             else:
                 self.logger.error(f"读取远程配置文件失败: {result.get('stderr', '未知错误')}")
                 return self._get_fallback_channel_config()
-                
+
         except Exception as e:
             self.logger.error(f"加载远程通道配置失败: {e}")
             return self._get_fallback_channel_config()
@@ -306,11 +306,11 @@ class RemoteConfigManager:
     
     def save_channel_config(self, config_data: Dict[str, Any]) -> bool:
         """
-        保存通道配置到服务端
-        
+        保存通道配置到服务端（保存到default_config.yaml）
+
         Args:
             config_data: 要保存的配置数据
-            
+
         Returns:
             bool: 保存是否成功
         """
@@ -319,30 +319,43 @@ class RemoteConfigManager:
             if not ssh_manager:
                 self.logger.error("SSH连接不可用，无法保存远程配置")
                 return False
-            
+
+            # 读取现有的default_config.yaml
+            remote_file_path = f"{self._server_config_path}/default_config.yaml"
+            result = ssh_manager.execute_remote_command(f"cat {remote_file_path}")
+
+            existing_config = {}
+            if result['success'] and result['stdout']:
+                try:
+                    existing_config = yaml.safe_load(result['stdout']) or {}
+                except Exception as e:
+                    self.logger.error(f"解析现有配置失败: {e}")
+
+            # 合并配置
+            existing_config.update(config_data)
+
             # 将配置数据转换为YAML格式
-            config_yaml = yaml.dump(config_data, default_flow_style=False, allow_unicode=True)
-            
+            config_yaml = yaml.dump(existing_config, default_flow_style=False, allow_unicode=True)
+
             # 创建临时文件
-            temp_file = "/tmp/channel_config_temp.yaml"
-            remote_file_path = f"{self._server_config_path}/channel_config.yaml"
-            
+            temp_file = "/tmp/default_config_temp.yaml"
+
             # 先写入临时文件
             write_cmd = f"cat > {temp_file} << 'EOF'\n{config_yaml}\nEOF"
             result = ssh_manager.execute_remote_command(write_cmd)
-            
+
             if result['success']:
                 # 备份原文件
                 backup_cmd = f"cp {remote_file_path} {remote_file_path}.backup"
                 ssh_manager.execute_remote_command(backup_cmd)
-                
+
                 # 移动临时文件到目标位置
                 move_cmd = f"mv {temp_file} {remote_file_path}"
                 move_result = ssh_manager.execute_remote_command(move_cmd)
-                
+
                 if move_result['success']:
                     self.logger.info("成功保存通道配置到服务端")
-                    self._config_cache['channel_config'] = config_data
+                    self._config_cache['channel_config'] = existing_config
                     return True
                 else:
                     self.logger.error(f"移动配置文件失败: {move_result.get('stderr', '未知错误')}")
@@ -350,7 +363,7 @@ class RemoteConfigManager:
             else:
                 self.logger.error(f"写入临时配置文件失败: {result.get('stderr', '未知错误')}")
                 return False
-                
+
         except Exception as e:
             self.logger.error(f"保存远程通道配置失败: {e}")
             return False

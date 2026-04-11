@@ -63,7 +63,7 @@ def test_detection_speed():
     """测试16个视频、32个ROI、4个模型（每4个视频共用1个模型）的并行检测性能"""
 
     # 配置路径
-    config_path = Path("/home/lqj/liquid/server/database/config/annotation_result.yaml")
+    config_path = Path("/home/lqj/liquid/server/config/annotation_result.yaml")
 
     # 16个视频路径
     video_paths = [
