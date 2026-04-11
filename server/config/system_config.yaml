@@ -4,6 +4,7 @@ detection:
   default_device: cuda
   fps:10
   kalman_enabled: true
+  local_video_loop: false
 logging:
   console_enabled: true
   file_enabled: true

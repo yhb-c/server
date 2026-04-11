@@ -789,7 +789,7 @@ class HKcapture:
             import yaml
             self._debug_logger = get_debug_logger()
             # 从配置文件读取fps_log开关并启用
-            config_path = "database/config/default_config.yaml"
+            config_path = "config/default_config.yaml"
             if os.path.exists(config_path):
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f)
@@ -1124,7 +1124,7 @@ class HKcapture:
                         import yaml
                         import os
                         self._debug_logger = get_debug_logger()
-                        config_path = "database/config/default_config.yaml"
+                        config_path = "config/default_config.yaml"
                         if os.path.exists(config_path):
                             with open(config_path, 'r', encoding='utf-8') as f:
                                 config = yaml.safe_load(f)

@@ -18,7 +18,7 @@ def get_resource_path(relative_path):
     获取资源文件的绝对路径，兼容开发环境和PyInstaller打包后的环境
     
     Args:
-        relative_path: 相对于 database/config 目录的路径
+        relative_path: 相对于 config 目录的路径
     
     Returns:
         str: 资源文件的绝对路径
@@ -28,7 +28,7 @@ def get_resource_path(relative_path):
         # 如果是打包后的exe运行
         # sys._MEIPASS 指向 _internal/ 目录
         base_path = sys._MEIPASS
-        return osp.join(base_path, 'database', 'config', relative_path)
+        return osp.join(base_path, 'config', relative_path)
     else:
         # 如果是开发环境运行，使用 get_config_dir() 获取配置目录
         config_dir = get_config_dir()
@@ -77,27 +77,27 @@ def get_project_root():
 
 def get_config_dir():
     """
-    获取配置文件目录的绝对路径 (database/config)
-    
+    获取配置文件目录的绝对路径 (config)
+
     Returns:
         str: 配置文件目录路径
     """
     if getattr(sys, 'frozen', False):
         # 打包后从 _MEIPASS 读取
         # sys._MEIPASS 指向 _internal/ 目录
-        return osp.join(sys._MEIPASS, 'database', 'config')
+        return osp.join(sys._MEIPASS, 'config')
     else:
         # 开发环境：基于项目根目录动态构建路径
         project_root = get_project_root()
-        config_path = osp.join(project_root, 'database', 'config')
-        
+        config_path = osp.join(project_root, 'config')
+
         # 调试信息：如果配置目录不存在，打印警告
         if not osp.exists(config_path):
             print(f"警告: 配置目录不存在: {config_path}")
             print(f"      项目根目录: {project_root}")
             # 后备方案：返回当前目录
             return here
-        
+
         return config_path
 
 

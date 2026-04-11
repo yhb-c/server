@@ -10,7 +10,7 @@
 4. 更新最新检测结果（供显示线程和曲线绘制使用）
 
 配置文件：
-- 模型配置：从 channel_config.yaml 读取
+- 模型配置：从 default_config.yaml 读取
 - 标注数据：从 annotation_result.yaml 读取
 """
 
@@ -452,7 +452,7 @@ except Exception as e:
     
     @staticmethod
     def _load_annotation_config(channel_id: str):
-        """从 annotation_result.yaml 加载标注数据，并从 channel_config.yaml 加载区域高度
+        """从 annotation_result.yaml 加载标注数据，并从 default_config.yaml 加载区域高度
         
         Args:
             channel_id: 通道ID（如 'channel1'）
@@ -482,7 +482,7 @@ except Exception as e:
             annotation_data = annotation_config[channel_id]
             
             # 读取区域高度数据
-            channel_config_file = os.path.join(project_root, 'database', 'config', 'channel_config.yaml')
+            channel_config_file = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
             
             actual_heights = []
             if os.path.exists(channel_config_file):

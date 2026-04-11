@@ -334,22 +334,27 @@ class DetectionTaskManager:
                         result_str = 'None' if detection_result is None else f'success={detection_result.get("success")}'
                         self.logger.info(f"[{channel_id}] 第一帧检测完成: result={result_str}")
 
-                    if detection_result and detection_result.get('success'):
+                    # 无论检测是否成功，都调用回调函数
+                    if detection_result:
                         # 添加时间戳到检测结果
                         detection_result['timestamp'] = time.time()
 
-                        # 记录日志
-                        liquid_positions = detection_result.get('liquid_line_positions', {})
+                        # 记录日志（仅在检测成功时）
+                        if detection_result.get('success'):
+                            liquid_positions = detection_result.get('liquid_line_positions', {})
 
-                        if frame_count == 0:
-                            self.logger.info(f"[{channel_id}] 第一帧检测成功: {len(liquid_positions)}个ROI")
+                            if frame_count == 0:
+                                self.logger.info(f"[{channel_id}] 第一帧检测成功: {len(liquid_positions)}个ROI")
 
-                        for roi_id, position_data in liquid_positions.items():
-                            height_mm = position_data.get('height_mm', 0)
-                            is_full = position_data.get('is_full', False)
-                            self.logger.info(f"[{channel_id}] ROI{roi_id} 检测结果: 高度={height_mm}mm, 满液={is_full}")
+                            for roi_id, position_data in liquid_positions.items():
+                                height_mm = position_data.get('height_mm', 0)
+                                is_full = position_data.get('is_full', False)
+                                self.logger.info(f"[{channel_id}] ROI{roi_id} 检测结果: 高度={height_mm}mm, 满液={is_full}")
+                        else:
+                            if frame_count == 0:
+                                self.logger.warning(f"[{channel_id}] 第一帧检测失败或无结果")
 
-                        # 直接回调完整的检测结果
+                        # 调用回调函数（无论成功或失败）
                         if frame_count == 0:
                             self.logger.info(f"[{channel_id}] 调用回调函数推送结果...")
 
@@ -357,9 +362,6 @@ class DetectionTaskManager:
 
                         if frame_count == 0:
                             self.logger.info(f"[{channel_id}] 回调函数调用完成")
-                    else:
-                        if frame_count == 0:
-                            self.logger.warning(f"[{channel_id}] 第一帧检测失败或无结果")
 
                     frame_count += 1
                     fps_counter += 1

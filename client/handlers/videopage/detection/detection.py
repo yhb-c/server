@@ -265,7 +265,7 @@ def _get_kalman_log_enabled():
     """从配置文件读取卡尔曼日志开关状态"""
     try:
         import yaml
-        config_path = Path("database/config/default_config.yaml")
+        config_path = Path("config/default_config.yaml")
         if config_path.exists():
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
@@ -610,7 +610,7 @@ class LiquidDetectionEngine:
             return False
         try:
             import yaml
-            config_path = Path("database/config/default_config.yaml")
+            config_path = Path("config/default_config.yaml")
             if config_path.exists():
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f)

@@ -722,7 +722,7 @@ class GeneralSetPanelHandler:
                     import os
 
                     # 使用绝对路径
-                    config_path = '/home/lqj/liquid/server/database/config/default_config.yaml'
+                    config_path = '/home/lqj/liquid/server/config/default_config.yaml'
                     self.logger.info(f"[检测启动] 配置文件路径: {config_path}")
                     self.logger.info(f"[检测启动] 配置文件存在: {os.path.exists(config_path)}")
 
@@ -759,7 +759,7 @@ class GeneralSetPanelHandler:
                 self.logger.info(f"[检测启动] ========== 步骤3: 配置通道 ==========")
                 try:
                     # 从annotation_result.yaml加载ROI配置
-                    annotation_file = '/home/lqj/liquid/server/database/config/annotation_result.yaml'
+                    annotation_file = '/home/lqj/liquid/server/config/annotation_result.yaml'
                     self.logger.info(f"[检测启动] ROI配置文件路径: {annotation_file}")
                     self.logger.info(f"[检测启动] ROI配置文件存在: {os.path.exists(annotation_file)}")
 
