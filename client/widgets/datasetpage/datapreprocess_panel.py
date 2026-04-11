@@ -50,7 +50,7 @@ except ImportError:
     delete_folder_to_recycle_bin = None
 
 try:
-    from database.config import get_project_root
+    from client.config import get_project_root
 except Exception:
     def get_project_root():
         return osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))

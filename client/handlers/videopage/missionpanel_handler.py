@@ -19,9 +19,9 @@ from qtpy.QtCore import Qt
 
 # 导入统一的路径管理函数
 try:
-    from ...database.config import get_project_root
+    from ...config import get_project_root
 except ImportError:
-    from database.config import get_project_root
+    from client.config import get_project_root
 
 
 class MissionPanelHandler:
@@ -354,7 +354,7 @@ class MissionPanelHandler:
     
     def _syncTaskToConfigFile(self, channel_id, task_id, task_name, save_liquid_data_path=''):
         """
-        将任务信息同步到channel_config.yaml配置文件
+        将任务信息同步到default_config.yaml配置文件
         
         Args:
             channel_id: 通道ID（如 'channel1'）
@@ -366,9 +366,9 @@ class MissionPanelHandler:
             bool: 同步是否成功
         """
         try:
-            # 获取channel_config.yaml配置文件路径（使用统一的路径管理）
+            # 获取default_config.yaml配置文件路径（使用统一的路径管理）
             project_root = get_project_root()
-            config_file = os.path.join(project_root, 'database', 'config', 'channel_config.yaml')
+            config_file = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
             
             if not os.path.exists(config_file):
                 return False
@@ -423,7 +423,7 @@ class MissionPanelHandler:
         
         将任务配置同步到：
         1. 通道面板UI显示
-        2. channel_config.yaml 配置文件
+        2. default_config.yaml 配置文件
         
         Args:
             channel_id: 通道ID（如 'channel1'）
@@ -432,7 +432,7 @@ class MissionPanelHandler:
             save_liquid_data_path: 结果保存路径（结果文件夹路径）
         """
         try:
-            # 🔥 第一步：同步到 channel_config.yaml（独立业务，无论通道是否打开都执行）
+            # 🔥 第一步：同步到 default_config.yaml（独立业务，无论通道是否打开都执行）
             sync_success = self._syncTaskToConfigFile(channel_id, task_id, task_name, save_liquid_data_path)
             
             # 🔥 第二步：更新通道面板UI（可选操作，仅在通道已打开时执行）
@@ -1054,7 +1054,7 @@ class MissionPanelHandler:
     def _loadChannelConfig(self):
         """从 default_config.yaml 加载通道配置"""
         try:
-            from database.config import get_project_root
+            from client.config import get_project_root
             import yaml
             
             project_root = get_project_root()
@@ -1089,7 +1089,7 @@ class MissionPanelHandler:
     def _saveChannelConfig(self, channel_data):
         """保存通道配置到 default_config.yaml"""
         try:
-            from database.config import get_project_root
+            from client.config import get_project_root
             import yaml
             
             project_root = get_project_root()
@@ -1143,7 +1143,7 @@ class MissionPanelHandler:
                 return
             
             # 从 default_config.yaml 重新加载通道配置
-            from database.config import get_project_root
+            from client.config import get_project_root
             import yaml
             
             project_root = get_project_root()
@@ -1535,7 +1535,7 @@ class MissionPanelHandler:
             task_id: 任务编号
             new_status: 新状态
         """
-        from database.config import get_project_root
+        from client.config import get_project_root
         import yaml
         import os
         

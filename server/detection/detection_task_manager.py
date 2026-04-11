@@ -299,6 +299,11 @@ class DetectionTaskManager:
                 self.logger.error(f"[{channel_id}] 检测资源不完整: video_capture={video_capture}, detection_engine={detection_engine}")
                 return
 
+            # 从配置文件读取FPS限制
+            fps_limit = self.config_manager.system_config.get('detection', {}).get('fps_limit', 25)
+            frame_interval = 1.0 / fps_limit if fps_limit > 0 else 0.04  # 默认25FPS
+            self.logger.info(f"[{channel_id}] FPS限制: {fps_limit}, 帧间隔: {frame_interval:.4f}秒")
+
             frame_count = 0
             last_fps_time = time.time()
             fps_counter = 0
@@ -366,8 +371,8 @@ class DetectionTaskManager:
                         fps_counter = 0
                         last_fps_time = current_time
 
-                    # 控制帧率
-                    time.sleep(0.033)  # 约30FPS
+                    # 控制帧率（从配置文件读取）
+                    time.sleep(frame_interval)
 
                 except Exception as e:
                     self.logger.error(f"[{channel_id}] 检测循环异常: {e}")

@@ -397,9 +397,9 @@ except Exception as e:
             
             # 获取项目根目录（用于解析相对路径）
             try:
-                from .....database.config import get_project_root
+                from .....config import get_project_root
             except ImportError:
-                from database.config import get_project_root
+                from client.config import get_project_root
             
             project_root = get_project_root()
             

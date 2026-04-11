@@ -29,10 +29,10 @@ except ImportError:
 
 # 导入项目根目录函数
 try:
-    from ...database.config import get_project_root
+    from ...config import get_project_root
 except ImportError:
     try:
-        from database.config import get_project_root
+        from client.config import get_project_root
     except ImportError:
         def get_project_root():
             return os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))

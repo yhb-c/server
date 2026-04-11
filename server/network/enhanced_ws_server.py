@@ -426,8 +426,10 @@ class EnhancedWebSocketServer:
         client_id = self.clients[websocket]['client_info']['id']
         self.logger.info(f"[{client_id}] 收到启动所有通道检测命令")
 
-        # 获取所有通道ID
-        all_channels = list(self.detection_service.channel_status.keys())
+        # 只获取前8个通道（channel1-channel8）
+        all_channels = [f'channel{i}' for i in range(1, 9)]
+        # 过滤出实际存在的通道
+        all_channels = [ch for ch in all_channels if ch in self.detection_service.channel_status]
         self.logger.info(f"[{client_id}] 找到 {len(all_channels)} 个通道: {all_channels}")
 
         # 统计结果
@@ -593,8 +595,10 @@ class EnhancedWebSocketServer:
         client_id = self.clients[websocket]['client_info']['id']
         self.logger.info(f"[{client_id}] 收到停止所有通道检测命令")
 
-        # 获取所有通道ID
-        all_channels = list(self.detection_service.channel_status.keys())
+        # 只获取前8个通道（channel1-channel8）
+        all_channels = [f'channel{i}' for i in range(1, 9)]
+        # 过滤出实际存在的通道
+        all_channels = [ch for ch in all_channels if ch in self.detection_service.channel_status]
         self.logger.info(f"[{client_id}] 找到 {len(all_channels)} 个通道: {all_channels}")
 
         # 统计结果

@@ -40,41 +40,25 @@ class ConfigManager:
         self.config_dir.mkdir(exist_ok=True)
         
         # 配置文件路径
-        self.channel_config_file = self.config_dir / "channel_config.yaml"
         self.system_config_file = self.config_dir / "system_config.yaml"
         self.rtsp_config_file = self.config_dir / "rtsp_config.yaml"
-        
+
         # 内存中的配置缓存
-        self.channel_configs: Dict[str, dict] = {}
         self.system_config: dict = {}
         self.rtsp_configs: Dict[str, dict] = {}
-        
+
         # 加载配置
         self._load_all_configs()
     
     def _load_all_configs(self):
         """加载所有配置文件"""
         try:
-            self._load_channel_configs()
             self._load_system_config()
             self._load_rtsp_configs()
             self.logger.info("所有配置加载完成")
         except Exception as e:
             self.logger.error(f"加载配置失败: {e}")
     
-    def _load_channel_configs(self):
-        """加载通道配置"""
-        try:
-            if self.channel_config_file.exists():
-                with open(self.channel_config_file, 'r', encoding='utf-8') as f:
-                    self.channel_configs = yaml.safe_load(f) or {}
-                self.logger.info(f"加载通道配置: {len(self.channel_configs)} 个通道")
-            else:
-                self.channel_configs = {}
-                self.logger.info("通道配置文件不存在，使用默认配置")
-        except Exception as e:
-            self.logger.error(f"加载通道配置失败: {e}")
-            self.channel_configs = {}
     
     def _load_system_config(self):
         """加载系统配置"""
@@ -162,40 +146,57 @@ class ConfigManager:
     
     def get_channel_config(self, channel_id: str) -> Optional[dict]:
         """
-        获取通道配置
-        
+        获取通道配置（从default_config.yaml）
+
         Args:
             channel_id: 通道ID
-            
+
         Returns:
             dict: 通道配置，如果不存在返回None
         """
-        return self.channel_configs.get(channel_id)
+        # 从default_config.yaml读取通道配置
+        config_path = self.config_dir / "default_config.yaml"
+        if not config_path.exists():
+            return None
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f) or {}
+            return config.get(channel_id)
+        except Exception as e:
+            self.logger.error(f"读取通道配置失败: {e}")
+            return None
     
     def set_channel_config(self, channel_id: str, config: dict) -> bool:
         """
-        设置通道配置
-        
+        设置通道配置（保存到default_config.yaml）
+
         Args:
             channel_id: 通道ID
             config: 配置数据
-            
+
         Returns:
             bool: 设置是否成功
         """
         try:
-            # 添加时间戳
-            config['last_updated'] = datetime.now().isoformat()
-            
-            # 更新内存配置
-            self.channel_configs[channel_id] = config
-            
+            config_path = self.config_dir / "default_config.yaml"
+
+            # 读取现有配置
+            existing_config = {}
+            if config_path.exists():
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    existing_config = yaml.safe_load(f) or {}
+
+            # 更新通道配置
+            existing_config[channel_id] = config
+
             # 保存到文件
-            self._save_channel_configs()
-            
+            with open(config_path, 'w', encoding='utf-8') as f:
+                yaml.dump(existing_config, f, allow_unicode=True, default_flow_style=False)
+
             self.logger.info(f"通道配置已更新: {channel_id}")
             return True
-            
+
         except Exception as e:
             self.logger.error(f"设置通道配置失败: {e}")
             return False
@@ -408,17 +409,22 @@ class ConfigManager:
     def get_all_channels(self) -> list:
         """获取所有通道ID列表"""
         all_channels = set()
-        all_channels.update(self.channel_configs.keys())
+
+        # 从default_config.yaml读取
+        config_path = self.config_dir / "default_config.yaml"
+        if config_path.exists():
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f) or {}
+                for key in config.keys():
+                    if key.startswith('channel') and isinstance(config[key], dict):
+                        all_channels.add(key)
+            except Exception as e:
+                self.logger.error(f"读取通道列表失败: {e}")
+
         all_channels.update(self.rtsp_configs.keys())
         return list(all_channels)
     
-    def _save_channel_configs(self):
-        """保存通道配置到文件"""
-        try:
-            with open(self.channel_config_file, 'w', encoding='utf-8') as f:
-                yaml.dump(self.channel_configs, f, allow_unicode=True, default_flow_style=False)
-        except Exception as e:
-            self.logger.error(f"保存通道配置失败: {e}")
     
     def _save_system_config(self):
         """保存系统配置到文件"""
@@ -443,9 +449,22 @@ class ConfigManager:
     
     def get_system_info(self) -> dict:
         """获取系统信息"""
+        # 统计通道数量
+        channel_count = 0
+        config_path = self.config_dir / "default_config.yaml"
+        if config_path.exists():
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f) or {}
+                for key in config.keys():
+                    if key.startswith('channel') and isinstance(config[key], dict):
+                        channel_count += 1
+            except Exception as e:
+                self.logger.error(f"统计通道数量失败: {e}")
+
         return {
             'config_dir': str(self.config_dir),
-            'channel_count': len(self.channel_configs),
+            'channel_count': channel_count,
             'rtsp_count': len(self.rtsp_configs),
             'system_config': self.system_config,
             'last_reload': datetime.now().isoformat()

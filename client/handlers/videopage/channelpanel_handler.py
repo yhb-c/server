@@ -31,12 +31,12 @@ except ImportError:
             ChannelThreadManager = None
 
 try:
-    from ...database.config import get_project_root
+    from ...config import get_project_root
 except ImportError:
     try:
-        from database.config import get_project_root
+        from client.config import get_project_root
     except ImportError:
-        from database.config import get_project_root
+        from client.config import get_project_root
 
 # 导入远程配置管理器
 try:
@@ -873,7 +873,7 @@ class ChannelPanelHandler:
             channels = {}
             address_list = []
             
-            # 首先尝试从 channel_config.yaml 的 channels 部分读取
+            # 首先尝试从 default_config.yaml 的 channels 部分读取
             if 'channels' in channel_config:
                 config_channels = channel_config['channels']
                 for channel_id, channel_data in config_channels.items():
@@ -908,7 +908,7 @@ class ChannelPanelHandler:
                             address_list.append(f"{name}: {address}")
                             self.logger.debug(f"[DEBUG] 从default_config加载通道{i}: {name} -> {address}")
             
-            # 如果还是没有数据，尝试从 channel_config.yaml 的根级别读取
+            # 如果还是没有数据，尝试从 default_config.yaml 的根级别读取
             if not channels:
                 for i in range(1, 9):  # 支持8个通道
                     channel_key = f'channel{i}'
@@ -1517,7 +1517,7 @@ class ChannelPanelHandler:
     
     def _loadChannelSettings(self, channel_id):
         """
-        加载通道设置（从 channel_config.yaml）
+        加载通道设置（从 default_config.yaml）
         
         Args:
             channel_id: 通道ID（如 'channel1'）
@@ -1534,8 +1534,8 @@ class ChannelPanelHandler:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             project_root = os.path.dirname(os.path.dirname(current_dir))
             
-            # channel_config.yaml 路径
-            config_file = os.path.join(project_root, 'database', 'config', 'channel_config.yaml')
+            # default_config.yaml 路径
+            config_file = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
             
             if not os.path.exists(config_file):
                 return None
@@ -1566,7 +1566,7 @@ class ChannelPanelHandler:
     
     def _saveChannelSettings(self, channel_id, settings):
         """
-        保存通道设置（到 channel_config.yaml）
+        保存通道设置（到 default_config.yaml）
         
         Args:
             channel_id: 通道ID（如 'channel1'）
@@ -1584,8 +1584,8 @@ class ChannelPanelHandler:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             project_root = os.path.dirname(os.path.dirname(current_dir))
             
-            # channel_config.yaml 路径
-            config_file = os.path.join(project_root, 'database', 'config', 'channel_config.yaml')
+            # default_config.yaml 路径
+            config_file = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
             
             # 读取现有配置
             if os.path.exists(config_file):

@@ -202,7 +202,7 @@ class HistoryPanelHandler:
                 print(f"[视频查找] 运行模式: 打包模式")
             else:
                 try:
-                    from database.config import get_project_root
+                    from client.config import get_project_root
                     project_root = get_project_root()
                     print(f"[视频查找] 运行模式: 开发模式（使用get_project_root）")
                 except ImportError:

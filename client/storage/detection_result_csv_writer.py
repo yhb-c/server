@@ -30,7 +30,7 @@ class DetectionResultCSVWriter:
         if save_dir is None:
             # 使用项目根目录下的database/mission_result
             try:
-                from database.config import get_project_root
+                from client.config import get_project_root
                 import os
                 project_root = get_project_root()
                 save_dir = os.path.join(project_root, 'database', 'mission_result')

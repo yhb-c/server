@@ -10,7 +10,7 @@ from qtpy import QtWidgets
 
 # 导入编译模式检查函数
 try:
-    from database.config import is_debug_mode
+    from client.config import is_debug_mode
 except ImportError:
     def is_debug_mode(config=None):
         return False
@@ -66,7 +66,7 @@ class ViewHandler:
             data_root = sys._MEIPASS
         else:
             try:
-                from database.config import get_project_root
+                from client.config import get_project_root
                 data_root = get_project_root()
             except ImportError:
                 data_root = os.getcwd()

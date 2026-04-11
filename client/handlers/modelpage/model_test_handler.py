@@ -52,16 +52,16 @@ except ImportError as e:
 
 # 导入统一的路径管理函数
 try:
-    from ...database.config import get_project_root, get_temp_models_dir, get_train_dir
+    from ...config import get_project_root, get_temp_models_dir, get_train_dir
 except (ImportError, ValueError):
     try:
-        from database.config import get_project_root, get_temp_models_dir, get_train_dir
+        from client.config import get_project_root, get_temp_models_dir, get_train_dir
     except ImportError:
         import sys
         from pathlib import Path
         project_root = Path(__file__).parent.parent.parent
         sys.path.insert(0, str(project_root))
-        from database.config import get_project_root, get_temp_models_dir, get_train_dir
+        from client.config import get_project_root, get_temp_models_dir, get_train_dir
 
 
 class ModelTestThread(QThread):

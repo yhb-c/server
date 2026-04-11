@@ -424,7 +424,7 @@ class SystemWindow(
         """初始化CSV写入器"""
         try:
             from client.storage.detection_result_csv_writer import DetectionResultCSVWriter
-            from client.database.config import get_project_root
+            from client.config import get_project_root
             import os
 
             # 获取项目根目录
