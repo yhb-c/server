@@ -1120,18 +1120,8 @@ class HKcapture:
 
     def _rtsp_capture_loop(self):
         """RTSP流捕获循环线程（仅用于非海康RTSP流和本地视频文件）"""
-        import sys
-        print(f"[HKcapture] _rtsp_capture_loop 线程启动")
-        print(f"[HKcapture] cv_cap: {self.cv_cap}")
-        print(f"[HKcapture] cv_cap.isOpened(): {self.cv_cap.isOpened() if self.cv_cap else 'N/A'}")
-        print(f"[HKcapture] is_video_file: {self.is_video_file}")
-        print(f"[HKcapture] fps: {self.fps}")
-        sys.stdout.flush()
-
         # 计算帧间隔（根据视频帧率）
         frame_interval = 1.0 / self.fps if self.fps > 0 else 0.04
-        print(f"[HKcapture] 帧间隔: {frame_interval:.4f}s ({self.fps} fps)")
-        sys.stdout.flush()
 
         frame_count = 0
         last_read_time = time.time()
@@ -1142,9 +1132,6 @@ class HKcapture:
             ret, frame = self.cv_cap.read()
             if ret and frame is not None:
                 frame_count += 1
-                if frame_count % 30 == 1:  # 每30帧打印一次
-                    print(f"[HKcapture] 已读取 {frame_count} 帧, 帧大小: {frame.shape}")
-                    sys.stdout.flush()
 
                 with self.frame_lock:
                     self.current_frame = frame
@@ -1159,11 +1146,7 @@ class HKcapture:
             else:
                 if frame_count == 0:
                     print(f"[HKcapture] 读取第一帧失败: ret={ret}")
-                    sys.stdout.flush()
                 time.sleep(0.1)
-
-        print(f"[HKcapture] _rtsp_capture_loop 线程退出, 总共读取 {frame_count} 帧")
-        sys.stdout.flush()
                 
     def _real_data_callback(self, lPlayHandle, dwDataType, pBuffer, dwBufSize, pUser):
         """海康威视实时数据回调函数（纯CPU解码模式，无渲染）"""

@@ -1885,8 +1885,6 @@ class ChannelPanelHandler:
         Args:
             channel_id: 通道ID
         """
-        self.logger.debug(f"[Qt显示] {channel_id} 开始运行（合并捕获和显示）")
-
         frame_count = 0
         last_frame_time = time.time()
 
@@ -1898,7 +1896,6 @@ class ChannelPanelHandler:
             video_fps = 25  # 默认25fps
 
         frame_interval = 1.0 / video_fps if video_fps > 0 else 0.04
-        self.logger.debug(f"[Qt显示] {channel_id} 视频帧率: {video_fps} fps, 帧间隔: {frame_interval:.4f}s")
 
         while self._display_flags.get(channel_id, False):
             try:
@@ -1914,14 +1911,6 @@ class ChannelPanelHandler:
 
                 if ret and frame is not None:
                     frame_count += 1
-                    current_time = time.time()
-
-                    # 每秒统计一次帧率
-                    if current_time - last_frame_time >= 1.0:
-                        fps = frame_count / (current_time - last_frame_time)
-                        self.logger.debug(f"[Qt显示] {channel_id} 显示帧率: {fps:.1f} fps")
-                        frame_count = 0
-                        last_frame_time = current_time
 
                     # 更新视频显示
                     self._updateVideoDisplay(channel_id, frame)
@@ -1938,8 +1927,6 @@ class ChannelPanelHandler:
             except Exception as e:
                 self.logger.debug(f"[Qt显示] {channel_id} 异常: {e}")
                 time.sleep(0.1)
-
-        self.logger.debug(f"[Qt显示] {channel_id} 已停止")
         
                 
 
