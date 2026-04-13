@@ -423,7 +423,7 @@ class SystemWindow(
     def _initCSVWriter(self):
         """初始化CSV写入器"""
         try:
-            from client.storage.detection_result_csv_writer import DetectionResultCSVWriter
+            from client.handlers.videopage.thread_manager.threads.storage_thread import DetectionResultCSVWriter
             from client.config import get_project_root
             import os
 
@@ -565,22 +565,50 @@ class SystemWindow(
         # === 中间：大预览窗口 ===
         self.previewPanel = ChannelPanel("预览", parent=video_area, debug_mode=False, width=1200, height=900)
         self.previewPanel.setObjectName("PreviewPanel")
+
+        # 初始化预览面板（添加通道数据和连接信号）
+        preview_channel_id = "preview"
+        self._channel_panels_map[preview_channel_id] = self.previewPanel
+        preview_channel_data = {
+            'name': '预览',
+            'type': 'rtsp',
+            'url': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1',
+            'status': 'disconnected',
+            'resolution': '1920x1080'
+        }
+        self.previewPanel.addChannel(preview_channel_id, preview_channel_data)
+
+        # 连接预览面板信号
+        if hasattr(self, '_connectChannelPanelSignals'):
+            self._connectChannelPanelSignals(self.previewPanel)
+
+        # 记录当前预览窗口显示的通道ID
+        self._current_preview_channel_id = None
+
         video_layout.addWidget(self.previewPanel)
         
         # === 右侧：8个小视频窗口（垂直排列，带滚动条） ===
         # 创建滚动区域
         scroll_area = QtWidgets.QScrollArea()
-        scroll_area.setWidgetResizable(False)
+        scroll_area.setWidgetResizable(False)  # 不自动调整，使用容器的固定尺寸
         scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         scroll_area.setFixedWidth(260)  # 240 + 滚动条宽度
-        scroll_area.setFixedHeight(900)
+        scroll_area.setFixedHeight(900)  # 固定高度，内容超出时显示滚动条
+        scroll_area.setFrameShape(QtWidgets.QFrame.NoFrame)  # 移除边框
+        scroll_area.viewport().setAutoFillBackground(True)  # 确保视口背景填充
+
+        # 确保视口裁剪超出范围的内容
+        scroll_area.viewport().setAttribute(QtCore.Qt.WA_OpaquePaintEvent, False)
+        scroll_area.setStyleSheet("QScrollArea { border: none; }")
+
         
         # 小视频容器
         small_videos_container = QtWidgets.QWidget()
         small_videos_layout = QtWidgets.QVBoxLayout(small_videos_container)
         small_videos_layout.setContentsMargins(0, 0, 0, 0)
         small_videos_layout.setSpacing(5)
+        small_videos_layout.setAlignment(QtCore.Qt.AlignTop)  # 确保从顶部对齐
         
         # 创建8个小视频面板（4:3比例）
         self.channelPanels = []
@@ -589,29 +617,35 @@ class SystemWindow(
         
         # 计算容器总高度：8个面板 + 7个间距
         container_height = small_panel_height * 8 + 5 * 7  # 1440 + 35 = 1475
-        small_videos_container.setFixedSize(240, container_height)
+        small_videos_container.setMinimumSize(240, container_height)
+        small_videos_container.setMaximumWidth(240)
         
         for i in range(8):
             channel_id = f'channel{i+1}'
             channel_name = self.getChannelDisplayName(channel_id, i+1)
-            
+
             # 创建小尺寸的通道面板（4:3比例）
-            channelPanel = ChannelPanel(channel_name, parent=small_videos_container, debug_mode=False, 
+            channelPanel = ChannelPanel(channel_name, parent=small_videos_container, debug_mode=False,
                                        width=small_panel_width, height=small_panel_height)
             channelPanel.setObjectName(f"ChannelPanel_{i+1}")
-            
+
+
             if hasattr(channelPanel, 'setChannelName'):
                 channelPanel.setChannelName(channel_name)
-            
+
             # 为每个通道面板的任务标签设置变量名
             mission_var_name = f'channel{i+1}mission'
             setattr(self, mission_var_name, channelPanel.taskLabel)
-            
+
             if hasattr(self, '_connectChannelPanelSignals'):
                 self._connectChannelPanelSignals(channelPanel)
-            
+
+            # 连接面板点击信号
+            channelPanel.panelClicked.connect(self._onSmallPanelClicked)
+
             small_videos_layout.addWidget(channelPanel)
             self.channelPanels.append(channelPanel)
+
         
         # 将容器放入滚动区域
         scroll_area.setWidget(small_videos_container)
@@ -790,16 +824,87 @@ class SystemWindow(
     def _onChannelCurveClicked(self, task_name):
         """
         处理通道面板的查看曲线按钮点击（来源2）
-        
+
         Args:
             task_name: 通道面板的任务名称
         """
         # 设置 curvemission 的值
         if hasattr(self, 'curvePanel') and self.curvePanel:
             success = self.curvePanel.setMissionFromTaskName(task_name)
-        
+
         # 切换到曲线模式
         self.toggleVideoPageMode()
+
+    def _onSmallPanelClicked(self, channel_id):
+        """
+        处理小画面点击事件，将该通道的画面切换到中间大预览窗口
+
+        Args:
+            channel_id: 被点击的通道ID
+        """
+        try:
+            # 获取被点击的小通道面板
+            small_panel = self._channel_panels_map.get(channel_id)
+            if not small_panel:
+                self.logger.debug(f"[_onSmallPanelClicked] 未找到通道面板: {channel_id}")
+                return
+
+            # 检查该通道是否已连接
+            if channel_id not in self._channel_captures:
+                self.logger.debug(f"[_onSmallPanelClicked] 通道未连接: {channel_id}")
+                self.statusBar().showMessage(f"通道未连接，请先打开通道")
+                return
+
+            # 如果点击的是当前已经在预览窗口显示的通道，不需要切换
+            if self._current_preview_channel_id == channel_id:
+                self.logger.debug(f"[_onSmallPanelClicked] 通道 {channel_id} 已在预览窗口显示")
+                return
+
+            # 更新预览窗口显示的通道ID
+            self._current_preview_channel_id = channel_id
+
+            # 更新预览面板的通道信息
+            if hasattr(self, 'previewPanel'):
+                channel_name = small_panel.getChannelName() if hasattr(small_panel, 'getChannelName') else channel_id
+                task_info = small_panel.getTaskInfo() if hasattr(small_panel, 'getTaskInfo') else None
+
+                self.previewPanel.setChannelName(channel_name)
+                if task_info:
+                    self.previewPanel.setTaskInfo(task_info)
+                else:
+                    self.previewPanel.setTaskInfo("未分配任务")
+
+                self.previewPanel.setConnected(True)
+                self.previewPanel.setHwndRenderMode(False)
+
+                # 获取capture_source的分辨率信息
+                thread_manager = self._channel_captures.get(channel_id)
+                resolution = "1920x1080"
+                if thread_manager:
+                    context = thread_manager.get_channel_context(channel_id)
+                    if context and hasattr(context, 'capture_source') and context.capture_source:
+                        capture_source = context.capture_source
+                        if hasattr(capture_source, 'get_frame_size'):
+                            try:
+                                width, height = capture_source.get_frame_size()
+                                resolution = f"{width}x{height}"
+                            except:
+                                pass
+
+                # 更新预览面板的InfoOverlay
+                if hasattr(self.previewPanel, 'updateOverlayInfo'):
+                    self.previewPanel.updateOverlayInfo(
+                        channel_name=channel_name,
+                        task_name=task_info if task_info else "未分配任务",
+                        fps=0.0,
+                        resolution=resolution
+                    )
+
+                self.logger.debug(f"[_onSmallPanelClicked] 已将 {channel_id} 切换到预览窗口")
+                self.statusBar().showMessage(f"已切换到 {channel_name}")
+
+        except Exception as e:
+            self.logger.error(f"[_onSmallPanelClicked] 切换预览窗口失败: {e}", exc_info=True)
     
     def _onCurveMissionChanged(self, mission_name):
         """曲线任务选择变化（基于CSV文件动态显示）"""
@@ -1276,7 +1381,7 @@ class SystemWindow(
     def _updateAllOverlayPositions(self):
         """更新所有通道面板的叠加层位置"""
         if hasattr(self, 'channelPanels'):
-            for panel in self.channelPanels:
+            for i, panel in enumerate(self.channelPanels):
                 if hasattr(panel, '_infoOverlay') and panel._infoOverlay:
                     panel._infoOverlay.update_position()
     

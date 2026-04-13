@@ -220,7 +220,7 @@ class SegmentationDebugger:
                 continue
     
     def detect_and_visualize(self, frame):
-        """检测并可视化分割结果"""
+        """检测并返回结果数据（移除渲染，客户端无GPU）"""
         try:
             # 执行YOLO推理
             results = self.engine.model.predict(
@@ -233,134 +233,35 @@ class SegmentationDebugger:
                 verbose=False,
                 half=True if self.device != 'cpu' else False
             )
-            
+
             result = results[0]
-            annotated_frame = frame.copy()
-            
-            # 绘制分割掩码
+
+            # 只返回检测结果数据，不进行渲染
+            detection_data = {
+                'masks': None,
+                'boxes': None,
+                'classes': None,
+                'confidences': None
+            }
+
+            # 提取分割掩码数据
             if result.masks is not None:
-                masks = result.masks.data.cpu().numpy()
-                classes = result.boxes.cls.cpu().numpy().astype(int)
-                confidences = result.boxes.conf.cpu().numpy()
-                
-                # 创建掩码叠加层
-                overlay = annotated_frame.copy()
-                
-                for i in range(len(masks)):
-                    if confidences[i] < 0.3:
-                        continue
-                    
-                    # 获取类别信息
-                    class_id = classes[i]
-                    class_name = self.engine.model.names[class_id]
-                    confidence = confidences[i]
-                    
-                    # 调整掩码尺寸
-                    mask = cv2.resize(
-                        masks[i].astype(np.uint8),
-                        (frame.shape[1], frame.shape[0])
-                    ) > 0.5
-                    
-                    # 获取颜色
-                    color = self.class_colors.get(class_name, (128, 128, 128))
-                    
-                    # 绘制掩码
-                    overlay[mask] = color
-                    
-                    # 绘制边界框和标签
-                    if result.boxes is not None:
-                        box = result.boxes.xyxy[i].cpu().numpy()
-                        x1, y1, x2, y2 = map(int, box)
-                        
-                        # 绘制边界框
-                        cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-                        
-                        # 绘制标签
-                        label = f"{class_name}: {confidence:.2f}"
-                        label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
-                        cv2.rectangle(annotated_frame, (x1, y1 - label_size[1] - 10), 
-                                    (x1 + label_size[0], y1), color, -1)
-                        cv2.putText(annotated_frame, label, (x1, y1 - 5),
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                
-                # 混合掩码和原图
-                annotated_frame = cv2.addWeighted(annotated_frame, 1 - self.mask_alpha, 
-                                                overlay, self.mask_alpha, 0)
-            
-            # 绘制检测框（如果没有掩码）
+                detection_data['masks'] = result.masks.data.cpu().numpy()
+                detection_data['classes'] = result.boxes.cls.cpu().numpy().astype(int)
+                detection_data['confidences'] = result.boxes.conf.cpu().numpy()
+                detection_data['boxes'] = result.boxes.xyxy.cpu().numpy()
+
+            # 提取检测框数据
             elif result.boxes is not None:
-                boxes = result.boxes.xyxy.cpu().numpy()
-                classes = result.boxes.cls.cpu().numpy().astype(int)
-                confidences = result.boxes.conf.cpu().numpy()
-                
-                for i in range(len(boxes)):
-                    if confidences[i] < 0.3:
-                        continue
-                    
-                    x1, y1, x2, y2 = map(int, boxes[i])
-                    class_name = self.engine.model.names[classes[i]]
-                    confidence = confidences[i]
-                    
-                    color = self.class_colors.get(class_name, (128, 128, 128))
-                    
-                    # 绘制边界框
-                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-                    
-                    # 绘制标签
-                    label = f"{class_name}: {confidence:.2f}"
-                    label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
-                    cv2.rectangle(annotated_frame, (x1, y1 - label_size[1] - 10), 
-                                (x1 + label_size[0], y1), color, -1)
-                    cv2.putText(annotated_frame, label, (x1, y1 - 5),
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-            
-            return annotated_frame
-            
+                detection_data['boxes'] = result.boxes.xyxy.cpu().numpy()
+                detection_data['classes'] = result.boxes.cls.cpu().numpy().astype(int)
+                detection_data['confidences'] = result.boxes.conf.cpu().numpy()
+
+            return detection_data
+
         except Exception as e:
             print(f"⚠️ 检测异常: {e}")
-            return frame.copy()
-    
-    def draw_info_panel(self, frame):
-        """绘制信息面板"""
-        # 计算FPS
-        self.fps_counter += 1
-        current_time = time.time()
-        if current_time - self.fps_start_time >= 1.0:
-            self.current_fps = self.fps_counter / (current_time - self.fps_start_time)
-            self.fps_counter = 0
-            self.fps_start_time = current_time
-        
-        # 绘制半透明背景
-        overlay = frame.copy()
-        cv2.rectangle(overlay, (10, 10), (400, 120), (0, 0, 0), -1)
-        frame = cv2.addWeighted(frame, 0.7, overlay, 0.3, 0)
-        
-        # 绘制文本信息
-        info_lines = [
-            f"FPS: {self.current_fps:.1f}",
-            f"Frame: {self.frame_count}",
-            f"Model: {Path(self.model_path).name if self.model_path else 'None'}",
-            f"Device: {self.device}",
-        ]
-        
-        for i, line in enumerate(info_lines):
-            y = 35 + i * 25
-            cv2.putText(frame, line, (20, y), cv2.FONT_HERSHEY_SIMPLEX, 
-                       0.6, (255, 255, 255), 2)
-        
-        # 绘制类别颜色图例
-        legend_x = frame.shape[1] - 200
-        legend_y = 30
-        cv2.putText(frame, "Classes:", (legend_x, legend_y), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-        
-        for i, (class_name, color) in enumerate(self.class_colors.items()):
-            y = legend_y + 30 + i * 25
-            cv2.rectangle(frame, (legend_x, y - 15), (legend_x + 20, y + 5), color, -1)
-            cv2.putText(frame, class_name, (legend_x + 30, y), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        
-        return frame
+            return None
     
     def run(self, source):
         """运行调试器"""
@@ -439,7 +340,7 @@ class SegmentationDebugger:
         process_thread.daemon = True
         process_thread.start()
         
-        print("🎥 开始实时检测，按 'q' 退出，按 's' 保存截图")
+        print("🎥 开始实时检测，按 'q' 退出")
         
         try:
             while True:
@@ -465,30 +366,23 @@ class SegmentationDebugger:
                 if not self.frame_queue.full():
                     self.frame_queue.put(frame.copy())
                 
-                # 获取处理结果
-                display_frame = frame.copy()
+                # 获取处理结果（不再渲染显示）
+                detection_data = None
                 if not self.result_queue.empty():
                     try:
-                        display_frame = self.result_queue.get_nowait()
+                        detection_data = self.result_queue.get_nowait()
                     except queue.Empty:
                         pass
-                
-                # 绘制信息面板
-                display_frame = self.draw_info_panel(display_frame)
-                
-                # 显示帧
-                cv2.imshow('Segmentation Debug Tool', display_frame)
+
+                # 处理检测数据（可以在这里添加数据保存或其他处理逻辑）
+                if detection_data is not None:
+                    # 这里可以添加数据处理逻辑，例如保存到文件或发送到服务器
+                    pass
                 
                 # 处理按键
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q'):
                     break
-                elif key == ord('s'):
-                    # 保存截图
-                    timestamp = time.strftime("%Y%m%d_%H%M%S")
-                    filename = f"debug_screenshot_{timestamp}.jpg"
-                    cv2.imwrite(filename, display_frame)
-                    print(f"📸 截图已保存: {filename}")
                 elif key == ord('r'):
                     # 重置统计
                     self.frame_count = 0
@@ -503,12 +397,11 @@ class SegmentationDebugger:
             # 清理资源
             self.running = False
             cap.release()
-            cv2.destroyAllWindows()
-            
+
             # 等待处理线程结束
             if process_thread.is_alive():
                 process_thread.join(timeout=1.0)
-            
+
             print("✅ 调试器已退出")
         
         return True
@@ -526,17 +419,12 @@ if QT_AVAILABLE:
         def __init__(self, parent=None):
             super().__init__(parent)
             self.source = None
-            self.model_path = None
-            # 检测GPU是否可用
-            self.device = self._validate_device('cuda')
             self.running = False
-            self.engine = None
-            self.mask_alpha = 0.6
-            
+
             # FPS统计
             self.fps_counter = 0
             self.fps_start_time = time.time()
-            
+
             # ROI区域（支持多个）
             self.roi_list = []  # [(x, y, w, h), ...]
             self.use_roi = False
@@ -549,39 +437,18 @@ if QT_AVAILABLE:
             self.frame_counter = 0
             self.csv_file = None
             self.csv_writer = None
-            
-            # 颜色映射
-            self.class_colors = {
-                'liquid': (0, 255, 0),      # 绿色
-                'foam': (255, 0, 0),        # 蓝色
-                'air': (0, 0, 255),         # 红色
-                'container': (255, 255, 0), # 青色
-            }
-        
-        def _validate_device(self, device):
-            """验证并选择可用的设备"""
-            try:
-                import torch
-                
-                if device in ['cuda', '0'] or device.startswith('cuda:'):
-                    if torch.cuda.is_available():
-                        return 'cuda' if device in ['cuda', '0'] else device
-                    else:
-                        print("[VideoThread] ⚠️  未检测到GPU，自动切换到CPU模式")
-                        return 'cpu'
-                return device
-            except Exception as e:
-                print(f"[VideoThread] ⚠️  设备检测异常: {e}，使用CPU模式")
-                return 'cpu'
-        
+
+            # WebSocket连接（用于接收服务器检测结果）
+            self.ws_client = None
+
         def set_source(self, source):
             """设置视频源"""
             self.source = source
-        
+
         def set_model(self, model_path):
-            """设置模型路径"""
-            self.model_path = model_path
-        
+            """设置模型路径（客户端不使用，保留接口兼容性）"""
+            pass
+
         def set_roi(self, roi):
             """设置ROI（支持单个或多个）"""
             if roi is None:
@@ -595,271 +462,58 @@ if QT_AVAILABLE:
                 # 单个ROI，转换为列表
                 self.roi_list = [roi]
                 self.use_roi = True
-        
-        def load_model(self):
-            """加载模型"""
+
+        def connect_to_server(self):
+            """连接到服务器WebSocket（接收检测结果）"""
             try:
-                if not self.model_path or not os.path.exists(self.model_path):
-                    self.error_occurred.emit(f"模型文件不存在: {self.model_path}")
-                    return False
-                
-                self.engine = LiquidDetectionEngine(device=self.device)
-                
-                if not self.engine.load_model(self.model_path):
-                    self.error_occurred.emit("模型加载失败")
-                    return False
-                
+                # TODO: 实现WebSocket连接到服务器
+                # 示例: ws://192.168.0.121:8085
+                print("[VideoThread] 连接到服务器...")
                 return True
-                
             except Exception as e:
-                self.error_occurred.emit(f"模型加载异常: {str(e)}")
+                self.error_occurred.emit(f"连接服务器失败: {str(e)}")
                 return False
-        
-        def detect_and_visualize(self, frame):
-            """检测并可视化分割结果（支持多个ROI）"""
-            detection_info = {}
+
+        def process_detection_result(self, detection_data):
+            """处理从服务器接收的检测结果"""
             try:
-                if not self.engine or not self.engine.model:
-                    return frame, detection_info
-                
-                annotated_frame = frame.copy()
-                overlay = annotated_frame.copy()
-                
-                # 如果设置了ROI，逐个检测ROI区域
-                if self.use_roi and len(self.roi_list) > 0:
-                    for roi_idx, roi in enumerate(self.roi_list):
-                        x, y, w, h = roi
-                        roi_frame = frame[y:y+h, x:x+w]
-                        
-                        # 绘制ROI边框（黄色）
-                        cv2.rectangle(annotated_frame, (x, y), (x+w, y+h), (0, 255, 255), 2)
-                        cv2.putText(annotated_frame, f"ROI {roi_idx+1}", (x, y-10), 
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-                        
-                        # 执行YOLO推理（只对ROI区域）
-                        results = self.engine.model.predict(
-                            source=roi_frame,
-                            imgsz=640,
-                            conf=0.3,
-                            iou=0.5,
-                            device=self.device,
-                            save=False,
-                            verbose=False,
-                            half=True if self.device != 'cpu' else False
-                        )
-                        
-                        result = results[0]
-                        
-                        # 记录检测结果（CSV记录所有mask，包括低置信度的）
-                        roi_info = {}
-                        if result.masks is not None:
-                            roi_info['mask_count'] = len(result.masks.data)
-                            roi_info['classes'] = []
-                            roi_info['confidences'] = []
-                            roi_info['pixel_counts'] = []
-                            for i in range(len(result.masks.data)):
-                                class_id = int(result.boxes.cls[i].cpu().numpy())
-                                conf = float(result.boxes.conf[i].cpu().numpy())
-                                # CSV记录所有检测结果，不过滤置信度
-                                class_name = self.engine.model.names[class_id]
-                                roi_info['classes'].append(class_name)
-                                roi_info['confidences'].append(conf)
-                                # 计算mask像素数量
-                                mask_resized = cv2.resize(
-                                    result.masks.data[i].cpu().numpy().astype(np.uint8),
-                                    (w, h)
-                                ) > 0.5
-                                pixel_count = int(np.sum(mask_resized))
-                                roi_info['pixel_counts'].append(pixel_count)
-                            self._draw_roi_masks(annotated_frame, overlay, result, x, y, w, h)
-                        else:
-                            roi_info['mask_count'] = 0
-                            roi_info['classes'] = []
-                            roi_info['confidences'] = []
-                            roi_info['pixel_counts'] = []
-                        detection_info[f'ROI{roi_idx+1}'] = roi_info
-                else:
-                    # 执行YOLO推理（全图）
-                    results = self.engine.model.predict(
-                        source=frame,
-                        imgsz=640,
-                        conf=0.3,
-                        iou=0.5,
-                        device=self.device,
-                        save=False,
-                        verbose=False,
-                        half=True if self.device != 'cpu' else False
-                    )
-                    
-                    result = results[0]
-                    
-                    # 记录检测结果（CSV记录所有mask，包括低置信度的）
-                    full_info = {}
-                    if result.masks is not None:
-                        full_info['mask_count'] = len(result.masks.data)
-                        full_info['classes'] = []
-                        full_info['confidences'] = []
-                        full_info['pixel_counts'] = []
-                        for i in range(len(result.masks.data)):
-                            class_id = int(result.boxes.cls[i].cpu().numpy())
-                            conf = float(result.boxes.conf[i].cpu().numpy())
-                            # CSV记录所有检测结果，不过滤置信度
-                            class_name = self.engine.model.names[class_id]
-                            full_info['classes'].append(class_name)
-                            full_info['confidences'].append(conf)
-                            # 计算mask像素数量
-                            mask_resized = cv2.resize(
-                                result.masks.data[i].cpu().numpy().astype(np.uint8),
-                                (frame.shape[1], frame.shape[0])
-                            ) > 0.5
-                            pixel_count = int(np.sum(mask_resized))
-                            full_info['pixel_counts'].append(pixel_count)
-                        self._draw_fullframe_masks(annotated_frame, overlay, result, frame.shape)
-                    else:
-                        full_info['mask_count'] = 0
-                        full_info['classes'] = []
-                        full_info['confidences'] = []
-                        full_info['pixel_counts'] = []
-                    detection_info['FullFrame'] = full_info
-                
-                # 混合掩码和原图
-                annotated_frame = cv2.addWeighted(annotated_frame, 1 - self.mask_alpha, 
-                                                overlay, self.mask_alpha, 0)
-                
-                return annotated_frame, detection_info
-                
-            except Exception as e:
-                print(f"检测异常: {e}")
-                return frame, detection_info
-        
-        def _draw_roi_masks(self, annotated_frame, overlay, result, roi_x, roi_y, roi_w, roi_h):
-            """绘制ROI区域的分割掩码"""
-            masks = result.masks.data.cpu().numpy()
-            classes = result.boxes.cls.cpu().numpy().astype(int)
-            confidences = result.boxes.conf.cpu().numpy()
-            
-            for i in range(len(masks)):
-                if confidences[i] < 0.3:
-                    continue
-                
-                class_id = classes[i]
-                class_name = self.engine.model.names[class_id]
-                confidence = confidences[i]
-                
-                # 调整掩码尺寸到ROI大小
-                mask_roi = cv2.resize(
-                    masks[i].astype(np.uint8),
-                    (roi_w, roi_h)
-                ) > 0.5
-                
-                # 绘制掩码
-                overlay[roi_y:roi_y+roi_h, roi_x:roi_x+roi_w][mask_roi] = self.class_colors.get(class_name, (128, 128, 128))
-                
-                # 绘制边界框（加上ROI偏移）
-                if result.boxes is not None:
-                    box = result.boxes.xyxy[i].cpu().numpy()
-                    x1, y1, x2, y2 = map(int, box)
-                    x1 += roi_x
-                    y1 += roi_y
-                    x2 += roi_x
-                    y2 += roi_y
-                    
-                    color = self.class_colors.get(class_name, (128, 128, 128))
-                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-                    
-                    label = f"{class_name}: {confidence:.2f}"
-                    label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-                    cv2.rectangle(annotated_frame, (x1, y1 - label_size[1] - 8), 
-                                (x1 + label_size[0], y1), color, -1)
-                    cv2.putText(annotated_frame, label, (x1, y1 - 4),
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-        
-        def _draw_fullframe_masks(self, annotated_frame, overlay, result, frame_shape):
-            """绘制全图分割掩码"""
-            masks = result.masks.data.cpu().numpy()
-            classes = result.boxes.cls.cpu().numpy().astype(int)
-            confidences = result.boxes.conf.cpu().numpy()
-            
-            for i in range(len(masks)):
-                if confidences[i] < 0.3:
-                    continue
-                
-                class_id = classes[i]
-                class_name = self.engine.model.names[class_id]
-                confidence = confidences[i]
-                
-                # 调整掩码尺寸
-                mask = cv2.resize(
-                    masks[i].astype(np.uint8),
-                    (frame_shape[1], frame_shape[0])
-                ) > 0.5
-                
-                color = self.class_colors.get(class_name, (128, 128, 128))
-                overlay[mask] = color
-                
-                # 绘制边界框
-                if result.boxes is not None:
-                    box = result.boxes.xyxy[i].cpu().numpy()
-                    x1, y1, x2, y2 = map(int, box)
-                    
-                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-                    
-                    label = f"{class_name}: {confidence:.2f}"
-                    label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
-                    cv2.rectangle(annotated_frame, (x1, y1 - label_size[1] - 10), 
-                                (x1 + label_size[0], y1), color, -1)
-                    cv2.putText(annotated_frame, label, (x1, y1 - 5),
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-        
+                # 解析检测结果
+                detection_info = detection_data.get('detection_info', {})
+
+                # 写入CSV日志
+                if self.csv_writer and detection_info:
+                    for region_name, info in detection_info.items():
+                        classes_str = ', '.join(info.get('classes', []))
+                        conf_str = ', '.join([f"{c:.2f}" for c in info.get('confidences', [])])
+                        pixel_str = ', '.join([str(p) for p in info.get('pixel_counts', [])])
+                        self.csv_writer.writerow([
+                            self.frame_counter,
+                            region_name,
+                            info.get('mask_count', 0),
+                            classes_str if classes_str else '无',
+                            conf_str if conf_str else '无',
+                            pixel_str if pixel_str else '无'
+                        ])
+
+                    # 每10帧刷新一次文件
+                    if self.frame_counter % 10 == 0:
+                        self.csv_file.flush()
+
+
         def run(self):
-            """线程运行函数"""
+            """线程运行函数（客户端只接收服务器数据，不进行检测）"""
             if not self.source:
                 self.error_occurred.emit("未设置视频源")
                 return
-            
-            # 加载模型
-            if not self.load_model():
+
+            # 连接到服务器WebSocket
+            if not self.connect_to_server():
                 return
-            
-            # 判断输入类型
-            source = self.source
-            if source.isdigit():
-                source = int(source)
-            
-            # 打开视频源 - 优先使用HKcapture
-            cap = None
-            if HK_AVAILABLE:
-                try:
-                    # 使用HKcapture（支持海康SDK和RTSP）
-                    cap = HKcapture(source)
-                    if not cap.open():
-                        self.error_occurred.emit(f"无法打开视频源: {self.source}")
-                        return
-                    
-                    # 开始捕获
-                    if not cap.start_capture():
-                        self.error_occurred.emit(f"无法开始视频捕获: {self.source}")
-                        cap.release()
-                        return
-                    
-                    # 等待视频流稳定
-                    time.sleep(0.5)
-                    
-                except Exception as e:
-                    self.error_occurred.emit(f"HKcapture初始化失败: {str(e)}")
-                    return
-            else:
-                # 备用：使用OpenCV
-                cap = cv2.VideoCapture(source)
-                if not cap.isOpened():
-                    self.error_occurred.emit(f"无法打开视频源: {self.source}")
-                    return
-                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            
+
             self.running = True
             self.fps_start_time = time.time()
             self.frame_counter = 0
-            
+
             # 初始化CSV日志文件
             try:
                 import csv
@@ -873,75 +527,33 @@ if QT_AVAILABLE:
                 print(f"⚠️  无法创建CSV日志文件: {e}")
                 self.csv_file = None
                 self.csv_writer = None
-            
+
+            # 主循环：接收服务器的检测结果
             while self.running:
-                # 读取帧
-                if HK_AVAILABLE and isinstance(cap, HKcapture):
-                    ret, frame = cap.read()
-                    if not ret or frame is None:
-                        time.sleep(0.01)
-                        continue
-                else:
-                    ret, frame = cap.read()
-                    if not ret:
-                        self.error_occurred.emit("读取帧失败")
-                        break
-                
-                # 执行检测
-                annotated_frame, detection_info = self.detect_and_visualize(frame)
-                
-                # 调试信息：每100帧输出一次检测结果
-                if self.frame_counter % 100 == 0 and detection_info:
-                    for region, info in detection_info.items():
-                        print(f"[帧{self.frame_counter}] {region}: {info.get('mask_count', 0)}个mask")
-                
-                # 记录帧数
-                self.frame_counter += 1
-                
-                # 写入CSV日志
-                if self.csv_writer:
-                    try:
-                        if detection_info:
-                            for region_name, info in detection_info.items():
-                                classes_str = ', '.join(info.get('classes', []))
-                                conf_str = ', '.join([f"{c:.2f}" for c in info.get('confidences', [])])
-                                pixel_str = ', '.join([str(p) for p in info.get('pixel_counts', [])])
-                                self.csv_writer.writerow([
-                                    self.frame_counter,
-                                    region_name,
-                                    info.get('mask_count', 0),
-                                    classes_str if classes_str else '无',
-                                    conf_str if conf_str else '无',
-                                    pixel_str if pixel_str else '无'
-                                ])
-                        else:
-                            self.csv_writer.writerow([self.frame_counter, '全图', 0, '无', '无', '无'])
-                        
-                        # 每10帧刷新一次文件
-                        if self.frame_counter % 10 == 0:
-                            self.csv_file.flush()
-                    except Exception as e:
-                        print(f"⚠️  写入CSV失败: {e}")
-                
-                # 发送帧
-                self.frame_ready.emit(annotated_frame)
-                
-                # 更新FPS
-                self.fps_counter += 1
-                current_time = time.time()
-                if current_time - self.fps_start_time >= 1.0:
-                    fps = self.fps_counter / (current_time - self.fps_start_time)
-                    self.fps_update.emit(fps)
-                    self.fps_counter = 0
-                    self.fps_start_time = current_time
-                
-                # 短暂休眠
-                self.msleep(1)
-            
-            # 释放资源
-            if cap:
-                cap.release()
-            
+                try:
+                    # TODO: 从WebSocket接收检测结果
+                    # detection_data = self.ws_client.receive()
+                    # self.process_detection_result(detection_data)
+
+                    # 记录帧数
+                    self.frame_counter += 1
+
+                    # 更新FPS
+                    self.fps_counter += 1
+                    current_time = time.time()
+                    if current_time - self.fps_start_time >= 1.0:
+                        fps = self.fps_counter / (current_time - self.fps_start_time)
+                        self.fps_update.emit(fps)
+                        self.fps_counter = 0
+                        self.fps_start_time = current_time
+
+                    # 短暂休眠
+                    self.msleep(10)
+
+                except Exception as e:
+                    print(f"⚠️  接收数据异常: {e}")
+                    time.sleep(0.1)
+
             # 关闭CSV文件
             if self.csv_file:
                 try:
@@ -1492,7 +1104,8 @@ if QT_AVAILABLE:
             self.video_thread.set_source(rtsp)
             self.video_thread.set_model(model_path)
             self.video_thread.set_roi(roi)  # 设置ROI
-            self.video_thread.frame_ready.connect(self._updateFrame)
+            # 不再连接frame_ready信号（客户端无GPU，不渲染）
+            # self.video_thread.frame_ready.connect(self._updateFrame)
             self.video_thread.fps_update.connect(self._updateFPS)
             self.video_thread.error_occurred.connect(self._handleError)
             self.video_thread.start()
