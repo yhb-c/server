@@ -583,16 +583,27 @@ class HKcapture:
     def open(self):
         """
         打开摄像头连接
-        
+
         返回:
             bool: 成功返回True，失败返回False
         """
         if self.is_opened:
+            if self.debug:
+                print(f"[HKcapture] 已经打开，跳过")
             return True
-            
+
+        if self.debug:
+            print(f"[HKcapture] 开始打开视频源: {self.source}")
+            print(f"[HKcapture] is_hikvision: {self.is_hikvision}")
+            print(f"[HKcapture] is_video_file: {self.is_video_file}")
+
         if self.is_hikvision:
+            if self.debug:
+                print(f"[HKcapture] 使用海康威视SDK打开")
             return self._open_hikvision()
         else:
+            if self.debug:
+                print(f"[HKcapture] 使用RTSP/视频文件方式打开")
             return self._open_rtsp()
     
     def _open_hikvision(self):
@@ -613,49 +624,70 @@ class HKcapture:
         """打开RTSP摄像头连接或本地视频文件"""
         # 🔥 本地视频文件使用 PlayCtrl SDK
         if self.is_video_file:
+            if self.debug:
+                print(f"[HKcapture] 检测到本地视频文件，调用_open_video_file()")
             return self._open_video_file()
-        
+
         # RTSP流使用 OpenCV
+        if self.debug:
+            print(f"[HKcapture] 使用OpenCV打开RTSP流")
         try:
             self.cv_cap = cv2.VideoCapture(self.source)
             if not self.cv_cap.isOpened():
+                if self.debug:
+                    print(f"[HKcapture] OpenCV打开失败")
                 return False
-            
+
             # 获取视频属性
             self.frame_width = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             self.frame_height = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             actual_fps = self.cv_cap.get(cv2.CAP_PROP_FPS)
-            
+
             # RTSP流：尝试设置帧率（通常不生效，由服务器控制）
             if self.target_fps > 0:
                 self.cv_cap.set(cv2.CAP_PROP_FPS, self.target_fps)
             # 使用配置的帧率（RTSP流的FPS通常不准确）
             self.fps = self.target_fps if self.target_fps > 0 else (int(actual_fps) or 25)
-            
+
             self.is_opened = True
+            if self.debug:
+                print(f"[HKcapture] OpenCV打开成功: {self.frame_width}x{self.frame_height} @ {self.fps}fps")
             return True
-            
+
         except Exception as e:
+            if self.debug:
+                print(f"[HKcapture] OpenCV打开异常: {e}")
             return False
     
     def _open_video_file(self):
-        """打开本地视频文件（使用 PlayCtrl SDK）"""
+        """打开本地视频文件（使用 OpenCV）"""
         try:
-            # 初始化 PlayCtrl SDK（如果尚未初始化）
-            if not hasattr(self, 'playM4SDK') or self.playM4SDK is None:
-                self.playM4SDK = load_library(playM4dllpath)
-            
-            # 获取播放句柄
-            with _HK_SDK_LOCK:
-                ret = self.playM4SDK.PlayM4_GetPort(byref(self.PlayCtrlPort))
-                if not ret:
-                    error = self.playM4SDK.PlayM4_GetLastError(c_long(0))
-                    return False
-            
+            if self.debug:
+                print(f"[HKcapture-视频文件] 开始打开本地视频文件: {self.source}")
+
+            # 使用 OpenCV 打开本地视频文件
+            self.cv_cap = cv2.VideoCapture(self.source)
+            if not self.cv_cap.isOpened():
+                if self.debug:
+                    print(f"[HKcapture-视频文件] OpenCV打开失败")
+                return False
+
+            # 获取视频属性
+            self.frame_width = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            self.frame_height = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.original_fps = self.cv_cap.get(cv2.CAP_PROP_FPS)
+
+            # 本地视频文件：使用原始帧率
+            self.fps = int(self.original_fps) if self.original_fps > 0 else 25
+
             self.is_opened = True
+            if self.debug:
+                print(f"[HKcapture-视频文件] 本地视频文件打开成功: {self.frame_width}x{self.frame_height} @ {self.fps}fps")
             return True
-            
+
         except Exception as e:
+            if self.debug:
+                print(f"[HKcapture-视频文件] 打开本地视频文件异常: {e}")
             import traceback
             traceback.print_exc()
             return False
