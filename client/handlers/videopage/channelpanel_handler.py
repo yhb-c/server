@@ -1121,7 +1121,11 @@ class ChannelPanelHandler:
 
             from HKcapture import HKcapture
 
-            # 创建HKcapture对象（使用HWND渲染模式）
+            # 判断是否为RTSP实时流或本地视频文件
+            is_rtsp_stream = rtsp_url.startswith('rtsp://')
+            is_video_file = not is_rtsp_stream and (rtsp_url.endswith('.mp4') or rtsp_url.endswith('.avi') or rtsp_url.endswith('.mkv'))
+
+            # 创建HKcapture对象
             cap = HKcapture(
                 source=rtsp_url,
                 username=username,
@@ -1129,11 +1133,16 @@ class ChannelPanelHandler:
                 port=port,
                 channel=1,
                 fps=25,
-                debug=False,  # 关闭调试输出，减少性能开销
-                decode_device='cpu'  # CPU软件解码
+                debug=False,
+                decode_device='cpu'
             )
 
-            self.logger.debug(f"[通道连接] 使用HWND渲染模式")
+            if is_rtsp_stream:
+                self.logger.debug(f"[通道连接] RTSP实时流，使用HWND渲染模式")
+            elif is_video_file:
+                self.logger.debug(f"[通道连接] 本地视频文件，使用HWND渲染模式（PlayCtrl SDK硬件加速）")
+            else:
+                self.logger.debug(f"[通道连接] 其他视频源，使用Qt渲染模式")
 
             # 打开相机连接
             if not cap.open():
@@ -1147,8 +1156,15 @@ class ChannelPanelHandler:
             # 移除连接中标记
             self._channels_connecting.discard(channel_id)
 
-            # 使用信号在主线程中启动HWND渲染
-            self._video_display_signal.start_hwnd_render.emit(channel_id)
+            # 根据类型选择渲染方式
+            if is_rtsp_stream or is_video_file:
+                # RTSP实时流和本地视频文件都使用HWND渲染（硬件加速）
+                self._video_display_signal.start_hwnd_render.emit(channel_id)
+            else:
+                # 其他视频源使用Qt渲染
+                if not cap.start_capture():
+                    raise Exception("无法开始视频捕获")
+                self._startQtVideoDisplay(channel_id)
 
             # 更新UI状态（在主线程中执行）
             QtCore.QTimer.singleShot(0, lambda: self._updateChannelConnectedUI(channel_id))
@@ -1742,7 +1758,68 @@ class ChannelPanelHandler:
         # 清空VideoRenderWidget的文本提示
         if hasattr(video_widget, 'setText'):
             video_widget.setText("")
-    
+
+    def _startQtVideoDisplay(self, channel_id):
+        """启动Qt视频显示线程（用于本地视频文件）
+
+        Args:
+            channel_id: 通道ID
+        """
+        self.logger.debug(f"[Qt显示] {channel_id} 启动Qt视频显示线程")
+
+        if not hasattr(self, '_display_flags'):
+            self._display_flags = {}
+
+        self._display_flags[channel_id] = True
+
+        display_thread = threading.Thread(
+            target=self._qtDisplayLoop,
+            args=(channel_id,),
+            daemon=True
+        )
+        display_thread.start()
+
+        self.logger.debug(f"[Qt显示] {channel_id} Qt显示线程已启动")
+
+    def _qtDisplayLoop(self, channel_id):
+        """Qt视频显示循环线程（用于本地视频文件）
+
+        Args:
+            channel_id: 通道ID
+        """
+        self.logger.debug(f"[Qt显示] {channel_id} 显示循环开始")
+
+        cap = self._channel_captures.get(channel_id)
+        if not cap:
+            self.logger.debug(f"[Qt显示] {channel_id} 找不到capture对象")
+            return
+
+        # 获取视频帧率
+        video_fps = cap.get_fps() if cap and hasattr(cap, 'get_fps') else 25
+        frame_interval = 1.0 / video_fps if video_fps > 0 else 0.04
+
+        self.logger.debug(f"[Qt显示] {channel_id} 视频帧率: {video_fps}, 帧间隔: {frame_interval}s")
+
+        while self._display_flags.get(channel_id, False):
+            cap = self._channel_captures.get(channel_id)
+            if not cap:
+                break
+
+            try:
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    # 使用信号更新显示
+                    self._updateVideoDisplay(channel_id, frame)
+                    time.sleep(frame_interval)
+                else:
+                    # 读取失败，可能是视频结束
+                    time.sleep(0.1)
+            except Exception as e:
+                self.logger.debug(f"[Qt显示] {channel_id} 读取帧失败: {e}")
+                time.sleep(0.1)
+
+        self.logger.debug(f"[Qt显示] {channel_id} 显示循环结束")
+
     def _startFrameStorageThread(self, channel_id):
         """启动帧数据存储线程（供标注功能使用）
         

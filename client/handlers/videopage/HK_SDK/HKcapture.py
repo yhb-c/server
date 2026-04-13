@@ -660,29 +660,46 @@ class HKcapture:
             return False
     
     def _open_video_file(self):
-        """打开本地视频文件（使用 OpenCV）"""
+        """打开本地视频文件（使用 PlayCtrl SDK）"""
         try:
             if self.debug:
                 print(f"[HKcapture-视频文件] 开始打开本地视频文件: {self.source}")
 
-            # 使用 OpenCV 打开本地视频文件
-            self.cv_cap = cv2.VideoCapture(self.source)
-            if not self.cv_cap.isOpened():
+            # 初始化 PlayCtrl SDK
+            if not self.playM4SDK:
                 if self.debug:
-                    print(f"[HKcapture-视频文件] OpenCV打开失败")
-                return False
+                    print(f"[HKcapture-视频文件] 初始化 PlayCtrl SDK")
+                self.playM4SDK = load_library(playM4dllpath)
 
-            # 获取视频属性
-            self.frame_width = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            self.frame_height = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            self.original_fps = self.cv_cap.get(cv2.CAP_PROP_FPS)
+            # 获取播放端口
+            with _HK_SDK_LOCK:
+                if not self.playM4SDK.PlayM4_GetPort(byref(self.PlayCtrlPort)):
+                    if self.debug:
+                        print(f"[HKcapture-视频文件] 获取播放端口失败")
+                    return False
 
-            # 本地视频文件：使用原始帧率
-            self.fps = int(self.original_fps) if self.original_fps > 0 else 25
+            port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
+            if self.debug:
+                print(f"[HKcapture-视频文件] 获取播放端口成功: {port}")
+
+            # 使用 OpenCV 临时打开获取视频属性
+            temp_cap = cv2.VideoCapture(self.source)
+            if temp_cap.isOpened():
+                self.frame_width = int(temp_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                self.frame_height = int(temp_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                self.original_fps = temp_cap.get(cv2.CAP_PROP_FPS)
+                self.fps = int(self.original_fps) if self.original_fps > 0 else 25
+                temp_cap.release()
+                if self.debug:
+                    print(f"[HKcapture-视频文件] 视频属性: {self.frame_width}x{self.frame_height} @ {self.fps}fps")
+            else:
+                if self.debug:
+                    print(f"[HKcapture-视频文件] 无法读取视频属性")
+                self.fps = 25
 
             self.is_opened = True
             if self.debug:
-                print(f"[HKcapture-视频文件] 本地视频文件打开成功: {self.frame_width}x{self.frame_height} @ {self.fps}fps")
+                print(f"[HKcapture-视频文件] 本地视频文件打开成功")
             return True
 
         except Exception as e:
@@ -864,8 +881,14 @@ class HKcapture:
         print(f"[HKcapture] _start_rtsp_capture: is_video_file={self.is_video_file}")
         sys.stdout.flush()
 
-        # 🔥 本地视频文件和RTSP流都使用 OpenCV 读取线程
-        print(f"[HKcapture] _start_rtsp_capture: 启动OpenCV读取线程")
+        # 🔥 本地视频文件使用 PlayCtrl SDK 硬件加速播放
+        if self.is_video_file:
+            print(f"[HKcapture] _start_rtsp_capture: 本地视频文件，使用PlayCtrl SDK播放")
+            sys.stdout.flush()
+            return self._start_video_file_capture()
+
+        # RTSP流使用 OpenCV 读取线程
+        print(f"[HKcapture] _start_rtsp_capture: RTSP流，启动OpenCV读取线程")
         sys.stdout.flush()
         self.stop_thread = False
         self.capture_thread = threading.Thread(target=self._rtsp_capture_loop)

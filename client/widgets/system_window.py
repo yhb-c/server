@@ -843,21 +843,28 @@ class SystemWindow(
             channel_id: 被点击的通道ID
         """
         try:
+            print(f"\n========== [预览窗口切换] 开始 ==========")
+            print(f"[预览窗口切换] 点击的通道: {channel_id}")
+
             # 获取被点击的小通道面板
             small_panel = self._channel_panels_map.get(channel_id)
             if not small_panel:
-                self.logger.debug(f"[_onSmallPanelClicked] 未找到通道面板: {channel_id}")
+                print(f"[预览窗口切换] 错误：未找到通道面板")
                 return
+
+            print(f"[预览窗口切换] 找到通道面板")
 
             # 检查该通道是否已连接
             if channel_id not in self._channel_captures:
-                self.logger.debug(f"[_onSmallPanelClicked] 通道未连接: {channel_id}")
+                print(f"[预览窗口切换] 错误：通道未连接")
                 self.statusBar().showMessage(f"通道未连接，请先打开通道")
                 return
 
+            print(f"[预览窗口切换] 通道已连接")
+
             # 如果点击的是当前已经在预览窗口显示的通道，不需要切换
             if self._current_preview_channel_id == channel_id:
-                self.logger.debug(f"[_onSmallPanelClicked] 通道 {channel_id} 已在预览窗口显示")
+                print(f"[预览窗口切换] 通道已在预览窗口，无需切换")
                 return
 
             # 更新预览窗口显示的通道ID
@@ -865,6 +872,8 @@ class SystemWindow(
 
             # 更新预览面板的通道信息
             if hasattr(self, 'previewPanel'):
+                print(f"[预览窗口切换] 找到previewPanel")
+
                 channel_name = small_panel.getChannelName() if hasattr(small_panel, 'getChannelName') else channel_id
                 task_info = small_panel.getTaskInfo() if hasattr(small_panel, 'getTaskInfo') else None
 
@@ -875,21 +884,41 @@ class SystemWindow(
                     self.previewPanel.setTaskInfo("未分配任务")
 
                 self.previewPanel.setConnected(True)
-                # HWND渲染模式：预览窗口也使用HWND直接渲染
-                self.previewPanel.setHwndRenderMode(True)
+                # HWND渲染模式
+                print(f"[预览窗口切换] 已设置连接状态")
 
-                # 获取HKcapture对象并设置HWND到预览窗口
+                # 获取HKcapture对象并切换HWND到预览窗口
                 cap = self._channel_captures.get(channel_id)
+                print(f"[预览窗口切换] capture对象存在: {cap is not None}")
+
                 if cap and hasattr(self.previewPanel, 'videoWidget'):
                     preview_widget = self.previewPanel.videoWidget
+                    print(f"[预览窗口切换] videoWidget存在: {preview_widget is not None}")
+
                     if preview_widget:
                         try:
+                            is_visible = preview_widget.isVisible()
+                            print(f"[预览窗口切换] videoWidget可见: {is_visible}")
+
+                            if not is_visible:
+                                preview_widget.show()
+                                QtWidgets.QApplication.processEvents()
+
                             preview_hwnd = int(preview_widget.winId())
-                            cap.set_hwnd(preview_hwnd)
-                            cap.start_render()
-                            self.logger.debug(f"[预览窗口] {channel_id} HWND渲染已启动，句柄: {preview_hwnd}")
+                            print(f"[预览窗口切换] 预览窗口HWND: {preview_hwnd}")
+
+                            print(f"[预览窗口切换] 调用switch_render_hwnd...")
+                            result = cap.switch_render_hwnd(preview_hwnd)
+                            print(f"[预览窗口切换] switch_render_hwnd结果: {result}")
+
+                            if result:
+                                print(f"[预览窗口切换] 成功切换到预览窗口")
+                            else:
+                                print(f"[预览窗口切换] 切换失败")
                         except Exception as e:
-                            self.logger.error(f"[预览窗口] {channel_id} HWND渲染启动失败: {e}")
+                            print(f"[预览窗口切换] 异常: {e}")
+                            import traceback
+                            traceback.print_exc()
 
                 # 获取capture_source的分辨率信息
                 thread_manager = self._channel_captures.get(channel_id)

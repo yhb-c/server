@@ -12,7 +12,7 @@ annotation_debug: false
 batch_processing_enabled: false
 channel1:
   name: 通道1
-  address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+  address: ''
   file_path: C:/Users/admin/Desktop/test video1.mp4
   general:
     task_id: '1'
@@ -21,7 +21,7 @@ channel1:
 channel1_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/1.engine
 channel2:
   name: 通道2
-  address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+  address: ''
   file_path: C:/Users/admin/Desktop/test video1.mp4
   general:
     task_id: '1'
@@ -30,7 +30,7 @@ channel2:
 channel2_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/2.engine
 channel3:
   name: 通道3
-  address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
+  address: ''
   file_path: C:/Users/admin/Desktop/test video1.mp4
   general:
     task_id: '1'
