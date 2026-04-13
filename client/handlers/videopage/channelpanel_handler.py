@@ -1192,11 +1192,11 @@ class ChannelPanelHandler:
             # 移除连接中标记
             self._channels_connecting.discard(channel_id)
 
-            # 启动视频显示（本地视频HWND模式下不需要Qt显示线程）
-            if not is_local_video or not hasattr(cap, '_hwnd') or cap._hwnd is None:
-                self._startVideoStream(channel_id, hwnd)
-            else:
-                self.logger.debug(f"[通道连接] {channel_id} 使用HWND直接渲染，跳过Qt显示线程")
+            # 启动视频显示
+            # 修复：无论是否为本地视频，都启动Qt显示线程
+            # 因为HWND模式需要在面板上正确设置，这里统一使用Qt渲染
+            self._startVideoStream(channel_id, hwnd)
+            self.logger.debug(f"[通道连接] {channel_id} 已启动Qt显示线程")
             
             # 更新UI状态（在主线程中执行）
             QtCore.QTimer.singleShot(0, lambda: self._updateChannelConnectedUI(channel_id))
@@ -1853,21 +1853,17 @@ class ChannelPanelHandler:
         self.logger.debug(f"[帧存储] {channel_id} 已停止")
     
     def _startQtVideoDisplay(self, channel_id):
-        """启动Qt视频显示线程
-        
+        """启动Qt视频显示线程（合并捕获和显示）
+
         Args:
             channel_id: 通道ID
         """
         try:
-            # 创建帧缓冲队列
-            if not hasattr(self, '_frame_buffers'):
-                self._frame_buffers = {}
+            # 初始化显示标志
             if not hasattr(self, '_display_flags'):
                 self._display_flags = {}
-                
-            self._frame_buffers[channel_id] = queue.Queue(maxsize=10)
-            
-            # 启动显示线程
+
+            # 启动显示线程（不再需要frame_buffer，直接从cap读取并显示）
             self._display_flags[channel_id] = True
             display_thread = threading.Thread(
                 target=self._qtDisplayLoop,
@@ -1875,57 +1871,74 @@ class ChannelPanelHandler:
                 daemon=True
             )
             display_thread.start()
-            
-            self.logger.debug(f"[视频流] {channel_id} Qt显示线程已启动")
-            
+
+            self.logger.debug(f"[视频流] {channel_id} Qt显示线程已启动（合并捕获和显示）")
+
         except Exception as e:
             self.logger.debug(f"[视频流] {channel_id} Qt显示线程启动失败: {e}")
     
     def _qtDisplayLoop(self, channel_id):
-        """Qt视频显示循环线程
-        
+        """Qt视频显示循环线程（合并捕获和显示）
+
+        直接从HKcapture读取帧并显示，不再使用中间缓冲队列
+
         Args:
             channel_id: 通道ID
         """
-        self.logger.debug(f"[Qt显示] {channel_id} 开始运行")
-        
+        self.logger.debug(f"[Qt显示] {channel_id} 开始运行（合并捕获和显示）")
+
         frame_count = 0
         last_frame_time = time.time()
-        
+
+        # 获取视频源的帧率
+        cap = self._channel_captures.get(channel_id)
+        if cap and hasattr(cap, 'get_fps'):
+            video_fps = cap.get_fps()
+        else:
+            video_fps = 25  # 默认25fps
+
+        frame_interval = 1.0 / video_fps if video_fps > 0 else 0.04
+        self.logger.debug(f"[Qt显示] {channel_id} 视频帧率: {video_fps} fps, 帧间隔: {frame_interval:.4f}s")
+
         while self._display_flags.get(channel_id, False):
             try:
+                loop_start = time.time()
+
                 cap = self._channel_captures.get(channel_id)
                 if not cap:
                     time.sleep(0.1)
                     continue
-                
-                # 读取最新帧
-                ret, frame = cap.read_latest()
-                
+
+                # 直接从HKcapture读取最新帧
+                ret, frame = cap.read()
+
                 if ret and frame is not None:
                     frame_count += 1
                     current_time = time.time()
-                    
+
                     # 每秒统计一次帧率
                     if current_time - last_frame_time >= 1.0:
                         fps = frame_count / (current_time - last_frame_time)
-                        self.logger.debug(f"[Qt显示] {channel_id} 帧率: {fps:.1f} fps")
+                        self.logger.debug(f"[Qt显示] {channel_id} 显示帧率: {fps:.1f} fps")
                         frame_count = 0
                         last_frame_time = current_time
-                    
+
                     # 更新视频显示
                     self._updateVideoDisplay(channel_id, frame)
-                    
-                    # 控制帧率（25fps）
-                    time.sleep(0.04)
+
+                    # 根据视频原始帧率控制播放速度
+                    elapsed = time.time() - loop_start
+                    sleep_time = frame_interval - elapsed
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
                 else:
                     # 没有新帧，短暂等待
                     time.sleep(0.01)
-                    
+
             except Exception as e:
                 self.logger.debug(f"[Qt显示] {channel_id} 异常: {e}")
                 time.sleep(0.1)
-        
+
         self.logger.debug(f"[Qt显示] {channel_id} 已停止")
         
                 
