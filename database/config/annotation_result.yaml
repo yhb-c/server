@@ -1,0 +1,22 @@
+channel1:
+  boxes:
+  - - 872
+    - 505
+    - 320
+  fixed_bottoms:
+  - 633
+  fixed_tops:
+  - 377
+  init_levels:
+  - - 872
+    - 505
+  fixed_init_levels:
+  - 10.0
+  annotation_count: 1
+  areas:
+    area_1:
+      name: 通道1_区域1
+      height: 20mm
+      state: 默认
+      init_status: 0
+  last_updated: '2026-04-13 14:24:23'

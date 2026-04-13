@@ -1201,17 +1201,16 @@ class HKcapture:
             self.playM4SDK.PlayM4_InputData(self.PlayCtrlPort, pBuffer, dwBufSize)
     
     def _real_data_callback_hwnd(self, lPlayHandle, dwDataType, pBuffer, dwBufSize, pUser):
-        """海康威视实时数据回调函数（纯CPU解码模式，无渲染）
+        """海康威视实时数据回调函数（HWND直接渲染模式）
 
         数据流：
-        1. 收到系统头：初始化PlayCtrl解码器，设置解码回调
+        1. 收到系统头：初始化PlayCtrl解码器
         2. 收到流数据：输入到PlayCtrl解码器
-        3. PlayCtrl解码后通过回调获取YUV数据
-        4. YUV数据送入队列供检测线程使用
+        3. PlayCtrl解码后直接渲染到HWND窗口
         """
         if dwDataType == NET_DVR_SYSHEAD:
             if self.debug:
-                print(f"[HKcapture] 收到系统头数据，初始化纯CPU解码模式（无渲染）...")
+                print(f"[HKcapture] 收到系统头数据，初始化HWND渲染模式...")
             import sys
             sys.stdout.flush()
 
@@ -1220,17 +1219,21 @@ class HKcapture:
 
             # 打开码流
             if self.playM4SDK.PlayM4_OpenStream(self.PlayCtrlPort, pBuffer, dwBufSize, 1024 * 1024):
-                # 禁用硬件解码，强制使用CPU软件解码
+                # 启用硬件解码（如果配置了）
                 port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
-                self.playM4SDK.PlayM4_SetDecodeEngine(c_long(port), 0)  # 0=软件解码
-                print(f"[HKcapture] 已设置为CPU软件解码模式")
+                if self.decode_device == 'hardware':
+                    self.playM4SDK.PlayM4_SetDecodeEngine(c_long(port), 1)  # 1=硬件解码
+                    print(f"[HKcapture] 已设置为硬件解码模式")
+                else:
+                    self.playM4SDK.PlayM4_SetDecodeEngine(c_long(port), 0)  # 0=软件解码
+                    print(f"[HKcapture] 已设置为软件解码模式")
 
-                # 设置解码回调（用于获取YUV数据送检测线程）
-                self._setup_hikvision_decode_callback()
+                # 不设置解码回调，让SDK直接渲染
+                # self._setup_hikvision_decode_callback()  # 注释掉
 
-                # 开始解码播放（不渲染到窗口，传入None）
-                if self.playM4SDK.PlayM4_Play(self.PlayCtrlPort, None):
-                    print(f"[HKcapture] 纯CPU解码已启动（无渲染）")
+                # 开始解码播放并渲染到HWND窗口
+                if self.playM4SDK.PlayM4_Play(self.PlayCtrlPort, self._hwnd):
+                    print(f"[HKcapture] HWND渲染已启动，窗口句柄={self._hwnd}")
                     sys.stdout.flush()
                 else:
                     error = self.playM4SDK.PlayM4_GetLastError(self.PlayCtrlPort)
