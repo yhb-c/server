@@ -1572,10 +1572,20 @@ class HKcapture:
         # read() 已经实现了新帧检测，read_latest() 和 read() 完全相同
         return self.read()
     
+    def get_current_frame(self):
+        """
+        获取当前帧（不管是否是新帧，用于标注等功能）
+
+        返回:
+            numpy.ndarray: 当前帧图像，如果没有帧则返回None
+        """
+        with self.frame_lock:
+            return self.current_frame
+
     def get_frame_size(self):
         """
         获取视频帧尺寸
-        
+
         返回:
             tuple: (width, height)
         """
