@@ -18,7 +18,7 @@ channel1_model_path: /home/lqj/liquid/server/database/model/detection_model/best
 
 channel2:
   name: 通道2
-  address: ''
+  address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
   file_path: /home/lqj/liquid/testvideo/2.mp4
 channel2_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/2.engine
 

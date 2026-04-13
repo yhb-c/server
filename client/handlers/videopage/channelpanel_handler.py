@@ -2736,15 +2736,28 @@ class ChannelPanelHandler:
             panel = self._channel_panels_map.get(channel_id)
             if panel:
 
-                # 获取视频尺寸（从通道配置或默认值）
-                video_width = 1920  # 默认值，可以从配置读取
-                video_height = 1080
+                # 从配置文件读取视频尺寸
+                video_width = 1280
+                video_height = 848
 
-                # 尝试从通道配置获取实际尺寸
-                if hasattr(self, '_channel_configs') and channel_id in self._channel_configs:
-                    config = self._channel_configs[channel_id]
-                    video_width = config.get('width', 1920)
-                    video_height = config.get('height', 1080)
+                try:
+                    import yaml
+                    import os
+                    from ...config import get_project_root
+
+                    project_root = get_project_root()
+                    annotation_file = os.path.join(project_root, 'client', 'config', 'annotation_result.yaml')
+
+                    if os.path.exists(annotation_file):
+                        with open(annotation_file, 'r', encoding='utf-8') as f:
+                            annotation_config = yaml.safe_load(f)
+
+                        if annotation_config and channel_id in annotation_config:
+                            channel_config = annotation_config[channel_id]
+                            video_width = channel_config.get('annotation_width', 1280)
+                            video_height = channel_config.get('annotation_height', 848)
+                except Exception as e:
+                    self.logger.debug(f"读取配置文件视频尺寸失败: {e}")
 
                 # 调用ChannelPanel的updateLiquidLines方法
                 panel.updateLiquidLines(

@@ -1340,6 +1340,8 @@ class LiquidDetectionEngine:
                 # 完整帧模式：内部裁剪ROI
                 frame = frame_or_roi_frames
                 h, w = frame.shape[:2]
+                video_width = w
+                video_height = h
                 
                 # 相机姿态检测（使用boxes信息计算扩展ROI）
                 camera_status_result = self._check_camera_position(frame, targets, channel_id)

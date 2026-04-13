@@ -212,11 +212,8 @@ class VideoRenderWidget(QtWidgets.QWidget):
             if self.video_width > 0 and self.video_height > 0:
                 scale_x = self.video_width / annotation_width
                 scale_y = self.video_height / annotation_height
-                print(f"[ROI加载] 标注分辨率: {annotation_width}x{annotation_height}")
-                print(f"[ROI加载] 当前视频分辨率: {self.video_width}x{self.video_height}")
-                print(f"[ROI加载] 缩放比例: scale_x={scale_x:.4f}, scale_y={scale_y:.4f}")
+                print(f"[ROI加载] 标注分辨率: {annotation_width}x{annotation_height}, 当前分辨率: {self.video_width}x{self.video_height}, 缩放: {scale_x:.3f}x{scale_y:.3f}")
             else:
-                # 如果还没有获取到视频分辨率，暂不缩放
                 scale_x = 1.0
                 scale_y = 1.0
                 print(f"[ROI加载] 视频分辨率未知，暂不缩放ROI")
@@ -240,8 +237,6 @@ class VideoRenderWidget(QtWidgets.QWidget):
                     bottom = int(bottom_orig * scale_y)
 
                     self.roi_boxes.append([left, top, right, bottom])
-                    print(f"[ROI加载] ROI[{i}] 原始: left={center_x - half_size}, right={center_x + half_size}, top={top_orig}, bottom={bottom_orig}")
-                    print(f"[ROI加载] ROI[{i}] 缩放后: left={left}, right={right}, top={top}, bottom={bottom}")
 
             self.update()
 
@@ -333,11 +328,6 @@ class VideoRenderWidget(QtWidgets.QWidget):
             scale_x = 1.0
             scale_y = 1.0
 
-        print(f"\n[ROI绘制] 视频原始尺寸: {self.video_width}x{self.video_height}")
-        print(f"[ROI绘制] Pixmap显示尺寸: {self._pixmap.width()}x{self._pixmap.height()}")
-        print(f"[ROI绘制] 绘制缩放比例: scale_x={scale_x:.4f}, scale_y={scale_y:.4f}")
-        print(f"[ROI绘制] 偏移量: offset_x={offset_x}, offset_y={offset_y}")
-
         # 设置ROI框样式：蓝色半透明矩形
         roi_color = QtGui.QColor(0, 255, 255, 100)  # 青色半透明
         roi_border_color = QtGui.QColor(0, 255, 255)  # 青色边框
@@ -347,8 +337,6 @@ class VideoRenderWidget(QtWidgets.QWidget):
             try:
                 left, top, right, bottom = box
 
-                print(f"[ROI绘制] ROI[{i}] 原始坐标: left={left}, top={top}, right={right}, bottom={bottom}")
-
                 # 应用缩放和偏移
                 scaled_left = int(left * scale_x) + offset_x
                 scaled_top = int(top * scale_y) + offset_y
@@ -357,9 +345,6 @@ class VideoRenderWidget(QtWidgets.QWidget):
 
                 width = scaled_right - scaled_left
                 height = scaled_bottom - scaled_top
-
-                print(f"[ROI绘制] ROI[{i}] 缩放后坐标: left={scaled_left}, top={scaled_top}, right={scaled_right}, bottom={scaled_bottom}")
-                print(f"[ROI绘制] ROI[{i}] 宽高: width={width}, height={height}")
 
                 # 绘制半透明填充
                 painter.fillRect(scaled_left, scaled_top, width, height, roi_color)
@@ -380,6 +365,61 @@ class VideoRenderWidget(QtWidgets.QWidget):
                 continue
 
     def _draw_liquid_lines(self, painter, offset_x, offset_y):
+        """绘制液位线
+
+        Args:
+            painter: QPainter对象
+            offset_x: 视频帧X偏移
+            offset_y: 视频帧Y偏移
+        """
+        if not self.liquid_positions or not self._pixmap:
+            return
+
+        # 计算缩放比例
+        if self.video_width > 0 and self.video_height > 0:
+            scale_x = self._pixmap.width() / self.video_width
+            scale_y = self._pixmap.height() / self.video_height
+        else:
+            scale_x = 1.0
+            scale_y = 1.0
+
+        # 设置液位线颜色（红色=新数据，黄色=旧数据）
+        line_color = QtGui.QColor(255, 0, 0) if self.is_new_data else QtGui.QColor(255, 255, 0)
+        text_color = QtGui.QColor(0, 255, 0)
+
+        # 设置画笔
+        pen = QtGui.QPen(line_color, 2)
+        painter.setPen(pen)
+
+        # 设置字体
+        font = QtGui.QFont("Arial", 10, QtGui.QFont.Bold)
+        painter.setFont(font)
+
+        # 遍历每个ROI的液位线数据
+        for area_idx, position_data in self.liquid_positions.items():
+            try:
+                left = position_data.get('left', 0)
+                right = position_data.get('right', 0)
+                y_absolute = position_data.get('y', position_data.get('y_absolute', 0))
+                height_mm = position_data.get('height_mm', 0)
+
+                # 应用缩放和偏移
+                scaled_left = int(left * scale_x) + offset_x
+                scaled_right = int(right * scale_x) + offset_x
+                scaled_y = int(y_absolute * scale_y) + offset_y
+
+                # 绘制红色液位线
+                painter.setPen(QtGui.QPen(line_color, 2))
+                painter.drawLine(scaled_left, scaled_y, scaled_right, scaled_y)
+
+                # 绘制绿色高度文字
+                height_mm_rounded = int(round(height_mm, 0))
+                text = f"{height_mm_rounded}mm"
+                painter.setPen(text_color)
+                painter.drawText(scaled_left + 5, scaled_y - 10, text)
+
+            except Exception as e:
+                continue
         """绘制液位线
 
         Args:
