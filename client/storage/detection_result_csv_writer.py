@@ -147,14 +147,21 @@ class DetectionResultCSVWriter:
         Args:
             channel_id: 通道ID
             heights: 液位高度列表 [h1, h2, h3, ...]
-            timestamp: 时间戳（可选，默认使用当前时间）
+            timestamp: 时间戳（可选，默认使用当前时间，支持秒或毫秒格式）
         """
         try:
             # 获取写入器
             file_handle, csv_writer = self._get_or_create_writer(channel_id)
 
-            # 使用提供的时间戳或当前时间
-            ts = timestamp if timestamp else time.time()
+            # 使用提供的时间戳或当前时间，并转换为13位毫秒格式
+            if timestamp:
+                # 如果时间戳小于10位数，说明是秒格式，需要转换为毫秒
+                if timestamp < 10000000000:
+                    ts = int(timestamp * 1000)
+                else:
+                    ts = int(timestamp)
+            else:
+                ts = int(time.time() * 1000)
 
             # 获取该通道的锁
             lock = self.locks.get(channel_id)
@@ -166,7 +173,7 @@ class DetectionResultCSVWriter:
                 for i, height in enumerate(heights):
                     if height is not None and height > 0:
                         row = [
-                            ts,  # 时间戳
+                            ts,  # 13位毫秒时间戳
                             round(height, 2)  # 液位高度
                         ]
 

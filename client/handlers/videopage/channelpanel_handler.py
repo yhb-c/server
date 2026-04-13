@@ -570,9 +570,14 @@ class ChannelPanelHandler:
             if channel_id not in self._channel_panels_map:
                 self._channel_panels_map[channel_id] = sender
         
-        # 临时方案：跳过配置文件检查，直接使用硬编码配置
-        channel_config = {'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'}
-        self.logger.debug(f"[DEBUG] 使用硬编码配置: {channel_config}")
+        # 从配置文件读取通道配置
+        channel_config = self._getChannelConfigFromFile(channel_id)
+        if not channel_config:
+            # 如果配置文件中没有，使用默认RTSP配置
+            channel_config = {'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'}
+            self.logger.debug(f"[DEBUG] 使用默认RTSP配置: {channel_config}")
+        else:
+            self.logger.debug(f"[DEBUG] 从配置文件读取配置: {channel_config}")
         
         # 读取并设置通道名称到面板（调用业务逻辑方法）
         # 从 channel_id (如 'channel1') 提取通道编号
@@ -1054,37 +1059,70 @@ class ChannelPanelHandler:
             return False
     
     def _connectChannelThread(self, channel_id, channel_config, hwnd=None):
-        """在后台线程中打开通道（直接连接RTSP相机）
-        
+        """在后台线程中打开通道（支持RTSP相机和本地视频文件）
+
         Args:
             channel_id: 通道ID
             channel_config: 通道配置
             hwnd: 预先获取的窗口句柄
         """
         try:
-            self.logger.debug(f"[通道连接] {channel_id} 开始连接RTSP相机")
-            
-            # 解析RTSP地址
-            rtsp_url = channel_config.get('address', '')
-            username, password, ip, port = self._parseRTSP(rtsp_url)
-            
-            self.logger.debug(f"[通道连接] RTSP解析结果: {ip}:{port}, 用户: {username}")
-            
+            self.logger.info(f"[通道连接-步骤1] {channel_id} 开始连接，配置: {channel_config}")
+
+            # 优先使用file_path（本地视频），如果为空则使用address（RTSP流）
+            file_path = channel_config.get('file_path', '').strip()
+            rtsp_url = channel_config.get('address', '').strip()
+
+            self.logger.info(f"[通道连接-步骤2] {channel_id} file_path={file_path}, address={rtsp_url}")
+
+            # 确定视频源
+            video_source = file_path if file_path else rtsp_url
+
+            if not video_source:
+                error_msg = "未配置视频源（file_path和address都为空）"
+                self.logger.error(f"[通道连接-错误] {channel_id} {error_msg}")
+                raise Exception(error_msg)
+
+            # 判断是本地文件还是RTSP流
+            is_local_file = not video_source.startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
+
+            self.logger.info(f"[通道连接-步骤3] {channel_id} 视频源: {video_source}, 是否本地文件: {is_local_file}")
+
+            # 如果是本地文件，检查文件是否存在
+            if is_local_file:
+                import os
+                if not os.path.exists(video_source):
+                    error_msg = f"本地视频文件不存在: {video_source}"
+                    self.logger.error(f"[通道连接-错误] {channel_id} {error_msg}")
+                    raise Exception(error_msg)
+                else:
+                    file_size = os.path.getsize(video_source) / (1024 * 1024)  # MB
+                    self.logger.info(f"[通道连接-步骤4] {channel_id} 本地视频文件存在，大小: {file_size:.2f}MB")
+
+            # 解析RTSP地址（仅用于RTSP流）
+            username, password, ip, port = self._parseRTSP(video_source)
+            self.logger.info(f"[通道连接-步骤5] {channel_id} 解析结果: username={username}, ip={ip}, port={port}")
+
             # 导入HKcapture
             import sys
             import os
             from pathlib import Path
-            
+
+            self.logger.info(f"[通道连接-步骤6] {channel_id} 准备导入HKcapture")
+
             # 添加HK_SDK路径
             current_dir = Path(__file__).parent
             hk_sdk_path = current_dir / "HK_SDK"
             sys.path.insert(0, str(hk_sdk_path))
-            
+
             from HKcapture import HKcapture
-            
+
+            self.logger.info(f"[通道连接-步骤7] {channel_id} HKcapture导入成功")
+
             # 创建HKcapture对象
+            self.logger.info(f"[通道连接-步骤8] {channel_id} 创建HKcapture对象，source={video_source}")
             cap = HKcapture(
-                source=rtsp_url,
+                source=video_source,
                 username=username,
                 password=password,
                 port=port,
@@ -1092,42 +1130,56 @@ class ChannelPanelHandler:
                 fps=25,
                 debug=True
             )
-            
+
+            self.logger.info(f"[通道连接-步骤9] {channel_id} HKcapture对象创建成功")
+
             # 设置HWND（如果有）
             if hwnd:
                 cap.set_hwnd(hwnd)
-                self.logger.debug(f"[通道连接] 设置HWND: {hwnd}")
-            
+                self.logger.info(f"[通道连接-步骤10] {channel_id} 设置HWND: {hwnd}")
+            else:
+                self.logger.info(f"[通道连接-步骤10] {channel_id} 未设置HWND（hwnd为None）")
+
             # 打开相机连接
+            self.logger.info(f"[通道连接-步骤11] {channel_id} 调用cap.open()")
             if not cap.open():
-                raise Exception("无法打开相机连接")
-            
-            self.logger.debug(f"[通道连接] {channel_id} 相机连接成功")
-            
+                error_msg = "cap.open()返回False，无法打开视频源"
+                self.logger.error(f"[通道连接-错误] {channel_id} {error_msg}")
+                raise Exception(error_msg)
+
+            self.logger.info(f"[通道连接-步骤12] {channel_id} cap.open()成功")
+
             # 开始捕获
+            self.logger.info(f"[通道连接-步骤13] {channel_id} 调用cap.start_capture()")
             if not cap.start_capture():
-                raise Exception("无法开始视频捕获")
-            
-            self.logger.debug(f"[通道连接] {channel_id} 视频捕获已启动")
-            
+                error_msg = "cap.start_capture()返回False，无法开始视频捕获"
+                self.logger.error(f"[通道连接-错误] {channel_id} {error_msg}")
+                raise Exception(error_msg)
+
+            self.logger.info(f"[通道连接-步骤14] {channel_id} cap.start_capture()成功")
+
             # 保存捕获对象
             self._channel_captures[channel_id] = cap
-            
+            self.logger.info(f"[通道连接-步骤15] {channel_id} 捕获对象已保存到_channel_captures")
+
             # 移除连接中标记
             self._channels_connecting.discard(channel_id)
-            
+            self.logger.info(f"[通道连接-步骤16] {channel_id} 移除连接中标记")
+
             # 启动视频显示
+            self.logger.info(f"[通道连接-步骤17] {channel_id} 调用_startVideoStream()")
             self._startVideoStream(channel_id, hwnd)
-            
+
             # 更新UI状态（在主线程中执行）
+            self.logger.info(f"[通道连接-步骤18] {channel_id} 更新UI状态")
             QtCore.QTimer.singleShot(0, lambda: self._updateChannelConnectedUI(channel_id))
-            
-            self.logger.debug(f"[通道连接] {channel_id} 连接完成")
-            
+
+            self.logger.info(f"[通道连接-完成] {channel_id} 连接完成")
+
         except Exception as e:
-            self.logger.debug(f"[通道连接] {channel_id} 连接失败: {e}")
+            self.logger.error(f"[通道连接-异常] {channel_id} 连接失败: {e}")
             import traceback
-            traceback.print_exc()
+            self.logger.error(traceback.format_exc())
             self._channels_connecting.discard(channel_id)
             QtCore.QTimer.singleShot(0, lambda: self._showConnectionError(channel_id, str(e)))
     

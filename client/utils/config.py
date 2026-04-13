@@ -217,7 +217,7 @@ class RemoteConfigManager:
         self._config_cache = {}
         
         if server_config_path is None:
-            self._server_config_path = "/home/lqj/liquid/server/database/config"
+            self._server_config_path = "/home/lqj/liquid/server/config"
         else:
             self._server_config_path = server_config_path
     
@@ -240,18 +240,31 @@ class RemoteConfigManager:
         """
         从服务端加载通道配置文件（从default_config.yaml）
 
+        优先直接读取本地文件，如果失败再尝试SSH
+
         Returns:
             dict: 通道配置数据
         """
         try:
+            # 优先尝试直接读取本地配置文件（适用于客户端和服务端在同一台机器的情况）
+            local_config_path = Path(self._server_config_path) / 'default_config.yaml'
+            if local_config_path.exists():
+                self.logger.info(f"直接读取本地配置文件: {local_config_path}")
+                with open(local_config_path, 'r', encoding='utf-8') as f:
+                    config_data = yaml.safe_load(f) or {}
+                    self.logger.info("成功从本地加载通道配置")
+                    self._config_cache['channel_config'] = config_data
+                    return config_data
+
+            # 如果本地文件不存在，尝试通过SSH读取
             ssh_manager = self._get_ssh_manager()
             if not ssh_manager:
-                self.logger.error("SSH连接不可用，无法读取远程配置")
+                self.logger.warning("本地配置文件不存在且SSH连接不可用，使用备用配置")
                 return self._get_fallback_channel_config()
 
             # 读取服务端的default_config.yaml文件
             remote_file_path = f"{self._server_config_path}/default_config.yaml"
-            self.logger.info(f"正在从服务端读取配置文件: {remote_file_path}")
+            self.logger.info(f"通过SSH读取服务端配置文件: {remote_file_path}")
 
             # 通过SSH读取远程文件内容
             result = ssh_manager.execute_remote_command(f"cat {remote_file_path}")
@@ -259,7 +272,7 @@ class RemoteConfigManager:
                 config_content = result['stdout']
                 config_data = yaml.safe_load(config_content)
 
-                self.logger.info("成功从服务端加载通道配置")
+                self.logger.info("成功通过SSH加载通道配置")
                 self._config_cache['channel_config'] = config_data
                 return config_data
             else:
@@ -267,41 +280,54 @@ class RemoteConfigManager:
                 return self._get_fallback_channel_config()
 
         except Exception as e:
-            self.logger.error(f"加载远程通道配置失败: {e}")
+            self.logger.error(f"加载通道配置失败: {e}")
             return self._get_fallback_channel_config()
     
     def load_default_config(self) -> Dict[str, Any]:
         """
         从服务端加载默认配置文件
-        
+
+        优先直接读取本地文件，如果失败再尝试SSH
+
         Returns:
             dict: 默认配置数据
         """
         try:
+            # 优先尝试直接读取本地配置文件
+            local_config_path = Path(self._server_config_path) / 'default_config.yaml'
+            if local_config_path.exists():
+                self.logger.info(f"直接读取本地配置文件: {local_config_path}")
+                with open(local_config_path, 'r', encoding='utf-8') as f:
+                    config_data = yaml.safe_load(f) or {}
+                    self.logger.info("成功从本地加载默认配置")
+                    self._config_cache['default_config'] = config_data
+                    return config_data
+
+            # 如果本地文件不存在，尝试通过SSH读取
             ssh_manager = self._get_ssh_manager()
             if not ssh_manager:
-                self.logger.error("SSH连接不可用，无法读取远程配置")
+                self.logger.warning("本地配置文件不存在且SSH连接不可用，使用备用配置")
                 return self._get_fallback_default_config()
-            
+
             # 读取服务端的默认配置文件
             remote_file_path = f"{self._server_config_path}/default_config.yaml"
-            self.logger.info(f"正在从服务端读取默认配置文件: {remote_file_path}")
-            
+            self.logger.info(f"通过SSH读取服务端默认配置文件: {remote_file_path}")
+
             # 通过SSH读取远程文件内容
             result = ssh_manager.execute_remote_command(f"cat {remote_file_path}")
             if result['success'] and result['stdout']:
                 config_content = result['stdout']
                 config_data = yaml.safe_load(config_content)
-                
-                self.logger.info("成功从服务端加载默认配置")
+
+                self.logger.info("成功通过SSH加载默认配置")
                 self._config_cache['default_config'] = config_data
                 return config_data
             else:
                 self.logger.error(f"读取远程默认配置文件失败: {result.get('stderr', '未知错误')}")
                 return self._get_fallback_default_config()
-                
+
         except Exception as e:
-            self.logger.error(f"加载远程默认配置失败: {e}")
+            self.logger.error(f"加载默认配置失败: {e}")
             return self._get_fallback_default_config()
     
     def save_channel_config(self, config_data: Dict[str, Any]) -> bool:
@@ -412,28 +438,76 @@ class RemoteConfigManager:
     
     def _get_fallback_channel_config(self) -> Dict[str, Any]:
         """获取备用通道配置（当远程配置不可用时）"""
+        # 尝试从本地配置文件读取
+        try:
+            import yaml
+            from pathlib import Path
+
+            # 尝试读取服务端配置文件
+            server_config_path = Path('/home/lqj/liquid/server/config/default_config.yaml')
+            if server_config_path.exists():
+                with open(server_config_path, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f) or {}
+                    self.logger.info("从本地服务端配置文件读取配置")
+                    return config
+
+            # 尝试读取客户端配置文件
+            client_config_path = Path('/home/lqj/liquid/client/config/default_config.yaml')
+            if client_config_path.exists():
+                with open(client_config_path, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f) or {}
+                    self.logger.info("从本地客户端配置文件读取配置")
+                    return config
+        except Exception as e:
+            self.logger.warning(f"读取本地配置文件失败: {e}")
+
+        # 如果本地文件也读取失败，返回硬编码的默认配置
         return {
             'channels': {
                 1: {
                     'channel_id': 1,
                     'name': '通道1',
-                    'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'
+                    'address': '',
+                    'file_path': '/home/lqj/liquid/testvideo/1.mp4'
                 },
                 2: {
                     'channel_id': 2,
                     'name': '通道2',
-                    'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'
+                    'address': '',
+                    'file_path': '/home/lqj/liquid/testvideo/2.mp4'
                 },
                 3: {
                     'channel_id': 3,
                     'name': '通道3',
-                    'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'
+                    'address': '',
+                    'file_path': '/home/lqj/liquid/testvideo/3.mp4'
                 },
                 4: {
                     'channel_id': 4,
                     'name': '通道4',
-                    'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'
+                    'address': '',
+                    'file_path': '/home/lqj/liquid/testvideo/4.mp4'
                 }
+            },
+            'channel1': {
+                'name': '通道1',
+                'address': '',
+                'file_path': '/home/lqj/liquid/testvideo/1.mp4'
+            },
+            'channel2': {
+                'name': '通道2',
+                'address': '',
+                'file_path': '/home/lqj/liquid/testvideo/2.mp4'
+            },
+            'channel3': {
+                'name': '通道3',
+                'address': '',
+                'file_path': '/home/lqj/liquid/testvideo/3.mp4'
+            },
+            'channel4': {
+                'name': '通道4',
+                'address': '',
+                'file_path': '/home/lqj/liquid/testvideo/4.mp4'
             }
         }
     
@@ -442,19 +516,23 @@ class RemoteConfigManager:
         return {
             'channel1': {
                 'name': '通道1',
-                'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'
+                'address': '',
+                'file_path': '/home/lqj/liquid/testvideo/1.mp4'
             },
             'channel2': {
                 'name': '通道2',
-                'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'
+                'address': '',
+                'file_path': '/home/lqj/liquid/testvideo/2.mp4'
             },
             'channel3': {
                 'name': '通道3',
-                'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'
+                'address': '',
+                'file_path': '/home/lqj/liquid/testvideo/3.mp4'
             },
             'channel4': {
                 'name': '通道4',
-                'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'
+                'address': '',
+                'file_path': '/home/lqj/liquid/testvideo/4.mp4'
             }
         }
     

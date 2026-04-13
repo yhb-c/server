@@ -13,6 +13,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from qtpy import QtCore, QtWebSockets, QtNetwork
+from qtpy import sip
 
 # 配置日志
 logger = logging.getLogger('WebSocketClient')
@@ -104,8 +105,19 @@ class WebSocketClient(QtCore.QObject):
 
         try:
             self.is_running = False
-            self.reconnect_timer.stop()
-            self.heartbeat_timer.stop()  # 停止心跳定时器
+
+            # 安全停止定时器
+            try:
+                if self.reconnect_timer and not sip.isdeleted(self.reconnect_timer):
+                    self.reconnect_timer.stop()
+            except Exception as e:
+                logger.warning(f"停止重连定时器时出错: {e}")
+
+            try:
+                if self.heartbeat_timer and not sip.isdeleted(self.heartbeat_timer):
+                    self.heartbeat_timer.stop()
+            except Exception as e:
+                logger.warning(f"停止心跳定时器时出错: {e}")
 
             if self.websocket:
                 self.websocket.close()
@@ -117,11 +129,19 @@ class WebSocketClient(QtCore.QObject):
     def _onConnected(self):
         """连接成功回调"""
         # print("[WebSocket] 连接成功")
-        self.reconnect_timer.stop()
+        try:
+            if self.reconnect_timer and not sip.isdeleted(self.reconnect_timer):
+                self.reconnect_timer.stop()
+        except Exception as e:
+            logger.warning(f"停止重连定时器时出错: {e}")
 
         # 启动心跳定时器
-        self.heartbeat_timer.start(self.heartbeat_interval)
-        # print(f"[WebSocket] 心跳定时器已启动，间隔: {self.heartbeat_interval}ms")
+        try:
+            if self.heartbeat_timer and not sip.isdeleted(self.heartbeat_timer):
+                self.heartbeat_timer.start(self.heartbeat_interval)
+                # print(f"[WebSocket] 心跳定时器已启动，间隔: {self.heartbeat_interval}ms")
+        except Exception as e:
+            logger.warning(f"启动心跳定时器时出错: {e}")
 
         self.connection_status.emit(True, "连接成功")
 
@@ -145,8 +165,12 @@ class WebSocketClient(QtCore.QObject):
         # 打印调用堆栈
         import traceback
 
-        # 停止心跳定时器
-        self.heartbeat_timer.stop()
+        # 停止心跳定时器 - 添加安全检查
+        try:
+            if self.heartbeat_timer and not sip.isdeleted(self.heartbeat_timer):
+                self.heartbeat_timer.stop()
+        except Exception as e:
+            logger.warning(f"停止心跳定时器时出错: {e}")
 
         self.connection_status.emit(False, "连接断开")
 

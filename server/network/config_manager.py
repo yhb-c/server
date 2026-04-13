@@ -166,6 +166,25 @@ class ConfigManager:
         except Exception as e:
             self.logger.error(f"读取通道配置失败: {e}")
             return None
+
+    def get_default_config(self) -> dict:
+        """
+        获取完整的default_config.yaml配置
+
+        Returns:
+            dict: 完整配置字典
+        """
+        config_path = self.config_dir / "default_config.yaml"
+        if not config_path.exists():
+            return {}
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f) or {}
+            return config
+        except Exception as e:
+            self.logger.error(f"读取default_config.yaml失败: {e}")
+            return {}
     
     def set_channel_config(self, channel_id: str, config: dict) -> bool:
         """
