@@ -875,7 +875,21 @@ class SystemWindow(
                     self.previewPanel.setTaskInfo("未分配任务")
 
                 self.previewPanel.setConnected(True)
-                self.previewPanel.setHwndRenderMode(False)
+                # HWND渲染模式：预览窗口也使用HWND直接渲染
+                self.previewPanel.setHwndRenderMode(True)
+
+                # 获取HKcapture对象并设置HWND到预览窗口
+                cap = self._channel_captures.get(channel_id)
+                if cap and hasattr(self.previewPanel, 'videoWidget'):
+                    preview_widget = self.previewPanel.videoWidget
+                    if preview_widget:
+                        try:
+                            preview_hwnd = int(preview_widget.winId())
+                            cap.set_hwnd(preview_hwnd)
+                            cap.start_render()
+                            self.logger.debug(f"[预览窗口] {channel_id} HWND渲染已启动，句柄: {preview_hwnd}")
+                        except Exception as e:
+                            self.logger.error(f"[预览窗口] {channel_id} HWND渲染启动失败: {e}")
 
                 # 获取capture_source的分辨率信息
                 thread_manager = self._channel_captures.get(channel_id)

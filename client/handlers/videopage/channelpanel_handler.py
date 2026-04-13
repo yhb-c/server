@@ -50,22 +50,30 @@ except ImportError:
 
 class VideoDisplaySignal(QtCore.QObject):
     """视频显示信号类，用于跨线程更新UI
-    
+
     这是一个独立的 QObject，用于在子线程和主线程之间传递信号。
     信号连接使用 QueuedConnection，确保槽函数在主线程中执行。
     """
     # 信号：(channel_id, overlay_data)
     update_display = QtCore.Signal(str, object)
-    
+    # 新增：启动HWND渲染信号
+    start_hwnd_render = QtCore.Signal(str)
+
     def __init__(self, handler, parent=None):
         super().__init__(parent)
         self._handler = handler
-    
+
     @QtCore.Slot(str, object)
     def on_update_display(self, channel_id, overlay_data):
         """槽函数：在主线程中更新UI"""
         if self._handler:
             self._handler._updateVideoDisplayUI(channel_id, overlay_data)
+
+    @QtCore.Slot(str)
+    def on_start_hwnd_render(self, channel_id):
+        """槽函数：在主线程中启动HWND渲染"""
+        if self._handler:
+            self._handler._startVideoStream(channel_id)
 
 
 class ChannelPanelHandler:
@@ -121,7 +129,12 @@ class ChannelPanelHandler:
         self._video_display_signal = VideoDisplaySignal(self, app)
         # 信号连接到自身的槽函数，使用 QueuedConnection 确保在主线程执行
         self._video_display_signal.update_display.connect(
-            self._video_display_signal.on_update_display, 
+            self._video_display_signal.on_update_display,
+            QtCore.Qt.QueuedConnection
+        )
+        # 连接HWND渲染启动信号
+        self._video_display_signal.start_hwnd_render.connect(
+            self._video_display_signal.on_start_hwnd_render,
             QtCore.Qt.QueuedConnection
         )
         self._liquid_line_locks = {}
@@ -1108,7 +1121,7 @@ class ChannelPanelHandler:
 
             from HKcapture import HKcapture
 
-            # 创建HKcapture对象（使用Qt渲染模式）
+            # 创建HKcapture对象（使用HWND渲染模式）
             cap = HKcapture(
                 source=rtsp_url,
                 username=username,
@@ -1116,10 +1129,11 @@ class ChannelPanelHandler:
                 port=port,
                 channel=1,
                 fps=25,
-                debug=False  # 关闭调试输出，减少性能开销
+                debug=False,  # 关闭调试输出，减少性能开销
+                decode_device='cpu'  # CPU软件解码
             )
 
-            self.logger.debug(f"[通道连接] 使用Qt渲染模式")
+            self.logger.debug(f"[通道连接] 使用HWND渲染模式")
 
             # 打开相机连接
             if not cap.open():
@@ -1127,27 +1141,20 @@ class ChannelPanelHandler:
 
             self.logger.debug(f"[通道连接] {channel_id} 相机连接成功")
 
-            # 开始捕获
-            if not cap.start_capture():
-                raise Exception("无法开始视频捕获")
-
-            self.logger.debug(f"[通道连接] {channel_id} 视频捕获已启动")
-
             # 保存捕获对象
             self._channel_captures[channel_id] = cap
 
             # 移除连接中标记
             self._channels_connecting.discard(channel_id)
 
-            # 启动视频显示（Qt渲染模式）
-            self._startVideoStream(channel_id)
-            self.logger.debug(f"[通道连接] {channel_id} 已启动Qt显示线程")
-            
+            # 使用信号在主线程中启动HWND渲染
+            self._video_display_signal.start_hwnd_render.emit(channel_id)
+
             # 更新UI状态（在主线程中执行）
             QtCore.QTimer.singleShot(0, lambda: self._updateChannelConnectedUI(channel_id))
-            
+
             self.logger.debug(f"[通道连接] {channel_id} 连接完成")
-            
+
         except Exception as e:
             self.logger.debug(f"[通道连接] {channel_id} 连接失败: {e}")
             import traceback
@@ -1317,15 +1324,14 @@ class ChannelPanelHandler:
             if hasattr(self, '_display_flags'):
                 self._display_flags[channel_id] = False
             
-            # 释放捕获对象
+            # 释放捕获对象（HWND渲染模式）
             if channel_id in self._channel_captures:
                 cap = self._channel_captures[channel_id]
-                if cap and hasattr(cap, 'stop_capture'):
-                    cap.stop_capture()
+                # HWND模式下，release()会自动停止渲染和释放资源
                 if cap and hasattr(cap, 'release'):
                     cap.release()
                 del self._channel_captures[channel_id]
-                self.logger.debug(f"[通道断开] {channel_id} 捕获对象已释放")
+                self.logger.debug(f"[通道断开] {channel_id} HWND渲染已停止，捕获对象已释放")
             
             # 清理帧缓冲
             if hasattr(self, '_frame_buffers') and channel_id in self._frame_buffers:
@@ -1665,12 +1671,12 @@ class ChannelPanelHandler:
             return False
 
     def _startVideoStream(self, channel_id):
-        """启动视频流显示（使用Qt渲染模式）
+        """启动视频流显示（使用HWND渲染模式）
 
         Args:
             channel_id: 通道ID
         """
-        self.logger.debug(f"[视频流] {channel_id} 开始启动视频显示（Qt渲染模式）")
+        self.logger.debug(f"[视频流] {channel_id} 开始启动视频显示（HWND渲染模式）")
 
         if channel_id not in self._channel_captures:
             self.logger.debug(f"[视频流] {channel_id} 不在 _channel_captures 中")
@@ -1679,8 +1685,63 @@ class ChannelPanelHandler:
         cap = self._channel_captures[channel_id]
         self.logger.debug(f"[视频流] 获取到 capture 对象: {cap}")
 
-        # 启动Qt显示线程
-        self._startQtVideoDisplay(channel_id)
+        # 获取通道面板的视频渲染控件
+        panel = self._channel_panels_map.get(channel_id)
+        if not panel:
+            self.logger.debug(f"[视频流] {channel_id} 找不到通道面板")
+            return
+
+        # 获取VideoRenderWidget的窗口句柄
+        video_widget = None
+        if hasattr(panel, 'videoWidget'):
+            video_widget = panel.videoWidget
+            self.logger.debug(f"[视频流] {channel_id} 通过videoWidget属性获取到控件: {video_widget}")
+        elif hasattr(panel, 'getVideoWidget'):
+            video_widget = panel.getVideoWidget()
+            self.logger.debug(f"[视频流] {channel_id} 通过getVideoWidget()方法获取到控件: {video_widget}")
+
+        if not video_widget:
+            self.logger.debug(f"[视频流] {channel_id} 找不到视频渲染控件")
+            return
+
+        # 确保控件已经显示并初始化
+        if not video_widget.isVisible():
+            self.logger.debug(f"[视频流] {channel_id} 视频控件未显示，等待显示...")
+            video_widget.show()
+            # 处理事件，确保窗口创建完成
+            QtWidgets.QApplication.processEvents()
+
+        # 获取HWND窗口句柄
+        try:
+            wid = video_widget.winId()
+            self.logger.debug(f"[视频流] {channel_id} winId()返回: {wid}, 类型: {type(wid)}")
+
+            if wid is None:
+                self.logger.debug(f"[视频流] {channel_id} winId()返回None，窗口可能未创建")
+                return
+
+            hwnd = int(wid)
+            self.logger.debug(f"[视频流] {channel_id} 获取到HWND: {hwnd}")
+        except Exception as e:
+            self.logger.debug(f"[视频流] {channel_id} 获取HWND失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return
+
+        # 设置HWND到HKcapture
+        cap.set_hwnd(hwnd)
+        self.logger.debug(f"[视频流] {channel_id} 已设置HWND到capture")
+
+        # 启动HWND渲染
+        if cap.start_render():
+            self.logger.debug(f"[视频流] {channel_id} HWND渲染已启动")
+        else:
+            self.logger.debug(f"[视频流] {channel_id} HWND渲染启动失败")
+            return
+
+        # 清空VideoRenderWidget的文本提示
+        if hasattr(video_widget, 'setText'):
+            video_widget.setText("")
     
     def _startFrameStorageThread(self, channel_id):
         """启动帧数据存储线程（供标注功能使用）
@@ -1795,86 +1856,7 @@ class ChannelPanelHandler:
                 time.sleep(0.1)
         
         self.logger.debug(f"[帧存储] {channel_id} 已停止")
-    
-    def _startQtVideoDisplay(self, channel_id):
-        """启动Qt视频显示线程（合并捕获和显示）
 
-        Args:
-            channel_id: 通道ID
-        """
-        try:
-            # 初始化显示标志
-            if not hasattr(self, '_display_flags'):
-                self._display_flags = {}
-
-            # 启动显示线程（不再需要frame_buffer，直接从cap读取并显示）
-            self._display_flags[channel_id] = True
-            display_thread = threading.Thread(
-                target=self._qtDisplayLoop,
-                args=(channel_id,),
-                daemon=True
-            )
-            display_thread.start()
-
-            self.logger.debug(f"[视频流] {channel_id} Qt显示线程已启动（合并捕获和显示）")
-
-        except Exception as e:
-            self.logger.debug(f"[视频流] {channel_id} Qt显示线程启动失败: {e}")
-    
-    def _qtDisplayLoop(self, channel_id):
-        """Qt视频显示循环线程（合并捕获和显示）
-
-        直接从HKcapture读取帧并显示，不再使用中间缓冲队列
-
-        Args:
-            channel_id: 通道ID
-        """
-        frame_count = 0
-        last_frame_time = time.time()
-
-        # 获取视频源的帧率
-        cap = self._channel_captures.get(channel_id)
-        if cap and hasattr(cap, 'get_fps'):
-            video_fps = cap.get_fps()
-        else:
-            video_fps = 25  # 默认25fps
-
-        frame_interval = 1.0 / video_fps if video_fps > 0 else 0.04
-
-        while self._display_flags.get(channel_id, False):
-            try:
-                loop_start = time.time()
-
-                cap = self._channel_captures.get(channel_id)
-                if not cap:
-                    time.sleep(0.1)
-                    continue
-
-                # 直接从HKcapture读取最新帧
-                ret, frame = cap.read()
-
-                if ret and frame is not None:
-                    frame_count += 1
-
-                    # 更新视频显示
-                    self._updateVideoDisplay(channel_id, frame)
-
-                    # 根据视频原始帧率控制播放速度
-                    elapsed = time.time() - loop_start
-                    sleep_time = frame_interval - elapsed
-                    if sleep_time > 0:
-                        time.sleep(sleep_time)
-                else:
-                    # 没有新帧，短暂等待
-                    time.sleep(0.01)
-
-            except Exception as e:
-                self.logger.debug(f"[Qt显示] {channel_id} 异常: {e}")
-                time.sleep(0.1)
-        
-                
-
-    
     def _handleDetectionmission_result(self, channel_id, mission_result):
         """处理检测结果回调"""
         try:
@@ -1898,24 +1880,20 @@ class ChannelPanelHandler:
         pass
     
     def _stopVideoStream(self, channel_id):
-        """停止视频流（使用新的线程管理器）"""
-        pass
-        
+        """停止视频流（HWND渲染模式）"""
         try:
-            # 使用新的线程管理器停止通道线程
-            success = self.thread_manager.stop_channel_threads(channel_id)
-            
-            if success:
-                pass
-            else:
-                pass
-                
+            # HWND模式下，只需要释放capture对象即可
+            if channel_id in self._channel_captures:
+                cap = self._channel_captures[channel_id]
+                if cap:
+                    cap.release()
+                    self.logger.debug(f"[视频流] {channel_id} HWND渲染已停止")
         except Exception as e:
-            pass
+            self.logger.debug(f"[视频流] {channel_id} 停止失败: {e}")
             import traceback
             traceback.print_exc()
-    
-    def _captureLoop(self, channel_id, cap):
+
+    def _updateVideoDisplay(self, channel_id, frame_or_data):
         """
         捕获线程循环 - 只负责从通道抓取画面到缓存池
         

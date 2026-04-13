@@ -176,7 +176,12 @@ class WebSocketClient(QtCore.QObject):
 
         # 如果还在运行状态，启动重连
         if self.is_running:
-            self.reconnect_timer.start(self.reconnect_interval)
+            try:
+                # 检查reconnect_timer是否有效
+                if self.reconnect_timer and not sip.isdeleted(self.reconnect_timer):
+                    self.reconnect_timer.start(self.reconnect_interval)
+            except Exception as e:
+                logger.warning(f"启动重连定时器时出错: {e}")
         else:
             pass
 
