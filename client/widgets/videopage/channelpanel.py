@@ -48,9 +48,6 @@ class ButtonOverlay(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super(ButtonOverlay, self).__init__(parent)
-        import traceback
-        print(f"[ButtonOverlay] __init__, parent={parent}, id={id(self)}")
-        print(f"[ButtonOverlay] 调用栈:\n{''.join(traceback.format_stack()[-5:])}")
         self._initUI()
 
     def _initUI(self):
@@ -119,7 +116,6 @@ class ButtonOverlay(QtWidgets.QWidget):
             parent_height = self.parent().height()
             parent_width = self.parent().width()
             y_pos = parent_height - 45
-            print(f"[ButtonOverlay.{id(self)}] resizeEvent: parent_size=({parent_width}x{parent_height}), geometry=(0, {y_pos}, {parent_width}, 45)")
             self.setGeometry(0, y_pos, parent_width, 45)
 
 
@@ -137,9 +133,6 @@ class InfoOverlay(QtWidgets.QWidget):
 
     def __init__(self, channel_id="", parent=None):
         super(InfoOverlay, self).__init__(parent)
-        import traceback
-        print(f"[InfoOverlay] __init__, channel_id={channel_id}, parent={parent}, id={id(self)}")
-        print(f"[InfoOverlay] 调用栈:\n{''.join(traceback.format_stack()[-5:])}")
         self.channel_id = channel_id
 
         # 不设置为顶层窗口，作为普通子控件
@@ -211,25 +204,20 @@ class InfoOverlay(QtWidgets.QWidget):
     
     def set_target(self, widget):
         """设置要跟随的视频控件"""
-        print(f"[InfoOverlay.{id(self)}] set_target called, widget={widget}")
         self.target_widget = widget
-        # 不再调用 update_position，让 resizeEvent 自动处理
     
     def update_position(self):
         """更新位置 - 固定在父控件顶部"""
-        print(f"[InfoOverlay.{id(self)}] update_position called")
         if self.parent():
             parent_width = self.parent().width()
             self.setGeometry(0, 0, parent_width, 28)
             self.raise_()
-            self.show()
 
     def resizeEvent(self, event):
         """窗口大小改变时自动调整位置"""
         super(InfoOverlay, self).resizeEvent(event)
         if self.parent():
             parent_width = self.parent().width()
-            print(f"[InfoOverlay.{id(self)}] resizeEvent: parent_size=({parent_width}x{self.parent().height()}), geometry=(0, 0, {parent_width}, 28)")
             self.setGeometry(0, 0, parent_width, 28)
 
     def _is_widget_in_viewport(self, widget):
@@ -431,9 +419,7 @@ class ChannelPanel(QtWidgets.QWidget):
 
     def _ensureButtonOverlay(self):
         """确保 ButtonOverlay 已创建"""
-        print(f"[ChannelPanel.{self._title}] _ensureButtonOverlay called, _buttonOverlay={self._buttonOverlay}")
         if self._buttonOverlay is None:
-            print(f"[ChannelPanel.{self._title}] 创建 ButtonOverlay")
             self._buttonOverlay = ButtonOverlay(self.videoWidget)
             # 兼容性：保留按钮引用
             self.btnToggleConnect = self._buttonOverlay.btnToggleConnect
@@ -443,24 +429,16 @@ class ChannelPanel(QtWidgets.QWidget):
             # 初始化位置
             self._buttonOverlay.setGeometry(0, self.videoWidget.height() - 45, self.videoWidget.width(), 45)
             self._buttonOverlay.show()
-            print(f"[ChannelPanel.{self._title}] ButtonOverlay 创建完成, id={id(self._buttonOverlay)}")
-        else:
-            print(f"[ChannelPanel.{self._title}] ButtonOverlay 已存在, id={id(self._buttonOverlay)}")
 
     def _ensureInfoOverlay(self):
         """确保 InfoOverlay 已创建"""
-        print(f"[ChannelPanel.{self._title}] _ensureInfoOverlay called, _infoOverlay={self._infoOverlay}")
         if self._infoOverlay is None:
-            print(f"[ChannelPanel.{self._title}] 创建 InfoOverlay")
             # 修改：将 InfoOverlay 的父控件设置为 videoWidget，而不是 self
             self._infoOverlay = InfoOverlay(self._title, self.videoWidget)
             self._infoOverlay.set_target(self.videoWidget)
             # 初始化位置
             self._infoOverlay.setGeometry(0, 0, self.videoWidget.width(), 28)
             self._infoOverlay.show()
-            print(f"[ChannelPanel.{self._title}] InfoOverlay 创建完成, id={id(self._infoOverlay)}")
-        else:
-            print(f"[ChannelPanel.{self._title}] InfoOverlay 已存在, id={id(self._infoOverlay)}")
     
     def getVideoHwnd(self):
         """获取视频显示区域的窗口句柄"""
@@ -470,7 +448,6 @@ class ChannelPanel(QtWidgets.QWidget):
     
     def setHwndRenderMode(self, enabled=True):
         """设置HWND直接渲染模式"""
-        print(f"[ChannelPanel.{self._title}] setHwndRenderMode called, enabled={enabled}")
         self._hwnd_render_mode = enabled
         if enabled:
             self._overlayLabel.hide()
@@ -491,7 +468,6 @@ class ChannelPanel(QtWidgets.QWidget):
     
     def showOverlay(self):
         """显示叠加层"""
-        print(f"[ChannelPanel.{self._title}] showOverlay called")
         if self._hwnd_render_mode:
             self._ensureInfoOverlay()
             self._infoOverlay.show()
