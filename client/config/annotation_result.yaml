@@ -1,15 +1,37 @@
 channel1:
+  boxes:
+  - - 650
+    - 469
+    - 864
+  fixed_bottoms:
+  - 640
+  fixed_tops:
+  - 185
+  init_levels:
+  - - 634
+    - 637
+  fixed_init_levels:
+  - 0.13
+  annotation_count: 1
+  areas:
+    area_1:
+      name: 通道1_区域1
+      height: 20mm
+      state: 默认
+      init_status: 0
+  last_updated: '2026-04-13 19:07:42'
+channel10:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道1_区域1
+      name: 通道10_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道1_区域2
+      name: 通道10_区域2
       state: 默认
   boxes:
   - &id001
@@ -32,18 +54,18 @@ channel1:
     - 824
   - *id002
   last_updated: '2026-03-25 00:00:00'
-channel10:
+channel11:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道10_区域1
+      name: 通道11_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道10_区域2
+      name: 通道11_区域2
       state: 默认
   boxes:
   - &id003
@@ -66,18 +88,18 @@ channel10:
     - 824
   - *id004
   last_updated: '2026-03-25 00:00:00'
-channel11:
+channel12:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道11_区域1
+      name: 通道12_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道11_区域2
+      name: 通道12_区域2
       state: 默认
   boxes:
   - &id005
@@ -100,18 +122,18 @@ channel11:
     - 824
   - *id006
   last_updated: '2026-03-25 00:00:00'
-channel12:
+channel13:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道12_区域1
+      name: 通道13_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道12_区域2
+      name: 通道13_区域2
       state: 默认
   boxes:
   - &id007
@@ -134,18 +156,18 @@ channel12:
     - 824
   - *id008
   last_updated: '2026-03-25 00:00:00'
-channel13:
+channel14:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道13_区域1
+      name: 通道14_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道13_区域2
+      name: 通道14_区域2
       state: 默认
   boxes:
   - &id009
@@ -168,18 +190,18 @@ channel13:
     - 824
   - *id010
   last_updated: '2026-03-25 00:00:00'
-channel14:
+channel15:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道14_区域1
+      name: 通道15_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道14_区域2
+      name: 通道15_区域2
       state: 默认
   boxes:
   - &id011
@@ -202,18 +224,18 @@ channel14:
     - 824
   - *id012
   last_updated: '2026-03-25 00:00:00'
-channel15:
+channel16:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道15_区域1
+      name: 通道16_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道15_区域2
+      name: 通道16_区域2
       state: 默认
   boxes:
   - &id013
@@ -236,18 +258,18 @@ channel15:
     - 824
   - *id014
   last_updated: '2026-03-25 00:00:00'
-channel16:
+channel2:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道16_区域1
+      name: 通道2_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道16_区域2
+      name: 通道2_区域2
       state: 默认
   boxes:
   - &id015
@@ -270,18 +292,18 @@ channel16:
     - 824
   - *id016
   last_updated: '2026-03-25 00:00:00'
-channel2:
+channel3:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道2_区域1
+      name: 通道3_区域2
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道2_区域2
+      name: 通道3_区域2
       state: 默认
   boxes:
   - &id017
@@ -304,18 +326,18 @@ channel2:
     - 824
   - *id018
   last_updated: '2026-03-25 00:00:00'
-channel3:
+channel4:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道3_区域2
+      name: 通道4_区域2
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道3_区域2
+      name: 通道4_区域2
       state: 默认
   boxes:
   - &id019
@@ -338,18 +360,18 @@ channel3:
     - 824
   - *id020
   last_updated: '2026-03-25 00:00:00'
-channel4:
+channel5:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道4_区域2
+      name: 通道5_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道4_区域2
+      name: 通道5_区域2
       state: 默认
   boxes:
   - &id021
@@ -372,18 +394,18 @@ channel4:
     - 824
   - *id022
   last_updated: '2026-03-25 00:00:00'
-channel5:
+channel6:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道5_区域1
+      name: 通道6_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道5_区域2
+      name: 通道6_区域2
       state: 默认
   boxes:
   - &id023
@@ -406,18 +428,18 @@ channel5:
     - 824
   - *id024
   last_updated: '2026-03-25 00:00:00'
-channel6:
+channel7:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道6_区域1
+      name: 通道7_区域2
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道6_区域2
+      name: 通道7_区域2
       state: 默认
   boxes:
   - &id025
@@ -440,18 +462,18 @@ channel6:
     - 824
   - *id026
   last_updated: '2026-03-25 00:00:00'
-channel7:
+channel8:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道7_区域2
+      name: 通道8_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道7_区域2
+      name: 通道8_区域2
       state: 默认
   boxes:
   - &id027
@@ -474,18 +496,18 @@ channel7:
     - 824
   - *id028
   last_updated: '2026-03-25 00:00:00'
-channel8:
+channel9:
   annotation_count: 2
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道8_区域1
+      name: 通道9_区域1
       state: 默认
     area_2:
       height: 20mm
       init_status: 0
-      name: 通道8_区域2
+      name: 通道9_区域2
       state: 默认
   boxes:
   - &id029
@@ -507,38 +529,4 @@ channel8:
     - 640
     - 824
   - *id030
-  last_updated: '2026-03-25 00:00:00'
-channel9:
-  annotation_count: 2
-  areas:
-    area_1:
-      height: 20mm
-      init_status: 0
-      name: 通道9_区域1
-      state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道9_区域2
-      state: 默认
-  boxes:
-  - &id031
-    - 640
-    - 424
-    - 1280
-  - *id031
-  fixed_bottoms:
-  - 824
-  - 824
-  fixed_init_levels:
-  - 0.0
-  - 0.0
-  fixed_tops:
-  - 24
-  - 24
-  init_levels:
-  - &id032
-    - 640
-    - 824
-  - *id032
   last_updated: '2026-03-25 00:00:00'

@@ -75,11 +75,8 @@ class AnnotationManager(QtCore.QObject):
             bool: 是否成功启动标注
         """
         try:
-            print(f"[标注管理器] 开始为通道 {channel_id} 启动标注流程")
-
             # 防重入保护：如果已经有标注界面在运行，先关闭它
             if self.annotation_widget is not None:
-                print(f"[标注管理器] 检测到已有标注界面在运行，先关闭旧界面")
                 try:
                     self.annotation_widget.close()
                     self.annotation_widget = None
@@ -90,34 +87,28 @@ class AnnotationManager(QtCore.QObject):
             frame = self._get_latest_frame(channel_id)
             if frame is None:
                 error_msg = f"无法获取通道 {channel_id} 的画面帧"
-                print(f"[标注管理器] 错误: {error_msg}")
                 self.annotationFailed.emit(channel_id, error_msg)
                 return False
-            
-            print(f"[标注管理器] 成功获取画面帧，尺寸: {frame.shape}")
-            
+
             # 2. 保存当前状态
             self.current_channel_id = channel_id
             self.current_frame = frame.copy()
-            
+
             # 3. 加载历史标注数据（如果有）
             history_data = self._load_history_annotation(channel_id)
-            
+
             # 4. 启动标注界面
             success = self._show_annotation_widget(frame, history_data)
-            
+
             if success:
-                print(f"[标注管理器] 标注界面已启动")
                 return True
             else:
                 error_msg = "标注界面启动失败"
-                print(f"[标注管理器] 错误: {error_msg}")
                 self.annotationFailed.emit(channel_id, error_msg)
                 return False
-                
+
         except Exception as e:
             error_msg = f"标注流程启动异常: {str(e)}"
-            print(f"[标注管理器] 异常: {error_msg}")
             import traceback
             traceback.print_exc()
             self.annotationFailed.emit(channel_id, error_msg)
@@ -248,7 +239,7 @@ class AnnotationManager(QtCore.QObject):
             
             # 从本地配置文件加载
             project_root = get_project_root()
-            annotation_file = os.path.join(project_root, 'database', 'config', 'annotation_result.yaml')
+            annotation_file = os.path.join(project_root, 'client', 'config', 'annotation_result.yaml')
             
             if os.path.exists(annotation_file):
                 with open(annotation_file, 'r', encoding='utf-8') as f:
@@ -728,7 +719,7 @@ class AnnotationManager(QtCore.QObject):
             print(f"[标注管理器] 保存标注结果到本地")
             
             project_root = get_project_root()
-            config_dir = os.path.join(project_root, 'database', 'config')
+            config_dir = os.path.join(project_root, 'client', 'config')
             annotation_file = os.path.join(config_dir, 'annotation_result.yaml')
             
             # 确保目录存在
@@ -1024,7 +1015,7 @@ class AnnotationManager(QtCore.QObject):
             
             # 获取项目根目录
             project_root = get_project_root()
-            config_path = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
+            config_path = os.path.join(project_root, 'client', 'config', 'default_config.yaml')
             
             if not os.path.exists(config_path):
                 print(f"[标注管理器] 配置文件不存在: {config_path}")

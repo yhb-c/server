@@ -581,7 +581,7 @@ class ChannelPanelHandler:
             # 修正路径：从client/handlers/videopage向上3级到项目根目录
             current_file = os.path.abspath(__file__)
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
-            config_path = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
+            config_path = os.path.join(project_root, 'client', 'config', 'default_config.yaml')
 
             print(f"[调试] 当前文件: {current_file}")
             print(f"[调试] 项目根目录: {project_root}")
@@ -2573,7 +2573,7 @@ class ChannelPanelHandler:
             
             # 获取配置文件路径
             project_root = get_project_root()
-            config_path = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
+            config_path = os.path.join(project_root, 'client', 'config', 'default_config.yaml')
             
             if not os.path.exists(config_path):
                 return

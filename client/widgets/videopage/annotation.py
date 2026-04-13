@@ -137,21 +137,11 @@ class AnnotationWidget(QtWidgets.QWidget):
     
     def _applyFullScreen(self):
         """应用全屏模式（延迟调用，确保控件已初始化）"""
-        with open('/tmp/annotation_focus_debug.log', 'a') as f:
-            f.write("[焦点调试] _applyFullScreen 开始\n")
         self.showFullScreen()
-        with open('/tmp/annotation_focus_debug.log', 'a') as f:
-            f.write(f"[焦点调试] showFullScreen完成，窗口是否激活: {self.isActiveWindow()}\n")
         self.setFocus()
-        with open('/tmp/annotation_focus_debug.log', 'a') as f:
-            f.write(f"[焦点调试] setFocus完成，窗口是否有焦点: {self.hasFocus()}\n")
         self.activateWindow()
-        with open('/tmp/annotation_focus_debug.log', 'a') as f:
-            f.write(f"[焦点调试] activateWindow完成，窗口是否激活: {self.isActiveWindow()}\n")
         if self.current_frame is not None:
             self._updateDisplay()
-        with open('/tmp/annotation_focus_debug.log', 'a') as f:
-            f.write("[焦点调试] _applyFullScreen 完成\n")
 
     def resizeEvent(self, event):
         """窗口大小变化时重新调整视图"""
@@ -591,16 +581,10 @@ class AnnotationWidget(QtWidgets.QWidget):
 
     def _onMousePress(self, event):
         """鼠标按下事件"""
-        with open('/tmp/annotation_focus_debug.log', 'a') as f:
-            f.write(f"[焦点调试] _onMousePress 触发，按钮: {event.button()}, 窗口是否有焦点: {self.hasFocus()}\n")
         if self.annotation_engine is None or self.current_frame is None:
-            with open('/tmp/annotation_focus_debug.log', 'a') as f:
-                f.write(f"[焦点调试] _onMousePress - annotation_engine为None: {self.annotation_engine is None}, current_frame为None: {self.current_frame is None}\n")
             return
 
         image_x, image_y = self._labelToImageCoords(event.x(), event.y())
-        with open('/tmp/annotation_focus_debug.log', 'a') as f:
-            f.write(f"[焦点调试] _onMousePress - 图像坐标: ({image_x}, {image_y})\n")
         
         if event.button() == Qt.RightButton:
             self._showContextMenu(event.globalPos(), image_x, image_y)
@@ -1131,8 +1115,6 @@ class AnnotationWidget(QtWidgets.QWidget):
     
     def keyPressEvent(self, event):
         """键盘事件处理"""
-        with open('/tmp/annotation_focus_debug.log', 'a') as f:
-            f.write(f"[焦点调试] keyPressEvent 触发，按键: {event.key()}, 窗口是否有焦点: {self.hasFocus()}\n")
         if event.key() == Qt.Key_Escape and self.edit_widget is not None:
             self._cancelEdit()
             return
