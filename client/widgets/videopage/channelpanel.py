@@ -7,6 +7,8 @@
 
 import logging
 import numpy as np
+import os
+import yaml
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
@@ -135,11 +137,21 @@ class VideoRenderWidget(QtWidgets.QWidget):
         self.video_width = 0
         self.video_height = 0
 
+        # ROI数据
+        self.roi_boxes = []
+        self.show_roi = True
+
         # 信息显示数据
         self.channel_name = ""
         self.task_name = "未分配任务"
         self.fps = 0.0
         self.resolution = "0x0"
+
+        # ROI配置文件路径
+        self.roi_config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+            'server', 'config', 'annotation_result.yaml'
+        )
 
     def setPixmap(self, pixmap):
         """设置要显示的pixmap"""
@@ -170,6 +182,49 @@ class VideoRenderWidget(QtWidgets.QWidget):
         self.liquid_positions = {}
         self.update()
 
+    def load_roi_config(self, channel_id):
+        """加载ROI配置
+
+        Args:
+            channel_id: 通道ID，如 "channel1"
+        """
+        try:
+            if not os.path.exists(self.roi_config_path):
+                return
+
+            with open(self.roi_config_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+
+            if not config or channel_id not in config:
+                self.roi_boxes = []
+                return
+
+            channel_config = config[channel_id]
+            boxes = channel_config.get('boxes', [])
+            fixed_tops = channel_config.get('fixed_tops', [])
+            fixed_bottoms = channel_config.get('fixed_bottoms', [])
+
+            # 构建ROI框列表 [left, top, right, bottom]
+            self.roi_boxes = []
+            for i, box in enumerate(boxes):
+                if len(box) >= 3:
+                    left = box[0]
+                    right = box[2]
+                    top = fixed_tops[i] if i < len(fixed_tops) else 0
+                    bottom = fixed_bottoms[i] if i < len(fixed_bottoms) else 0
+                    self.roi_boxes.append([left, top, right, bottom])
+
+            self.update()
+
+        except Exception as e:
+            print(f"加载ROI配置失败: {e}")
+            self.roi_boxes = []
+
+    def set_show_roi(self, show):
+        """设置是否显示ROI"""
+        self.show_roi = show
+        self.update()
+
     def update_info(self, channel_name=None, task_name=None, fps=None, resolution=None):
         """更新显示信息"""
         if channel_name is not None:
@@ -191,7 +246,7 @@ class VideoRenderWidget(QtWidgets.QWidget):
         self.update()
 
     def paintEvent(self, event):
-        """绘制事件 - 绘制视频帧、液位线和信息栏"""
+        """绘制事件 - 绘制视频帧、ROI、液位线和信息栏"""
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
 
@@ -204,12 +259,70 @@ class VideoRenderWidget(QtWidgets.QWidget):
             # 绘制pixmap
             painter.drawPixmap(x, y, self._pixmap)
 
-            # 2. 绘制液位线（在视频帧上方）
+            # 2. 绘制ROI区域（在视频帧上方）
+            if self.show_roi and self.roi_boxes:
+                self._draw_roi_boxes(painter, x, y)
+
+            # 3. 绘制液位线（在ROI上方）
             if self.liquid_positions:
                 self._draw_liquid_lines(painter, x, y)
 
-            # 3. 绘制信息栏（在最上方）
+            # 4. 绘制信息栏（在最上方）
             self._draw_info_bar(painter)
+
+    def _draw_roi_boxes(self, painter, offset_x, offset_y):
+        """绘制ROI区域框
+
+        Args:
+            painter: QPainter对象
+            offset_x: 视频帧X偏移
+            offset_y: 视频帧Y偏移
+        """
+        if not self.roi_boxes or not self._pixmap:
+            return
+
+        # 计算缩放比例
+        if self.video_width > 0 and self.video_height > 0:
+            scale_x = self._pixmap.width() / self.video_width
+            scale_y = self._pixmap.height() / self.video_height
+        else:
+            scale_x = 1.0
+            scale_y = 1.0
+
+        # 设置ROI框样式：蓝色半透明矩形
+        roi_color = QtGui.QColor(0, 255, 255, 100)  # 青色半透明
+        roi_border_color = QtGui.QColor(0, 255, 255)  # 青色边框
+
+        # 绘制每个ROI框
+        for i, box in enumerate(self.roi_boxes):
+            try:
+                left, top, right, bottom = box
+
+                # 应用缩放和偏移
+                scaled_left = int(left * scale_x) + offset_x
+                scaled_top = int(top * scale_y) + offset_y
+                scaled_right = int(right * scale_x) + offset_x
+                scaled_bottom = int(bottom * scale_y) + offset_y
+
+                width = scaled_right - scaled_left
+                height = scaled_bottom - scaled_top
+
+                # 绘制半透明填充
+                painter.fillRect(scaled_left, scaled_top, width, height, roi_color)
+
+                # 绘制边框
+                painter.setPen(QtGui.QPen(roi_border_color, 2))
+                painter.drawRect(scaled_left, scaled_top, width, height)
+
+                # 绘制ROI标签
+                label = f"ROI {i+1}"
+                painter.setPen(roi_border_color)
+                font = QtGui.QFont("Arial", 10, QtGui.QFont.Bold)
+                painter.setFont(font)
+                painter.drawText(scaled_left + 5, scaled_top + 15, label)
+
+            except Exception as e:
+                continue
 
     def _draw_liquid_lines(self, painter, offset_x, offset_y):
         """绘制液位线
@@ -436,6 +549,22 @@ class ChannelPanel(QtWidgets.QWidget):
     def clearLiquidLines(self):
         """清空液位线数据"""
         self.videoWidget.clear_liquid_lines()
+
+    def loadROIConfig(self, channel_id):
+        """加载ROI配置
+
+        Args:
+            channel_id: 通道ID，如 "channel1"
+        """
+        self.videoWidget.load_roi_config(channel_id)
+
+    def setShowROI(self, show):
+        """设置是否显示ROI
+
+        Args:
+            show: True显示，False隐藏
+        """
+        self.videoWidget.set_show_roi(show)
 
     def showOverlay(self):
         """显示叠加层（兼容性方法）"""

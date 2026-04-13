@@ -57,25 +57,35 @@ class AnnotationManager(QtCore.QObject):
         super().__init__(parent)
         self.main_window = main_window
         self.remote_config_manager = RemoteConfigManager() if RemoteConfigManager else None
-        
+
         # 当前标注状态
         self.current_channel_id = None
         self.current_frame = None
         self.annotation_widget = None
+        self._hidden_general_set_dialog = None  # 保存被隐藏的GeneralSetDialog引用
         
     def start_annotation(self, channel_id):
         """
         开始标注流程
-        
+
         Args:
             channel_id: 通道ID（如 'channel1'）
-            
+
         Returns:
             bool: 是否成功启动标注
         """
         try:
             print(f"[标注管理器] 开始为通道 {channel_id} 启动标注流程")
-            
+
+            # 防重入保护：如果已经有标注界面在运行，先关闭它
+            if self.annotation_widget is not None:
+                print(f"[标注管理器] 检测到已有标注界面在运行，先关闭旧界面")
+                try:
+                    self.annotation_widget.close()
+                    self.annotation_widget = None
+                except:
+                    pass
+
             # 1. 获取最新帧
             frame = self._get_latest_frame(channel_id)
             if frame is None:
@@ -418,27 +428,116 @@ class AnnotationManager(QtCore.QObject):
             
             # 显示界面
             print(f"[标注管理器] 显示标注界面...")
+            print(f"[标注管理器] ========== 窗口显示调试信息 ==========")
             try:
                 if hasattr(self.annotation_widget, 'show'):
+                    # 检查是否有其他模态窗口
+                    app = QtWidgets.QApplication.instance()
+                    if app:
+                        active_modal = app.activeModalWidget()
+                        active_popup = app.activePopupWidget()
+                        active_window = app.activeWindow()
+                        print(f"[标注管理器] 当前活动模态窗口: {active_modal}")
+                        print(f"[标注管理器] 当前活动弹出窗口: {active_popup}")
+                        print(f"[标注管理器] 当前活动窗口: {active_window}")
+
+                        # 获取所有顶层窗口
+                        top_level_widgets = app.topLevelWidgets()
+                        print(f"[标注管理器] 顶层窗口数量: {len(top_level_widgets)}")
+                        visible_count = 0
+                        for i, widget in enumerate(top_level_widgets):
+                            if widget.isVisible():
+                                visible_count += 1
+                                is_modal = widget.isModal() if hasattr(widget, 'isModal') else 'N/A'
+                                print(f"[标注管理器]   窗口{i}: {type(widget).__name__}, 标题: {widget.windowTitle()}, 可见: {widget.isVisible()}, 模态: {is_modal}")
+
+                        print(f"[标注管理器] 可见窗口总数: {visible_count}")
+
+                        # 🔥 关键修复：临时隐藏GeneralSetDialog，让标注窗口获得焦点
+                        general_set_dialog = None
+                        for widget in top_level_widgets:
+                            if type(widget).__name__ == 'GeneralSetDialog' and widget.isVisible():
+                                general_set_dialog = widget
+                                print(f"[标注管理器] 找到GeneralSetDialog，临时隐藏它")
+                                widget.hide()
+                                QtWidgets.QApplication.processEvents()
+                                break
+
+                    print(f"[标注管理器] 调用 show() 方法...")
                     self.annotation_widget.show()
-                    print(f"  - show()调用成功")
-                    
+                    print(f"[标注管理器] show() 调用完成")
+
+                    # 强制处理事件，确保窗口显示
+                    QtWidgets.QApplication.processEvents()
+                    print(f"[标注管理器] processEvents() 完成")
+
                     # 检查窗口是否真的显示了
                     if hasattr(self.annotation_widget, 'isVisible'):
                         is_visible = self.annotation_widget.isVisible()
-                        print(f"  - 窗口可见性: {is_visible}")
-                    
+                        print(f"[标注管理器] 窗口可见性: {is_visible}")
+
                     if hasattr(self.annotation_widget, 'windowTitle'):
                         title = self.annotation_widget.windowTitle()
-                        print(f"  - 窗口标题: {title}")
-                    
+                        print(f"[标注管理器] 窗口标题: {title}")
+
+                    # 检查窗口状态
+                    if hasattr(self.annotation_widget, 'windowState'):
+                        state = self.annotation_widget.windowState()
+                        print(f"[标注管理器] 窗口状态: {state}")
+
+                    # 检查窗口大小和位置
+                    if hasattr(self.annotation_widget, 'geometry'):
+                        geom = self.annotation_widget.geometry()
+                        print(f"[标注管理器] 窗口位置: x={geom.x()}, y={geom.y()}, w={geom.width()}, h={geom.height()}")
+
+                    # 检查窗口焦点
+                    if hasattr(self.annotation_widget, 'hasFocus'):
+                        has_focus = self.annotation_widget.hasFocus()
+                        print(f"[标注管理器] 窗口是否有焦点: {has_focus}")
+
+                    if hasattr(self.annotation_widget, 'isActiveWindow'):
+                        is_active = self.annotation_widget.isActiveWindow()
+                        print(f"[标注管理器] 窗口是否激活: {is_active}")
+
+                    # 尝试激活窗口
+                    if hasattr(self.annotation_widget, 'activateWindow'):
+                        print(f"[标注管理器] 调用 activateWindow()...")
+                        self.annotation_widget.activateWindow()
+                        QtWidgets.QApplication.processEvents()
+
+                    # 尝试将窗口置顶
+                    if hasattr(self.annotation_widget, 'raise_'):
+                        print(f"[标注管理器] 调用 raise_()...")
+                        self.annotation_widget.raise_()
+                        QtWidgets.QApplication.processEvents()
+
+                    # 尝试设置焦点
+                    if hasattr(self.annotation_widget, 'setFocus'):
+                        print(f"[标注管理器] 调用 setFocus()...")
+                        self.annotation_widget.setFocus()
+                        QtWidgets.QApplication.processEvents()
+
+                    # 再次检查焦点状态
+                    if hasattr(self.annotation_widget, 'hasFocus'):
+                        has_focus = self.annotation_widget.hasFocus()
+                        print(f"[标注管理器] 设置焦点后，窗口是否有焦点: {has_focus}")
+
+                    if hasattr(self.annotation_widget, 'isActiveWindow'):
+                        is_active = self.annotation_widget.isActiveWindow()
+                        print(f"[标注管理器] 设置焦点后，窗口是否激活: {is_active}")
+
+                    # 🔥 保存GeneralSetDialog引用，以便标注完成后恢复显示
+                    if general_set_dialog:
+                        self._hidden_general_set_dialog = general_set_dialog
+
+                    print(f"[标注管理器] ========== 窗口显示调试信息结束 ==========")
                     print(f"[标注管理器] 标注界面已显示")
                     return True
                 else:
-                    print(f"  - AnnotationWidget没有show方法")
+                    print(f"[标注管理器] AnnotationWidget没有show方法")
                     return False
             except Exception as e:
-                print(f"  - show()调用失败: {e}")
+                print(f"[标注管理器] show()调用失败: {e}")
                 import traceback
                 traceback.print_exc()
                 return False
@@ -1057,11 +1156,17 @@ class AnnotationManager(QtCore.QObject):
             if self.annotation_widget:
                 self.annotation_widget.close()
                 self.annotation_widget = None
-            
+
+            # 🔥 恢复显示GeneralSetDialog
+            if hasattr(self, '_hidden_general_set_dialog') and self._hidden_general_set_dialog:
+                print(f"[标注管理器] 恢复显示GeneralSetDialog")
+                self._hidden_general_set_dialog.show()
+                self._hidden_general_set_dialog = None
+
             self.current_channel_id = None
             self.current_frame = None
-            
+
             print(f"[标注管理器] 标注状态已清理")
-            
+
         except Exception as e:
             print(f"[标注管理器] 清理标注状态异常: {e}")

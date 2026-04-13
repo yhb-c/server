@@ -635,10 +635,14 @@ class ChannelPanelHandler:
         channel_number = channel_id.replace('channel', '') if 'channel' in channel_id else '?'
         channel_name = f"通道{channel_number}"
         self.logger.debug(f"[DEBUG] 通道名称: {channel_name}")
-        
+
         panel = self._channel_panels_map.get(channel_id)
         if panel and hasattr(panel, 'setChannelName'):
             panel.setChannelName(channel_name)
+            # 加载ROI配置
+            if hasattr(panel, 'loadROIConfig'):
+                panel.loadROIConfig(channel_id)
+                self.logger.debug(f"[DEBUG] 已加载 {channel_id} 的ROI配置")
         
         # 获取面板引用
         panel = self._channel_panels_map.get(channel_id)

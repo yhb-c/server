@@ -663,7 +663,7 @@ class LiquidDetectionEngine:
     def configure(self, boxes, fixed_bottoms, fixed_tops, actual_heights, annotation_initstatus=None):
         """
         配置标注数据
-        
+
         Args:
             boxes: 检测框列表
             fixed_bottoms: 容器底部y坐标列表
@@ -672,19 +672,35 @@ class LiquidDetectionEngine:
             annotation_initstatus: 从标注结果读取的初始状态列表 [0/1/2, ...]
                                    0=默认, 1=满, 2=空
         """
+        print(f"[DEBUG-检测引擎] ========== configure被调用（检测引擎） ==========")
+        print(f"[DEBUG-检测引擎] 输入参数:")
+        print(f"[DEBUG-检测引擎]   boxes: {boxes}")
+        print(f"[DEBUG-检测引擎]   fixed_bottoms: {fixed_bottoms}")
+        print(f"[DEBUG-检测引擎]   fixed_tops: {fixed_tops}")
+        print(f"[DEBUG-检测引擎]   actual_heights: {actual_heights}")
+        print(f"[DEBUG-检测引擎]   annotation_initstatus: {annotation_initstatus}")
+
         self.targets = parse_targets(boxes)
         self.fixed_container_bottoms = list(fixed_bottoms)
         self.fixed_container_tops = list(fixed_tops)
         self.actual_heights = [float(h) for h in actual_heights]
-        
+
+        print(f"[DEBUG-检测引擎] 解析后的配置:")
+        print(f"[DEBUG-检测引擎]   self.targets: {self.targets}")
+        print(f"[DEBUG-检测引擎]   self.fixed_container_bottoms: {self.fixed_container_bottoms}")
+        print(f"[DEBUG-检测引擎]   self.fixed_container_tops: {self.fixed_container_tops}")
+        print(f"[DEBUG-检测引擎]   self.actual_heights: {self.actual_heights}")
+
         num_targets = len(self.targets)
         self._init_state_lists(num_targets)
         self._init_kalman_filters(num_targets)
-        
+
         # 从标注结果读取初始状态（detect_initstatus只从标注结果赋值）
         self.detect_initstatus = calculate_initstatus(num_targets, annotation_initstatus)
         self.init_mask_pixel_counts = [0] * num_targets
         self.is_inference_error = [False] * num_targets
+
+        print(f"[DEBUG-检测引擎] 配置完成，ROI数量: {num_targets}")
         
 
     
@@ -1265,30 +1281,39 @@ class LiquidDetectionEngine:
     def detect(self, frame_or_roi_frames, annotation_config=None, channel_id=None):
         """
         检测帧中的液位高度
-        
+
         Args:
             frame_or_roi_frames: 输入数据，支持两种格式：
                 - 单个完整帧 (np.ndarray): 内部根据targets裁剪ROI
                 - ROI图像列表 (list[np.ndarray]): 预裁剪的ROI图像，跳过内部裁剪
             annotation_config: 可选的标注配置字典
             channel_id: 通道ID（用于多通道状态隔离）
-        
+
         Returns:
             dict: 检测结果 {'liquid_line_positions': {...}, 'success': bool}
         """
         if self.model is None:
             return {'liquid_line_positions': {}, 'success': False}
-        
+
         # 判断输入类型：列表为预裁剪ROI，否则为完整帧
         is_roi_frames = isinstance(frame_or_roi_frames, list)
-        
+
         if annotation_config:
+            print(f"[DEBUG-检测引擎] {channel_id}: ========== detect方法被调用 ==========")
+            print(f"[DEBUG-检测引擎] {channel_id}: 使用annotation_config参数")
+
             targets = parse_targets(annotation_config.get('boxes', []))
             fixed_bottoms = annotation_config.get('fixed_bottoms', [])
             fixed_tops = annotation_config.get('fixed_tops', [])
             actual_heights = annotation_config.get('actual_heights', [])
             fixed_init_levels = annotation_config.get('fixed_init_levels', [])  # 读取初始液位
-            
+
+            print(f"[DEBUG-检测引擎] {channel_id}: 从annotation_config读取的配置:")
+            print(f"[DEBUG-检测引擎] {channel_id}:   targets: {targets}")
+            print(f"[DEBUG-检测引擎] {channel_id}:   fixed_bottoms: {fixed_bottoms}")
+            print(f"[DEBUG-检测引擎] {channel_id}:   fixed_tops: {fixed_tops}")
+            print(f"[DEBUG-检测引擎] {channel_id}:   actual_heights: {actual_heights}")
+
             # 从annotation_config中读取init_status，为当前通道创建独立的detect_initstatus
             areas = annotation_config.get('areas', {})
             current_detect_initstatus = []
@@ -1300,31 +1325,43 @@ class LiquidDetectionEngine:
                     current_detect_initstatus.append(init_status)
             else:
                 current_detect_initstatus = [0] * len(targets)
-            
+
             # 尝试从annotation_config获取channel_id（如果未传入）
             if channel_id is None:
                 channel_id = annotation_config.get('channel_id', 'default')
         else:
+            print(f"[DEBUG-检测引擎] {channel_id}: ========== detect方法被调用 ==========")
+            print(f"[DEBUG-检测引擎] {channel_id}: 使用引擎实例配置")
+
             targets = self.targets
             fixed_bottoms = self.fixed_container_bottoms
             fixed_tops = self.fixed_container_tops
             actual_heights = self.actual_heights
             fixed_init_levels = []  # 无配置时为空
             current_detect_initstatus = self.detect_initstatus if self.detect_initstatus else [0] * len(targets)
+
+            print(f"[DEBUG-检测引擎] {channel_id}: 引擎实例配置:")
+            print(f"[DEBUG-检测引擎] {channel_id}:   self.targets: {targets}")
+            print(f"[DEBUG-检测引擎] {channel_id}:   self.fixed_container_bottoms: {fixed_bottoms}")
+            print(f"[DEBUG-检测引擎] {channel_id}:   self.fixed_container_tops: {fixed_tops}")
+            print(f"[DEBUG-检测引擎] {channel_id}:   self.actual_heights: {actual_heights}")
+
             if channel_id is None:
                 channel_id = 'default'
-        
+
         if not targets:
             return {'liquid_line_positions': {}, 'success': False}
-        
+
         self._ensure_state_lists_size(len(targets))
-        
+
         # 确保current_detect_initstatus长度与targets一致
         while len(current_detect_initstatus) < len(targets):
             current_detect_initstatus.append(0)
-        
+
         # 获取或创建通道特定状态（传入fixed_init_levels用于卡尔曼滤波器初始化）
         channel_init_state = self._get_or_create_channel_init_state(channel_id, len(targets), fixed_init_levels)
+
+        print(f"[DEBUG-检测引擎] {channel_id}: 准备开始检测，ROI数量={len(targets)}")
         
         try:
             liquid_line_positions = {}
@@ -1488,7 +1525,7 @@ class LiquidDetectionEngine:
     
     def _detect_single_target(self, cropped, idx, crop_top_y, container_bottom, container_top, container_height_mm, current_detect_initstatus=None, channel_init_state=None, channel_id=None):
         """检测单个目标的液位高度
-        
+
         Args:
             cropped: 裁剪后的图像
             idx: 目标索引
@@ -1501,13 +1538,24 @@ class LiquidDetectionEngine:
             channel_id: 通道ID（用于日志记录）
         """
         try:
+            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: ========== 开始检测单个目标 ==========")
             print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 输入图像shape={cropped.shape if cropped is not None else None}")
+            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 传入的ROI配置参数:")
+            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   container_bottom={container_bottom}")
+            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   container_top={container_top}")
+            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   container_height_mm={container_height_mm}")
+
             if container_bottom is None or container_top is None:
+                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 参数为None，使用引擎实例配置:")
                 container_bottom = self.fixed_container_bottoms[idx] if idx < len(self.fixed_container_bottoms) else 0
                 container_top = self.fixed_container_tops[idx] if idx < len(self.fixed_container_tops) else 0
                 container_height_mm = self.actual_heights[idx] if idx < len(self.actual_heights) else 20.0
-            
+                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   self.fixed_container_bottoms[{idx}]={container_bottom}")
+                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   self.fixed_container_tops[{idx}]={container_top}")
+                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   self.actual_heights[{idx}]={container_height_mm}")
+
             container_pixel_height = container_bottom - container_top
+            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 计算得到 container_pixel_height={container_pixel_height}")
             
             # YOLO推理
             # TensorRT模型已内置FP16，不需要再设置half参数

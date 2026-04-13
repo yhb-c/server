@@ -522,9 +522,7 @@ class GeneralSetPanel(QtWidgets.QWidget):
     
     def _onStartAnnotation(self):
         """开始标注按钮点击（发送信号给handler处理）"""
-        # 发送创建标注引擎请求信号给handler
-        self.createAnnotationEngineRequested.emit()
-        # 发送标注请求信号
+        # 只发送标注请求信号，由AnnotationManager统一处理
         self.annotationRequested.emit()
     
     def _onStartDetection(self):
@@ -905,14 +903,17 @@ class GeneralSetDialog(QtWidgets.QDialog):
     
     def __init__(self, parent=None, channel_name=None, channel_id=None, task_info=None):
         super(GeneralSetDialog, self).__init__(parent)
-        
+
         self.channel_name = channel_name
         self.channel_id = channel_id
         self.task_info = task_info
-        
+
         # 设置左上角图标为设置图标
         self.setWindowIcon(newIcon("设置"))
-        
+
+        # 设置为非模态对话框，允许标注窗口获得焦点
+        self.setModal(False)
+
         # 移除帮助按钮（问号按钮）
         self.setWindowFlags(
             self.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint

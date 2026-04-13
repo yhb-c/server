@@ -482,14 +482,24 @@ class EnhancedWebSocketServer:
                         'database', 'config', 'annotation_result.yaml'
                     )
 
+                    self.logger.info(f"[{client_id}] ========== 读取配置文件 ==========")
+                    self.logger.info(f"[{client_id}] 配置文件路径: {annotation_file}")
+
                     annotation_config = {}
                     if os.path.exists(annotation_file):
                         try:
                             with open(annotation_file, 'r', encoding='utf-8') as f:
                                 all_annotations = yaml.safe_load(f)
+                                self.logger.info(f"[{client_id}] 配置文件中的所有通道: {list(all_annotations.keys())}")
+
                                 if channel_id in all_annotations:
                                     annotation_config = all_annotations[channel_id]
-                                    self.logger.info(f"[{client_id}] 通道 {channel_id} 加载ROI配置成功: {annotation_config.get('annotation_count', 0)}个区域")
+                                    self.logger.info(f"[{client_id}] 通道 {channel_id} 从配置文件读取的ROI配置:")
+                                    self.logger.info(f"[{client_id}]   annotation_count: {annotation_config.get('annotation_count', 0)}")
+                                    self.logger.info(f"[{client_id}]   boxes: {annotation_config.get('boxes', [])}")
+                                    self.logger.info(f"[{client_id}]   fixed_bottoms: {annotation_config.get('fixed_bottoms', [])}")
+                                    self.logger.info(f"[{client_id}]   fixed_tops: {annotation_config.get('fixed_tops', [])}")
+                                    self.logger.info(f"[{client_id}]   areas: {annotation_config.get('areas', {})}")
                                 else:
                                     self.logger.warning(f"[{client_id}] 通道 {channel_id} 在annotation_result.yaml中未找到配置")
                         except Exception as e:
@@ -505,6 +515,11 @@ class EnhancedWebSocketServer:
                         },
                         'annotation_config': annotation_config  # 添加ROI配置
                     }
+
+                    self.logger.info(f"[{client_id}] ========== 准备配置通道 ==========")
+                    self.logger.info(f"[{client_id}] 将要传递给detection_service.configure_channel的config:")
+                    self.logger.info(f"[{client_id}]   detection_config: {config['detection_config']}")
+                    self.logger.info(f"[{client_id}]   annotation_config: {config['annotation_config']}")
 
                     config_success = self.detection_service.configure_channel(channel_id, config)
 

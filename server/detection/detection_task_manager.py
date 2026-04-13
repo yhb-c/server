@@ -149,7 +149,14 @@ class DetectionTaskManager:
                 height_value = float(height_str.replace('mm', '').strip())
                 actual_heights.append(height_value)
 
-            self.logger.info(f"[{channel_id}] 配置ROI: boxes={len(boxes)}, bottoms={len(fixed_bottoms)}, tops={len(fixed_tops)}, heights={actual_heights}")
+            self.logger.info(f"[{channel_id}] ========== 配置ROI（任务管理器） ==========")
+            self.logger.info(f"[{channel_id}] 配置来源: annotation_config参数")
+            self.logger.info(f"[{channel_id}] ROI数量: {len(boxes)}")
+            self.logger.info(f"[{channel_id}] boxes: {boxes}")
+            self.logger.info(f"[{channel_id}] fixed_bottoms: {fixed_bottoms}")
+            self.logger.info(f"[{channel_id}] fixed_tops: {fixed_tops}")
+            self.logger.info(f"[{channel_id}] actual_heights: {actual_heights}")
+            self.logger.info(f"[{channel_id}] areas配置: {areas}")
 
             # 配置检测引擎
             detection_engine.configure(
@@ -161,7 +168,7 @@ class DetectionTaskManager:
 
             # 保存配置到任务
             self.tasks[channel_id]['annotation_config'] = annotation_config
-            self.logger.info(f"ROI标注配置成功: {channel_id}")
+            self.logger.info(f"[{channel_id}] ROI标注配置成功，已保存到tasks['{channel_id}']['annotation_config']")
             return True
 
         except Exception as e:
@@ -303,6 +310,13 @@ class DetectionTaskManager:
                 self.logger.error(f"[{channel_id}] 检测资源不完整: video_capture={video_capture}, detection_engine={detection_engine}")
                 return
 
+            # 输出检测引擎当前的ROI配置
+            self.logger.info(f"[{channel_id}] ========== 检测引擎当前ROI配置 ==========")
+            self.logger.info(f"[{channel_id}] detection_engine.targets: {detection_engine.targets}")
+            self.logger.info(f"[{channel_id}] detection_engine.fixed_container_bottoms: {detection_engine.fixed_container_bottoms}")
+            self.logger.info(f"[{channel_id}] detection_engine.fixed_container_tops: {detection_engine.fixed_container_tops}")
+            self.logger.info(f"[{channel_id}] detection_engine.actual_heights: {detection_engine.actual_heights}")
+
             # 从配置文件读取FPS限制
             fps_limit = self.config_manager.system_config.get('detection', {}).get('fps', 10)
             frame_interval = 1.0 / fps_limit if fps_limit > 0 else 0.1  # 默认10FPS
@@ -331,6 +345,11 @@ class DetectionTaskManager:
                     # 执行检测
                     if frame_count == 0:
                         self.logger.info(f"[{channel_id}] 开始执行第一帧检测...")
+                        self.logger.info(f"[{channel_id}] ========== 第一帧检测前再次确认ROI配置 ==========")
+                        self.logger.info(f"[{channel_id}] detection_engine.targets: {detection_engine.targets}")
+                        self.logger.info(f"[{channel_id}] detection_engine.fixed_container_bottoms: {detection_engine.fixed_container_bottoms}")
+                        self.logger.info(f"[{channel_id}] detection_engine.fixed_container_tops: {detection_engine.fixed_container_tops}")
+                        self.logger.info(f"[{channel_id}] detection_engine.actual_heights: {detection_engine.actual_heights}")
 
                     detection_result = detection_engine.detect(frame, channel_id=channel_id)
 
