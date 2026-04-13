@@ -908,10 +908,15 @@ class HKcapture:
             sys.stdout.flush()
             
             # 设置解码回调（用于FPS记录和帧抓取）
-            # 在HWND直接渲染模式下，总是设置解码回调来记录FPS
-            print(f"[HKcapture] 设置解码回调...")
-            sys.stdout.flush()
-            self._setup_video_file_decode_callback()
+            # 只在需要帧数据时才设置解码回调，避免不必要的CPU开销
+            # 纯播放模式下跳过解码回调，让PlayCtrl SDK直接渲染，减少CPU负载
+            if self._yuv_queue_enabled:
+                print(f"[HKcapture] 设置解码回调（YUV队列模式）...")
+                sys.stdout.flush()
+                self._setup_video_file_decode_callback()
+            else:
+                print(f"[HKcapture] 跳过解码回调（纯播放模式，减少CPU负载）")
+                sys.stdout.flush()
             
             # 🔥 启用QSV解码（Intel Quick Sync Video）
             self._try_enable_qsv_decode()
@@ -937,7 +942,10 @@ class HKcapture:
                 print(f"[HKcapture] 本地视频 PlayCtrl 播放已启动!")
                 print(f"[HKcapture]    - Port: {port}")
                 print(f"[HKcapture]    - HWND: {hwnd_value}")
-                print(f"[HKcapture]    - 渲染模式: HWND直接渲染")
+                if hwnd_value == 0:
+                    print(f"[HKcapture]    - 渲染模式: 纯CPU解码（无窗口渲染，通过回调获取帧）")
+                else:
+                    print(f"[HKcapture]    - 渲染模式: HWND直接渲染")
                 sys.stdout.flush()
                 self.is_reading = True
                 return True

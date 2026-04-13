@@ -35,10 +35,98 @@ except (ImportError, ValueError):
         scale_h = lambda x: x
 
 
+class ButtonOverlay(QtWidgets.QWidget):
+    """
+    按钮叠加层 - 固定在视频控件底部的按钮栏
+    """
+
+    # 定义信号
+    toggleConnectClicked = QtCore.Signal()
+    editClicked = QtCore.Signal()
+    curveClicked = QtCore.Signal()
+    amplifyClicked = QtCore.Signal()
+
+    def __init__(self, parent=None):
+        super(ButtonOverlay, self).__init__(parent)
+        import traceback
+        print(f"[ButtonOverlay] __init__, parent={parent}, id={id(self)}")
+        print(f"[ButtonOverlay] 调用栈:\n{''.join(traceback.format_stack()[-5:])}")
+        self._initUI()
+
+    def _initUI(self):
+        """初始化按钮UI"""
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
+
+        # 背景样式
+        self.setStyleSheet("background-color: rgba(50, 50, 50, 200);")
+
+        button_style = """
+            QPushButton { background-color: transparent; border: 1px solid transparent; border-radius: 3px; padding: 5px; }
+            QPushButton:hover { background-color: rgba(100, 100, 100, 150); border: 1px solid rgba(150, 150, 150, 200); }
+            QPushButton:pressed { background-color: rgba(80, 80, 80, 150); }
+            QPushButton:disabled { opacity: 0.5; }
+        """
+
+        icon_size = scale_w(24)
+        btn_size = scale_w(35)
+
+        self.btnToggleConnect = QtWidgets.QPushButton()
+        self.btnToggleConnect.setIcon(newIcon("开始"))
+        self.btnToggleConnect.setIconSize(QtCore.QSize(icon_size, icon_size))
+        self.btnToggleConnect.setToolTip("打开通道")
+        self.btnToggleConnect.setStyleSheet(button_style)
+        self.btnToggleConnect.setFixedSize(btn_size, btn_size)
+        self.btnToggleConnect.clicked.connect(self.toggleConnectClicked.emit)
+
+        self.btnEdit = QtWidgets.QPushButton()
+        self.btnEdit.setIcon(newIcon('设置'))
+        self.btnEdit.setIconSize(QtCore.QSize(icon_size, icon_size))
+        self.btnEdit.setToolTip("通道设置")
+        self.btnEdit.setStyleSheet(button_style)
+        self.btnEdit.setFixedSize(btn_size, btn_size)
+        self.btnEdit.clicked.connect(self.editClicked.emit)
+
+        self.btnCurve = QtWidgets.QPushButton()
+        self.btnCurve.setIcon(newIcon('动态曲线'))
+        self.btnCurve.setIconSize(QtCore.QSize(icon_size, icon_size))
+        self.btnCurve.setToolTip("查看曲线")
+        self.btnCurve.setStyleSheet(button_style)
+        self.btnCurve.setFixedSize(btn_size, btn_size)
+        self.btnCurve.clicked.connect(self.curveClicked.emit)
+
+        self.btnAmplify = QtWidgets.QPushButton()
+        self.btnAmplify.setIcon(newIcon('amplify'))
+        self.btnAmplify.setIconSize(QtCore.QSize(icon_size, icon_size))
+        self.btnAmplify.setToolTip("放大显示")
+        self.btnAmplify.setStyleSheet(button_style)
+        self.btnAmplify.setFixedSize(btn_size, btn_size)
+        self.btnAmplify.clicked.connect(self.amplifyClicked.emit)
+
+        layout.addWidget(self.btnToggleConnect)
+        layout.addWidget(self.btnEdit)
+        layout.addWidget(self.btnCurve)
+        layout.addWidget(self.btnAmplify)
+        layout.addStretch()
+
+        self.setFixedHeight(45)
+
+    def resizeEvent(self, event):
+        """窗口大小改变时自动调整位置"""
+        super(ButtonOverlay, self).resizeEvent(event)
+        if self.parent():
+            parent_height = self.parent().height()
+            parent_width = self.parent().width()
+            y_pos = parent_height - 45
+            print(f"[ButtonOverlay.{id(self)}] resizeEvent: parent_size=({parent_width}x{parent_height}), geometry=(0, {y_pos}, {parent_width}, 45)")
+            self.setGeometry(0, y_pos, parent_width, 45)
+
+
 class InfoOverlay(QtWidgets.QWidget):
     """
     信息叠加层 - 独立顶层窗口，叠加在视频上方显示信息
-    
+
     特点：
     - 无边框顶层窗口
     - 透明背景
@@ -46,9 +134,12 @@ class InfoOverlay(QtWidgets.QWidget):
     - 跟随目标视频控件位置
     - 绘制液位线和检测结果
     """
-    
+
     def __init__(self, channel_id="", parent=None):
         super(InfoOverlay, self).__init__(parent)
+        import traceback
+        print(f"[InfoOverlay] __init__, channel_id={channel_id}, parent={parent}, id={id(self)}")
+        print(f"[InfoOverlay] 调用栈:\n{''.join(traceback.format_stack()[-5:])}")
         self.channel_id = channel_id
 
         # 不设置为顶层窗口，作为普通子控件
@@ -120,14 +211,26 @@ class InfoOverlay(QtWidgets.QWidget):
     
     def set_target(self, widget):
         """设置要跟随的视频控件"""
+        print(f"[InfoOverlay.{id(self)}] set_target called, widget={widget}")
         self.target_widget = widget
-        self.update_position()
+        # 不再调用 update_position，让 resizeEvent 自动处理
     
     def update_position(self):
         """更新位置 - 固定在父控件顶部"""
+        print(f"[InfoOverlay.{id(self)}] update_position called")
         if self.parent():
-            self.setGeometry(0, 0, self.parent().width(), 28)
+            parent_width = self.parent().width()
+            self.setGeometry(0, 0, parent_width, 28)
+            self.raise_()
             self.show()
+
+    def resizeEvent(self, event):
+        """窗口大小改变时自动调整位置"""
+        super(InfoOverlay, self).resizeEvent(event)
+        if self.parent():
+            parent_width = self.parent().width()
+            print(f"[InfoOverlay.{id(self)}] resizeEvent: parent_size=({parent_width}x{self.parent().height()}), geometry=(0, 0, {parent_width}, 28)")
+            self.setGeometry(0, 0, parent_width, 28)
 
     def _is_widget_in_viewport(self, widget):
         """检查控件是否在滚动区域的可视范围内 - 已废弃"""
@@ -246,12 +349,17 @@ class ChannelPanel(QtWidgets.QWidget):
         self._is_connected = False
         self._custom_width = width  # 自定义宽度
         self._custom_height = height  # 自定义高度
-        
+
         # 初始化 logger
         self.logger = logging.getLogger(f"ChannelPanel.{title}")
-        
+
         self.setObjectName("ChannelPanel")
+
+        # 按钮叠加层引用（在_initUI之前声明）
+        self._buttonOverlay = None
+
         self._initUI()
+        self._ensureButtonOverlay()  # 创建按钮叠加层
         self._connectSignals()
     
     def _initUI(self):
@@ -300,81 +408,59 @@ class ChannelPanel(QtWidgets.QWidget):
             FontManager.applyToWidget(self._overlayLabel)
         
         layout.addWidget(self.videoWidget, 1)
-        
-        # 按钮面板
-        buttonPanel = QtWidgets.QWidget()
-        buttonPanel.setStyleSheet("background-color: palette(button);")
-        buttonPanel.setFixedHeight(scale_h(45))
-        buttonPanel.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        buttonPanel.setAttribute(Qt.WA_StyledBackground, True)  # 确保样式背景生效
-        
-        buttonLayout = QtWidgets.QHBoxLayout(buttonPanel)
-        buttonLayout.setContentsMargins(5, 5, 5, 5)
-        buttonLayout.setSpacing(5)
-        
-        button_style = """
-            QPushButton { background-color: transparent; border: 1px solid transparent; border-radius: 3px; padding: 5px; }
-            QPushButton:hover { background-color: palette(light); border: 1px solid palette(mid); }
-            QPushButton:pressed { background-color: palette(midlight); }
-            QPushButton:disabled { opacity: 0.5; }
-        """
-        
-        icon_size = scale_w(24)
-        btn_size = scale_w(35)
-        
-        self.btnToggleConnect = QtWidgets.QPushButton()
-        self.btnToggleConnect.setIcon(newIcon("开始"))
-        self.btnToggleConnect.setIconSize(QtCore.QSize(icon_size, icon_size))
-        self.btnToggleConnect.setToolTip("打开通道")
-        self.btnToggleConnect.setStyleSheet(button_style)
-        self.btnToggleConnect.setFixedSize(btn_size, btn_size)
-        
-        self.btnEdit = QtWidgets.QPushButton()
-        self.btnEdit.setIcon(newIcon('设置'))
-        self.btnEdit.setIconSize(QtCore.QSize(icon_size, icon_size))
-        self.btnEdit.setToolTip("通道设置")
-        self.btnEdit.setStyleSheet(button_style)
-        self.btnEdit.setFixedSize(btn_size, btn_size)
-        
-        self.btnCurve = QtWidgets.QPushButton()
-        self.btnCurve.setIcon(newIcon('动态曲线'))
-        self.btnCurve.setIconSize(QtCore.QSize(icon_size, icon_size))
-        self.btnCurve.setToolTip("查看曲线")
-        self.btnCurve.setStyleSheet(button_style)
-        self.btnCurve.setFixedSize(btn_size, btn_size)
-        
-        self.btnAmplify = QtWidgets.QPushButton()
-        self.btnAmplify.setIcon(newIcon('amplify'))
-        self.btnAmplify.setIconSize(QtCore.QSize(icon_size, icon_size))
-        self.btnAmplify.setToolTip("放大显示")
-        self.btnAmplify.setStyleSheet(button_style)
-        self.btnAmplify.setFixedSize(btn_size, btn_size)
-        
-        buttonLayout.addWidget(self.btnToggleConnect)
-        buttonLayout.addWidget(self.btnEdit)
-        buttonLayout.addWidget(self.btnCurve)
-        buttonLayout.addWidget(self.btnAmplify)
-        buttonLayout.addStretch()
-        
-        layout.addWidget(buttonPanel)
+
+        # 按钮叠加层将在_initUI后创建
+        # 兼容性：预先声明按钮引用
+        self.btnToggleConnect = None
+        self.btnEdit = None
+        self.btnCurve = None
+        self.btnAmplify = None
     
     def _connectSignals(self):
         """连接信号槽"""
-        self.btnToggleConnect.clicked.connect(self._onToggleConnectClicked)
-        self.btnEdit.clicked.connect(self._onEditClicked)
-        self.btnCurve.clicked.connect(self._onCurveClicked)
-        self.btnAmplify.clicked.connect(self._onAmplifyClicked)
+        if self._buttonOverlay:
+            self._buttonOverlay.toggleConnectClicked.connect(self._onToggleConnectClicked)
+            self._buttonOverlay.editClicked.connect(self._onEditClicked)
+            self._buttonOverlay.curveClicked.connect(self._onCurveClicked)
+            self._buttonOverlay.amplifyClicked.connect(self._onAmplifyClicked)
 
         # 视频区域点击事件
         self.videoWidget.mousePressEvent = self._onVideoWidgetClicked
     
     # ==================== HWND渲染模式API ====================
-    
+
+    def _ensureButtonOverlay(self):
+        """确保 ButtonOverlay 已创建"""
+        print(f"[ChannelPanel.{self._title}] _ensureButtonOverlay called, _buttonOverlay={self._buttonOverlay}")
+        if self._buttonOverlay is None:
+            print(f"[ChannelPanel.{self._title}] 创建 ButtonOverlay")
+            self._buttonOverlay = ButtonOverlay(self.videoWidget)
+            # 兼容性：保留按钮引用
+            self.btnToggleConnect = self._buttonOverlay.btnToggleConnect
+            self.btnEdit = self._buttonOverlay.btnEdit
+            self.btnCurve = self._buttonOverlay.btnCurve
+            self.btnAmplify = self._buttonOverlay.btnAmplify
+            # 初始化位置
+            self._buttonOverlay.setGeometry(0, self.videoWidget.height() - 45, self.videoWidget.width(), 45)
+            self._buttonOverlay.show()
+            print(f"[ChannelPanel.{self._title}] ButtonOverlay 创建完成, id={id(self._buttonOverlay)}")
+        else:
+            print(f"[ChannelPanel.{self._title}] ButtonOverlay 已存在, id={id(self._buttonOverlay)}")
+
     def _ensureInfoOverlay(self):
         """确保 InfoOverlay 已创建"""
+        print(f"[ChannelPanel.{self._title}] _ensureInfoOverlay called, _infoOverlay={self._infoOverlay}")
         if self._infoOverlay is None:
-            self._infoOverlay = InfoOverlay(self._title, self)
+            print(f"[ChannelPanel.{self._title}] 创建 InfoOverlay")
+            # 修改：将 InfoOverlay 的父控件设置为 videoWidget，而不是 self
+            self._infoOverlay = InfoOverlay(self._title, self.videoWidget)
             self._infoOverlay.set_target(self.videoWidget)
+            # 初始化位置
+            self._infoOverlay.setGeometry(0, 0, self.videoWidget.width(), 28)
+            self._infoOverlay.show()
+            print(f"[ChannelPanel.{self._title}] InfoOverlay 创建完成, id={id(self._infoOverlay)}")
+        else:
+            print(f"[ChannelPanel.{self._title}] InfoOverlay 已存在, id={id(self._infoOverlay)}")
     
     def getVideoHwnd(self):
         """获取视频显示区域的窗口句柄"""
@@ -384,24 +470,31 @@ class ChannelPanel(QtWidgets.QWidget):
     
     def setHwndRenderMode(self, enabled=True):
         """设置HWND直接渲染模式"""
+        print(f"[ChannelPanel.{self._title}] setHwndRenderMode called, enabled={enabled}")
         self._hwnd_render_mode = enabled
         if enabled:
             self._overlayLabel.hide()
-            # 🔥 启用 InfoOverlay 叠加层
+            # 启用 InfoOverlay 叠加层
             self._ensureInfoOverlay()
-            self._infoOverlay.update_position()  # 使用update_position来决定是否显示
-            self.logger.debug(f"[ChannelPanel] HWND渲染模式已启用，InfoOverlay已显示")
+            self._infoOverlay.show()
+            # 启用 ButtonOverlay 叠加层
+            self._ensureButtonOverlay()
+            self._buttonOverlay.show()
+            self.logger.debug(f"[ChannelPanel] HWND渲染模式已启用，InfoOverlay和ButtonOverlay已显示")
         else:
             self._overlayLabel.show()
             if self._infoOverlay:
                 self._infoOverlay.hide()
+            if self._buttonOverlay:
+                self._buttonOverlay.hide()
             self.logger.debug(f"[ChannelPanel] Qt渲染模式已启用")
     
     def showOverlay(self):
         """显示叠加层"""
+        print(f"[ChannelPanel.{self._title}] showOverlay called")
         if self._hwnd_render_mode:
             self._ensureInfoOverlay()
-            self._infoOverlay.update_position()  # 使用update_position来决定是否显示
+            self._infoOverlay.show()
     
     def hideOverlay(self):
         """隐藏叠加层"""
@@ -513,7 +606,11 @@ class ChannelPanel(QtWidgets.QWidget):
 
                 # 显示InfoOverlay
                 if self._infoOverlay:
-                    self._infoOverlay.update_position()  # 使用update_position来决定是否显示
+                    self._infoOverlay.show()
+
+                # 显示ButtonOverlay
+                if self._buttonOverlay:
+                    self._buttonOverlay.show()
 
                 return
             
@@ -556,6 +653,8 @@ class ChannelPanel(QtWidgets.QWidget):
         self._overlayLabel.show()
         if self._infoOverlay:
             self._infoOverlay.hide()
+        if self._buttonOverlay:
+            self._buttonOverlay.hide()
     
     def setChannelName(self, name):
         """设置通道名称"""
@@ -660,29 +759,33 @@ class ChannelPanel(QtWidgets.QWidget):
         super(ChannelPanel, self).resizeEvent(event)
         if hasattr(self, '_overlayLabel'):
             self._overlayLabel.setGeometry(0, 0, self.videoWidget.width(), self.videoWidget.height())
-        if self._infoOverlay:
-            QtCore.QTimer.singleShot(0, self._infoOverlay.update_position)
+        # 不再在resizeEvent中调用update_position，让叠加层自己的resizeEvent处理
     
     def moveEvent(self, event):
         """窗口移动"""
         super(ChannelPanel, self).moveEvent(event)
-        if self._infoOverlay:
-            self._infoOverlay.update_position()
+        # 不需要在moveEvent中更新叠加层位置
     
     def showEvent(self, event):
         """窗口显示"""
         super(ChannelPanel, self).showEvent(event)
         if self._hwnd_render_mode and self._infoOverlay:
-            self._infoOverlay.update_position()  # 使用update_position来决定是否显示
+            self._infoOverlay.show()
+        if self._buttonOverlay:
+            self._buttonOverlay.show()
     
     def hideEvent(self, event):
         """窗口隐藏"""
         super(ChannelPanel, self).hideEvent(event)
         if self._infoOverlay:
             self._infoOverlay.hide()
+        if self._buttonOverlay:
+            self._buttonOverlay.hide()
     
     def closeEvent(self, event):
         """窗口关闭"""
         if self._infoOverlay:
             self._infoOverlay.close()
+        if self._buttonOverlay:
+            self._buttonOverlay.close()
         super(ChannelPanel, self).closeEvent(event)

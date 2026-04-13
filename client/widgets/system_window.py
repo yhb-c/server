@@ -424,7 +424,7 @@ class SystemWindow(
         """初始化CSV写入器"""
         try:
             from client.handlers.videopage.thread_manager.threads.storage_thread import DetectionResultCSVWriter
-            from client.database.config import get_project_root
+            from client.config import get_project_root
             import os
 
             # 获取项目根目录
@@ -590,11 +590,11 @@ class SystemWindow(
         # === 右侧：8个小视频窗口（垂直排列，带滚动条） ===
         # 创建滚动区域
         scroll_area = QtWidgets.QScrollArea()
-        scroll_area.setWidgetResizable(False)
+        scroll_area.setWidgetResizable(False)  # 不自动调整，使用容器的固定尺寸
         scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         scroll_area.setFixedWidth(260)  # 240 + 滚动条宽度
-        scroll_area.setFixedHeight(900)
+        scroll_area.setFixedHeight(900)  # 固定高度，内容超出时显示滚动条
         scroll_area.setFrameShape(QtWidgets.QFrame.NoFrame)  # 移除边框
         scroll_area.viewport().setAutoFillBackground(True)  # 确保视口背景填充
 

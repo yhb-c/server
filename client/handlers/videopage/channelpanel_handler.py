@@ -570,33 +570,64 @@ class ChannelPanelHandler:
             if channel_id not in self._channel_panels_map:
                 self._channel_panels_map[channel_id] = sender
         
-        # 从系统窗口读取通道配置（RTSP地址和本地视频文件）
+        # 从配置文件读取通道配置（RTSP地址和本地视频文件）
+        print(f"[调试] 开始读取 {channel_id} 的配置")
         channel_config = {}
 
-        # 获取通道编号
-        channel_number = channel_id.replace('channel', '') if 'channel' in channel_id else '1'
+        # 从default_config.yaml读取配置
+        try:
+            import os
+            import yaml
+            # 修正路径：从client/handlers/videopage向上3级到项目根目录
+            current_file = os.path.abspath(__file__)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
+            config_path = os.path.join(project_root, 'database', 'config', 'default_config.yaml')
 
-        # 尝试从系统窗口获取RTSP地址和本地视频文件路径
-        if hasattr(self, 'channelAddressInputs') and channel_number in self.channelAddressInputs:
-            rtsp_address = self.channelAddressInputs[channel_number].text().strip()
-            if rtsp_address and rtsp_address != 'username:password@ip:port/stream':
-                channel_config['address'] = rtsp_address
-                self.logger.debug(f"[DEBUG] 使用RTSP地址: {rtsp_address}")
+            print(f"[调试] 当前文件: {current_file}")
+            print(f"[调试] 项目根目录: {project_root}")
+            print(f"[调试] 配置文件路径: {config_path}")
+            print(f"[调试] 配置文件是否存在: {os.path.exists(config_path)}")
 
-        # 如果没有有效的RTSP地址，尝试使用本地视频文件
-        if 'address' not in channel_config:
-            if hasattr(self, 'channelVideoFileInputs') and channel_number in self.channelVideoFileInputs:
-                video_file = self.channelVideoFileInputs[channel_number].text().strip()
-                if video_file and video_file != '选择本地视频文件路径':
-                    channel_config['address'] = video_file
-                    self.logger.debug(f"[DEBUG] 使用本地视频文件: {video_file}")
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f) or {}
+
+                print(f"[调试] 配置文件内容: {config}")
+                print(f"[调试] channel_id: {channel_id}")
+                print(f"[调试] channel_id in config: {channel_id in config}")
+
+                if channel_id in config:
+                    channel_data = config[channel_id]
+                    print(f"[调试] {channel_id} 的配置数据: {channel_data}")
+
+                    # 优先使用RTSP地址
+                    if 'address' in channel_data and channel_data['address']:
+                        channel_config['address'] = channel_data['address']
+                        print(f"[调试] 使用RTSP地址: {channel_data['address']}")
+                        self.logger.debug(f"[DEBUG] 从配置文件读取RTSP地址: {channel_data['address']}")
+                    # 如果没有RTSP地址，使用本地视频文件
+                    elif 'file_path' in channel_data and channel_data['file_path']:
+                        channel_config['address'] = channel_data['file_path']
+                        print(f"[调试] 使用本地视频文件: {channel_data['file_path']}")
+                        self.logger.debug(f"[DEBUG] 从配置文件读取本地视频文件: {channel_data['file_path']}")
+                    else:
+                        print(f"[调试] {channel_id} 没有address或file_path字段")
+                else:
+                    print(f"[调试] 配置文件中没有 {channel_id}")
+        except Exception as e:
+            print(f"[调试] 读取配置文件失败: {e}")
+            import traceback
+            traceback.print_exc()
+            self.logger.debug(f"[DEBUG] 读取配置文件失败: {e}")
 
         # 如果既没有RTSP地址也没有本地视频文件，无法连接
         if 'address' not in channel_config:
+            print(f"[调试] {channel_id} 最终没有获取到地址，无法连接")
             self.logger.debug(f"[DEBUG] {channel_id} 没有配置RTSP地址或本地视频文件，无法连接")
             self._channels_connecting.discard(channel_id)
             return
 
+        print(f"[调试] 最终使用配置: {channel_config}")
         self.logger.debug(f"[DEBUG] 最终使用配置: {channel_config}")
         
         # 读取并设置通道名称到面板（调用业务逻辑方法）
@@ -610,15 +641,25 @@ class ChannelPanelHandler:
             panel.setChannelName(channel_name)
         
         # 关键修复：在主线程中预先获取面板引用
-        # 不再需要HWND，使用Qt渲染模式
+        # 检测是否为本地视频文件，决定渲染模式
         panel = self._channel_panels_map.get(channel_id)
         if panel:
             self.logger.debug(f"[DEBUG] 主线程获取 {channel_id} 面板引用")
 
-            # 设置面板为Qt渲染模式（不使用HWND）
-            if hasattr(panel, 'setHwndRenderMode'):
-                panel.setHwndRenderMode(False)
-                self.logger.debug(f"[DEBUG] 主线程设置 {channel_id} Qt渲染模式")
+            # 检测是否为本地视频文件
+            rtsp_url = channel_config.get('address', '')
+            is_local_video = rtsp_url.endswith(('.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v'))
+
+            if is_local_video:
+                # 本地视频使用HWND直接渲染模式（高性能，无CPU开销）
+                if hasattr(panel, 'setHwndRenderMode'):
+                    panel.setHwndRenderMode(True)
+                    self.logger.debug(f"[DEBUG] 主线程设置 {channel_id} HWND直接渲染模式（本地视频）")
+            else:
+                # RTSP流使用Qt渲染模式
+                if hasattr(panel, 'setHwndRenderMode'):
+                    panel.setHwndRenderMode(False)
+                    self.logger.debug(f"[DEBUG] 主线程设置 {channel_id} Qt渲染模式（RTSP流）")
 
         # 切换到视频监控页面
         self.showVideoPage()
@@ -1106,7 +1147,10 @@ class ChannelPanelHandler:
 
             from HKcapture import HKcapture
 
-            # 创建HKcapture对象（不再设置HWND）
+            # 检测是否为本地视频文件
+            is_local_video = rtsp_url.endswith(('.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v'))
+
+            # 创建HKcapture对象
             cap = HKcapture(
                 source=rtsp_url,
                 username=username,
@@ -1114,32 +1158,45 @@ class ChannelPanelHandler:
                 port=port,
                 channel=1,
                 fps=25,
-                debug=True
+                debug=False  # 关闭调试输出，减少性能开销
             )
 
-            # 不再设置HWND，使用纯CPU解码模式
-            self.logger.debug(f"[通道连接] 使用纯CPU解码模式（无渲染）")
+            # 本地视频使用HWND直接渲染模式
+            if is_local_video:
+                # 获取面板的HWND
+                panel = self._channel_panels_map.get(channel_id)
+                if panel and hasattr(panel, 'getVideoHwnd'):
+                    video_hwnd = panel.getVideoHwnd()
+                    cap.set_hwnd(video_hwnd)
+                    self.logger.debug(f"[通道连接] 本地视频使用HWND直接渲染模式，HWND={video_hwnd}")
+                else:
+                    self.logger.debug(f"[通道连接] 无法获取HWND，回退到Qt渲染模式")
+            else:
+                self.logger.debug(f"[通道连接] RTSP流使用Qt渲染模式")
 
             # 打开相机连接
             if not cap.open():
                 raise Exception("无法打开相机连接")
 
             self.logger.debug(f"[通道连接] {channel_id} 相机连接成功")
-            
+
             # 开始捕获
             if not cap.start_capture():
                 raise Exception("无法开始视频捕获")
-            
+
             self.logger.debug(f"[通道连接] {channel_id} 视频捕获已启动")
-            
+
             # 保存捕获对象
             self._channel_captures[channel_id] = cap
-            
+
             # 移除连接中标记
             self._channels_connecting.discard(channel_id)
-            
-            # 启动视频显示
-            self._startVideoStream(channel_id, hwnd)
+
+            # 启动视频显示（本地视频HWND模式下不需要Qt显示线程）
+            if not is_local_video or not hasattr(cap, '_hwnd') or cap._hwnd is None:
+                self._startVideoStream(channel_id, hwnd)
+            else:
+                self.logger.debug(f"[通道连接] {channel_id} 使用HWND直接渲染，跳过Qt显示线程")
             
             # 更新UI状态（在主线程中执行）
             QtCore.QTimer.singleShot(0, lambda: self._updateChannelConnectedUI(channel_id))
@@ -1331,7 +1388,7 @@ class ChannelPanelHandler:
             
             # 清理thread_manager上下文
             if hasattr(self, 'thread_manager') and self.thread_manager:
-                self.thread_manager.remove_channel_context(channel_id)
+                pass  # self.thread_manager.remove_channel_context(channel_id)
             
             # 更新面板UI
             panel = self._channel_panels_map.get(channel_id)
