@@ -663,7 +663,17 @@ class AnnotationManager(QtCore.QObject):
             print(f"  - area_names: {area_names}")
             print(f"  - area_heights: {area_heights}")
             print(f"  - area_states: {area_states}")
-            
+
+            # 获取视频分辨率（从标注界面的当前帧获取）
+            video_width = 1920
+            video_height = 1080
+            if self.annotation_widget and hasattr(self.annotation_widget, 'current_frame'):
+                if self.annotation_widget.current_frame is not None:
+                    h, w = self.annotation_widget.current_frame.shape[:2]
+                    video_width = w
+                    video_height = h
+                    print(f"  - 标注视频分辨率: {video_width}x{video_height}")
+
             # 构建标注数据
             annotation_data = {
                 'boxes': boxes,
@@ -672,7 +682,9 @@ class AnnotationManager(QtCore.QObject):
                 'init_levels': init_levels or [],
                 'area_names': area_names,
                 'area_heights': area_heights,
-                'area_states': area_states
+                'area_states': area_states,
+                'video_width': video_width,
+                'video_height': video_height
             }
             
             # 1. 保存到本地配置文件
@@ -805,7 +817,10 @@ class AnnotationManager(QtCore.QObject):
                 'fixed_init_levels': fixed_init_levels,  # 保存实际高度（毫米）
                 'annotation_count': len(boxes),
                 'areas': areas_dict,
-                'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                # 保存标注时的视频分辨率，用于分辨率自适应
+                'annotation_width': annotation_data.get('video_width', 1920),
+                'annotation_height': annotation_data.get('video_height', 1080)
             }
             
             # 写入文件

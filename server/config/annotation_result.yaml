@@ -20,6 +20,8 @@ channel1:
       state: 默认
       init_status: 0
   last_updated: '2026-04-13 19:07:42'
+  annotation_width: 1920
+  annotation_height: 1080
 channel10:
   annotation_count: 2
   areas:

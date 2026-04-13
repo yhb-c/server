@@ -204,15 +204,44 @@ class VideoRenderWidget(QtWidgets.QWidget):
             fixed_tops = channel_config.get('fixed_tops', [])
             fixed_bottoms = channel_config.get('fixed_bottoms', [])
 
+            # 获取配置文件中保存的标注分辨率（默认1920x1080）
+            annotation_width = channel_config.get('annotation_width', 1920)
+            annotation_height = channel_config.get('annotation_height', 1080)
+
+            # 计算分辨率缩放比例
+            if self.video_width > 0 and self.video_height > 0:
+                scale_x = self.video_width / annotation_width
+                scale_y = self.video_height / annotation_height
+                print(f"[ROI加载] 标注分辨率: {annotation_width}x{annotation_height}")
+                print(f"[ROI加载] 当前视频分辨率: {self.video_width}x{self.video_height}")
+                print(f"[ROI加载] 缩放比例: scale_x={scale_x:.4f}, scale_y={scale_y:.4f}")
+            else:
+                # 如果还没有获取到视频分辨率，暂不缩放
+                scale_x = 1.0
+                scale_y = 1.0
+                print(f"[ROI加载] 视频分辨率未知，暂不缩放ROI")
+
             # 构建ROI框列表 [left, top, right, bottom]
+            # boxes格式: [center_x, center_y, crop_size]
             self.roi_boxes = []
             for i, box in enumerate(boxes):
                 if len(box) >= 3:
-                    left = box[0]
-                    right = box[2]
-                    top = fixed_tops[i] if i < len(fixed_tops) else 0
-                    bottom = fixed_bottoms[i] if i < len(fixed_bottoms) else 0
+                    center_x = box[0]
+                    center_y = box[1]
+                    crop_size = box[2]
+                    half_size = crop_size // 2
+
+                    # 应用分辨率缩放
+                    left = int((center_x - half_size) * scale_x)
+                    right = int((center_x + half_size) * scale_x)
+                    top_orig = fixed_tops[i] if i < len(fixed_tops) else 0
+                    bottom_orig = fixed_bottoms[i] if i < len(fixed_bottoms) else 0
+                    top = int(top_orig * scale_y)
+                    bottom = int(bottom_orig * scale_y)
+
                     self.roi_boxes.append([left, top, right, bottom])
+                    print(f"[ROI加载] ROI[{i}] 原始: left={center_x - half_size}, right={center_x + half_size}, top={top_orig}, bottom={bottom_orig}")
+                    print(f"[ROI加载] ROI[{i}] 缩放后: left={left}, right={right}, top={top}, bottom={bottom}")
 
             self.update()
 
@@ -355,6 +384,28 @@ class VideoRenderWidget(QtWidgets.QWidget):
         font = QtGui.QFont("Arial", 10, QtGui.QFont.Bold)
         painter.setFont(font)
 
+        # 输出绘制液位线的配置信息
+        print("\n========== 绘制液位线配置信息 ==========")
+        print(f"视频尺寸: {self.video_width}x{self.video_height}")
+        print(f"显示尺寸: {self._pixmap.width()}x{self._pixmap.height()}")
+        print(f"缩放比例: scale_x={scale_x:.4f}, scale_y={scale_y:.4f}")
+        print(f"偏移量: offset_x={offset_x}, offset_y={offset_y}")
+        print(f"液位线数据数量: {len(self.liquid_positions)}")
+
+        # 加载配置文件进行对比
+        try:
+            if os.path.exists(self.roi_config_path):
+                with open(self.roi_config_path, 'r', encoding='utf-8') as f:
+                    roi_config = yaml.safe_load(f)
+                print(f"\n配置文件路径: {self.roi_config_path}")
+                print(f"配置文件中的通道: {list(roi_config.keys()) if roi_config else []}")
+            else:
+                roi_config = None
+                print(f"\n配置文件不存在: {self.roi_config_path}")
+        except Exception as e:
+            roi_config = None
+            print(f"\n读取配置文件失败: {e}")
+
         # 遍历每个ROI的液位线数据
         for area_idx, position_data in self.liquid_positions.items():
             try:
@@ -363,10 +414,62 @@ class VideoRenderWidget(QtWidgets.QWidget):
                 y_absolute = position_data.get('y', position_data.get('y_absolute', 0))
                 height_mm = position_data.get('height_mm', 0)
 
+                print(f"\n--- 区域 {area_idx} ---")
+                print(f"液位线数据: left={left}, right={right}, y={y_absolute}, height_mm={height_mm}")
+                # 不打印完整数据，避免输出大量mask数组
+                filtered_data = {k: v for k, v in position_data.items() if k != 'observation_mask'}
+                print(f"过滤后数据: {filtered_data}")
+
+                # 对比配置文件中的ROI信息
+                if roi_config and hasattr(self, 'channel_name'):
+                    channel_id = self.channel_name.lower().replace('通道', 'channel')
+                    if channel_id in roi_config:
+                        channel_config = roi_config[channel_id]
+                        boxes = channel_config.get('boxes', [])
+                        fixed_tops = channel_config.get('fixed_tops', [])
+                        fixed_bottoms = channel_config.get('fixed_bottoms', [])
+
+                        print(f"\n配置文件中 {channel_id} 的ROI信息:")
+                        if area_idx < len(boxes):
+                            box = boxes[area_idx]
+                            top = fixed_tops[area_idx] if area_idx < len(fixed_tops) else None
+                            bottom = fixed_bottoms[area_idx] if area_idx < len(fixed_bottoms) else None
+                            print(f"  boxes[{area_idx}]: {box} (格式: [center_x, center_y, crop_size])")
+                            print(f"  fixed_tops[{area_idx}]: {top}")
+                            print(f"  fixed_bottoms[{area_idx}]: {bottom}")
+
+                            # 对比数据
+                            if len(box) >= 3:
+                                config_center_x = box[0]
+                                config_center_y = box[1]
+                                config_crop_size = box[2]
+                                config_half_size = config_crop_size // 2
+                                config_left = config_center_x - config_half_size
+                                config_right = config_center_x + config_half_size
+
+                                print(f"\n配置文件ROI计算:")
+                                print(f"  center_x={config_center_x}, center_y={config_center_y}, crop_size={config_crop_size}")
+                                print(f"  计算得到: left={config_left}, right={config_right}")
+
+                                print(f"\n数据对比:")
+                                print(f"  left: 液位线={left}, 配置计算={config_left}, 匹配={left==config_left}")
+                                print(f"  right: 液位线={right}, 配置计算={config_right}, 匹配={right==config_right}")
+                                if top is not None and bottom is not None:
+                                    print(f"  Y坐标范围: 液位线y={y_absolute}, 配置top={top}, 配置bottom={bottom}")
+                                    print(f"  Y坐标是否在范围内: {top <= y_absolute <= bottom}")
+
+                                # 检查ROI框加载
+                                if area_idx < len(self.roi_boxes):
+                                    roi_box = self.roi_boxes[area_idx]
+                                    print(f"\n加载的ROI框[{area_idx}]: {roi_box} (格式: [left, top, right, bottom])")
+                                    print(f"  ROI框与配置对比: left匹配={roi_box[0]==config_left}, right匹配={roi_box[2]==config_right}")
+
                 # 应用缩放和偏移
                 scaled_left = int(left * scale_x) + offset_x
                 scaled_right = int(right * scale_x) + offset_x
                 scaled_y = int(y_absolute * scale_y) + offset_y
+
+                print(f"缩放后坐标: scaled_left={scaled_left}, scaled_right={scaled_right}, scaled_y={scaled_y}")
 
                 # 绘制红色液位线
                 painter.setPen(QtGui.QPen(line_color, 2))
@@ -379,7 +482,10 @@ class VideoRenderWidget(QtWidgets.QWidget):
                 painter.drawText(scaled_left + 5, scaled_y - 10, text)
 
             except Exception as e:
+                print(f"绘制区域 {area_idx} 失败: {e}")
                 continue
+
+        print("========================================\n")
 
     def _draw_info_bar(self, painter):
         """绘制信息栏（顶部）"""
