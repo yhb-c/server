@@ -160,26 +160,33 @@ class AnnotationManager(QtCore.QObject):
                 capture = self.main_window._channel_captures.get(channel_id)
                 if capture:
                     print(f"[标注管理器] 找到捕获对象: {type(capture).__name__}")
-                    
+
+                    # 优先使用get_current_frame（直接返回当前帧，不管是否是新帧）
+                    if hasattr(capture, 'get_current_frame'):
+                        frame = capture.get_current_frame()
+                        if frame is not None:
+                            print(f"[标注管理器] 通过get_current_frame成功获取帧")
+                            return frame
+
                     # 尝试不同的获取方法
                     if hasattr(capture, 'get_frame'):
                         frame = capture.get_frame()
                         if frame is not None:
                             print(f"[标注管理器] 通过get_frame成功获取帧")
                             return frame
-                    
+
                     if hasattr(capture, 'read'):
                         ret, frame = capture.read()
                         if ret and frame is not None:
                             print(f"[标注管理器] 通过read成功获取帧")
                             return frame
-                    
+
                     if hasattr(capture, 'read_latest'):
                         ret, frame = capture.read_latest()
                         if ret and frame is not None:
                             print(f"[标注管理器] 通过read_latest成功获取帧")
                             return frame
-                    
+
                     print(f"[标注管理器] 捕获对象的所有获取方法都失败")
                 else:
                     print(f"[标注管理器] 未找到通道 {channel_id} 的捕获对象")

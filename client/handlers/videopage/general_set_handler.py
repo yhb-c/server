@@ -40,7 +40,6 @@ class GeneralSetPanelHandler:
         super().__init__(*args, **kwargs)
         self.logger = logging.getLogger('client')
         self.general_set_panel = None
-        self.annotation_widget = None
         self.annotation_engine = None
     
     def _showWarningDialog(self, parent, title, message):
@@ -108,22 +107,6 @@ class GeneralSetPanelHandler:
         if hasattr(panel, 'channel_id') and panel.channel_id:
             self._handleLoadChannelModelConfig(panel.channel_id)
     
-    def connectAnnotationWidget(self, widget):
-        """
-        连接标注界面组件信号
-        
-        Args:
-            widget: AnnotationWidget实例
-        """
-        self.annotation_widget = widget
-        
-        # 连接信号
-        widget.annotationEngineRequested.connect(self._handleAnnotationEngineRequest)
-        widget.frameLoadRequested.connect(self._handleFrameLoadRequest)
-        widget.annotationDataRequested.connect(self._handleAnnotationDataRequest)
-        
-        # 连接ROI拖动完成信号 - 触发自动标注
-        widget.roiDragCompleted.connect(self._handleRoiDragCompleted)
     
     def _handleRefreshModelList(self, model_widget=None):
         """处理刷新模型列表请求 - 从服务端获取模型列表"""
@@ -1233,109 +1216,22 @@ class GeneralSetPanelHandler:
     def _on_annotation_manager_failed(self, channel_id, error_message):
         """
         处理标注管理器失败事件
-        
+
         Args:
             channel_id: 通道ID
             error_message: 错误信息
         """
         try:
             self.logger.debug(f"[标注处理] 通道 {channel_id} 标注失败: {error_message}")
-            
+
             QtWidgets.QMessageBox.warning(
                 self.main_window if hasattr(self, 'main_window') else None,
                 "标注失败",
                 f"通道 {channel_id} 标注失败：\n{error_message}"
             )
-            
+
         except Exception as e:
             self.logger.debug(f"[标注处理] 处理标注失败异常: {e}")
-            
-            # 3. 创建标注界面组件
-            annotation_widget = self.showAnnotationWidget(self.general_set_panel)
-            
-            #  设置通道名称（用于生成区域默认名称）
-            if self.general_set_panel and self.general_set_panel.channel_name:
-                annotation_widget.setChannelName(self.general_set_panel.channel_name)
-            
-            # 3.5. 初始化物理变焦控制器
-            self._initPhysicalZoomForAnnotation(annotation_widget)
-            
-            # 3.6. 加载历史ROI标注数据
-            if self.general_set_panel and self.general_set_panel.channel_id:
-                history_data = self._loadHistoryAnnotation(self.general_set_panel.channel_id)
-                if history_data:
-                    self._applyHistoryAnnotation(annotation_widget, history_data)
-            
-            # 4. 连接标注完成信号
-            def on_annotation_completed(boxes, bottoms, tops, init_levels=None):
-                # 保存标注结果到配置文件（包含区域名称、高度、初始液位线和状态）
-                if self.general_set_panel and self.general_set_panel.channel_id:
-                    channel_id = self.general_set_panel.channel_id
-                    self._saveAnnotationmission_result(
-                        channel_id,
-                        boxes,
-                        bottoms,
-                        tops,
-                        annotation_widget.area_names,  # 区域名称
-                        annotation_widget.area_heights,  # 区域高度
-                        init_levels=init_levels,  # 初始液位线
-                        area_states=annotation_widget.area_states  # 区域状态（默认/空/满）
-                    )
-                
-                # 生成并显示标注结果
-                if self._annotation_source_frame is not None and self.general_set_panel:
-                    try:
-                        # 调用handler方法处理标注结果
-                        pixmap = self._createAnnotationmission_resultPixmap(
-                            self._annotation_source_frame, 
-                            boxes, 
-                            bottoms, 
-                            tops,
-                            init_levels
-                        )
-                        
-                        if pixmap:
-                            # 显示处理好的pixmap
-                            self.general_set_panel.showAnnotationmission_result(pixmap, len(boxes))
-                            pass
-                        else:
-                            # pixmap创建失败，只更新状态
-                            self.general_set_panel.updateAnnotationStatus(True, len(boxes))
-                        
-                    except Exception as e:
-                        pass
-                        import traceback
-                        traceback.print_exc()
-                        # 即使显示失败，也更新状态
-                        if self.general_set_panel:
-                            self.general_set_panel.updateAnnotationStatus(True, len(boxes))
-                else:
-                    # 没有图像，只更新状态
-                    if self.general_set_panel:
-                        self.general_set_panel.updateAnnotationStatus(True, len(boxes))
-            
-            def on_annotation_cancelled():
-                pass
-            
-            annotation_widget.annotationCompleted.connect(on_annotation_completed)
-            annotation_widget.annotationCancelled.connect(on_annotation_cancelled)
-            
-            # 5. 加载图像并显示标注界面
-            if annotation_widget.loadFrame(channel_frame):
-                # 🔥 关键修复：延迟显示窗口，确保全屏应用后再显示
-                # 这样可以确保标注帧在全屏模式下立即显示
-                QtCore.QTimer.singleShot(150, annotation_widget.show)
-                pass
-            else:
-                pass
-            
-            self.logger.debug(f"[标注调试] ========== 标注请求处理完成 ==========\n")
-            
-        except Exception as e:
-            self.logger.debug(f"[标注调试] 标注请求处理异常: {e}")
-            import traceback
-            traceback.print_exc()
-            self.logger.debug(f"[标注调试] ========== 标注请求处理异常结束 ==========\n")
     
     def _saveAnnotationmission_result(self, channel_id, boxes, bottoms, tops, area_names=None, area_heights=None, init_levels=None, area_states=None):
         """
@@ -2208,140 +2104,7 @@ finally:
             traceback.print_exc()
             print(f"{'='*60}\n")
     
-    def _handleAnnotationEngineRequest(self):
-        """处理标注引擎请求"""
-        if self.annotation_engine and self.annotation_widget:
-            self.annotation_widget.setAnnotationEngine(self.annotation_engine)
-    
-    def _handleFrameLoadRequest(self):
-        """处理帧加载请求"""
-        # 这里可以添加帧加载的业务逻辑
-        pass
-    
-    def _handleAnnotationDataRequest(self):
-        """处理标注数据请求"""
-        try:
-            if self.annotation_engine and self.annotation_widget:
-                # 从标注引擎获取实际的标注数据
-                boxes = self.annotation_engine.boxes
-                bottoms = self.annotation_engine.bottom_points
-                tops = self.annotation_engine.top_points
-                
-                # 发送标注完成信号
-                self.annotation_widget.showAnnotationCompleted(boxes, bottoms, tops)
-            else:
-                if self.annotation_widget:
-                    self.annotation_widget.showAnnotationError("标注引擎未初始化")
-        except Exception as e:
-            pass
-            import traceback
-            traceback.print_exc()
-            if self.annotation_widget:
-                self.annotation_widget.showAnnotationError(f"获取标注数据失败: {str(e)}")
-    
-    def _handleRoiDragCompleted(self, roi_index: int, roi_box: tuple):
-        """
-        处理ROI拖动完成信号 - 自动标注顶部线条、底部线条、初始液位线
-        
-        流程：
-        1. 尝试使用模型自动标注
-        2. 若自动标注失败则使用固定比例设置液位线
-        
-        Args:
-            roi_index: ROI索引
-            roi_box: ROI框数据 (cx, cy, size)
-        """
-        try:
-            if not self.annotation_widget or not self.annotation_engine:
-                return
-            
-            cx, cy, size = roi_box
-            
-            # 计算固定比例的默认位置（作为备选）
-            half_size = size // 2
-            default_top = (cx, cy - half_size + int(size * 0.1))      # 顶部：ROI顶部向下10%
-            default_bottom = (cx, cy + half_size - int(size * 0.1))   # 底部：ROI底部向上10%
-            default_init_level = (cx, cy)                              # 初始液位：ROI中心
-            
-            # 获取当前帧
-            frame = self.annotation_widget.current_frame
-            if frame is None:
-                self._applyAnnotationPoints(roi_index, default_top, default_bottom, default_init_level, 'fixed_ratio')
-                return
-            
-            # 尝试自动标注
-            auto_success = False
-            try:
-                from utils.auto_dot import auto_annotate_single_roi, get_model_from_pool
-                
-                # 获取通道ID
-                channel_id = None
-                if self.general_set_panel and hasattr(self.general_set_panel, 'channel_id'):
-                    channel_id = self.general_set_panel.channel_id
-                
-                # 尝试从全局模型池获取模型
-                model = get_model_from_pool(channel_id)
-                
-                if model is not None:
-                    # 执行自动标注
-                    result = auto_annotate_single_roi(frame, roi_box, model, channel_id)
-                    
-                    if result.get('success') and result.get('method') != 'default' and result.get('method') != 'default_fallback':
-                        top_point = result['top_point']
-                        bottom_point = result['bottom_point']
-                        init_level_point = result['init_level_point']
-                        method = result.get('method', 'unknown')
-                        confidence = result.get('confidence', 0.0)
-                        
-                        self._applyAnnotationPoints(roi_index, top_point, bottom_point, init_level_point, method)
-                        auto_success = True
-                    
-            except ImportError:
-                pass
-            except Exception:
-                pass
-            
-            # 若自动标注失败，使用固定比例
-            if not auto_success:
-                self._applyAnnotationPoints(roi_index, default_top, default_bottom, default_init_level, 'fixed_ratio')
-                
-        except Exception:
-            pass
-    
-    def _applyAnnotationPoints(self, roi_index: int, top_point: tuple, bottom_point: tuple, 
-                                init_level_point: tuple, method: str):
-        """
-        应用标注点位置到标注引擎
-        
-        Args:
-            roi_index: ROI索引
-            top_point: 顶部线条位置 (x, y)
-            bottom_point: 底部线条位置 (x, y)
-            init_level_point: 初始液位线位置 (x, y)
-            method: 标注方法（用于日志）
-        """
-        try:
-            # 更新顶部线条
-            if roi_index < len(self.annotation_engine.top_points):
-                self.annotation_engine.top_points[roi_index] = top_point
-            
-            # 更新底部线条
-            if roi_index < len(self.annotation_engine.bottom_points):
-                self.annotation_engine.bottom_points[roi_index] = bottom_point
-            
-            # 更新初始液位线
-            if hasattr(self.annotation_engine, 'init_level_points'):
-                while len(self.annotation_engine.init_level_points) <= roi_index:
-                    self.annotation_engine.init_level_points.append(init_level_point)
-                self.annotation_engine.init_level_points[roi_index] = init_level_point
-            
-            # 刷新显示
-            if self.annotation_widget:
-                self.annotation_widget._updateDisplay()
-                
-        except Exception:
-            pass
-    
+
     def _initPhysicalZoomForAnnotation(self, annotation_widget):
         """为标注界面初始化物理变焦控制器"""
         try:
@@ -2408,31 +2171,19 @@ finally:
     def showGeneralSetDialog(self, channel_name=None, channel_id=None, task_info=None):
         """显示常规设置对话框"""
         from widgets.videopage.general_set import GeneralSetDialog
-        
+
         # 创建对话框
         dialog = GeneralSetDialog(self, channel_name, channel_id, task_info)
-        
+
         # 连接信号（这会设置 self.general_set_panel）
         self.connectGeneralSetPanel(dialog.getPanel())
-        
+
         # 自动加载该通道的配置
         if channel_id:
             pass
-            
+
             # 使用QTimer延迟加载，确保UI初始化完成
             from qtpy.QtCore import QTimer
             QTimer.singleShot(200, self._handleLoadSettings)
-        
+
         return dialog
-    
-    def showAnnotationWidget(self, parent=None):
-        """显示标注界面组件"""
-        from widgets.videopage.annotation import AnnotationWidget
-        
-        # 创建标注界面组件
-        widget = AnnotationWidget(parent, self.annotation_engine)
-        
-        # 连接信号
-        self.connectAnnotationWidget(widget)
-        
-        return widget

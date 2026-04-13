@@ -1,17 +1,17 @@
 channel1:
   boxes:
-  - - 872
-    - 505
-    - 320
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 633
+  - 635
   fixed_tops:
-  - 377
+  - 189
   init_levels:
-  - - 872
-    - 505
+  - - 632
+    - 633
   fixed_init_levels:
-  - 10.0
+  - 0.09
   annotation_count: 1
   areas:
     area_1:
@@ -19,4 +19,26 @@ channel1:
       height: 20mm
       state: 默认
       init_status: 0
-  last_updated: '2026-04-13 14:24:23'
+  last_updated: '2026-04-13 15:07:12'
+channel4:
+  boxes:
+  - - 631
+    - 446
+    - 864
+  fixed_bottoms:
+  - 791
+  fixed_tops:
+  - 100
+  init_levels:
+  - - 631
+    - 446
+  fixed_init_levels:
+  - 9.99
+  annotation_count: 1
+  areas:
+    area_1:
+      name: 通道4_区域1
+      height: 20mm
+      state: 默认
+      init_status: 0
+  last_updated: '2026-04-13 14:35:31'

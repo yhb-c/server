@@ -1,544 +1,352 @@
 channel1:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道1_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道1_区域2
-      state: 默认
   boxes:
-  - &id001
-    - 640
-    - 424
-    - 1280
-  - *id001
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id002
-    - 640
-    - 824
-  - *id002
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel10:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道10_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道10_区域2
-      state: 默认
   boxes:
-  - &id003
-    - 640
-    - 424
-    - 1280
-  - *id003
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id004
-    - 640
-    - 824
-  - *id004
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel11:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道11_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道11_区域2
-      state: 默认
   boxes:
-  - &id005
-    - 640
-    - 424
-    - 1280
-  - *id005
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id006
-    - 640
-    - 824
-  - *id006
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel12:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道12_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道12_区域2
-      state: 默认
   boxes:
-  - &id007
-    - 640
-    - 424
-    - 1280
-  - *id007
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id008
-    - 640
-    - 824
-  - *id008
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel13:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道13_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道13_区域2
-      state: 默认
   boxes:
-  - &id009
-    - 640
-    - 424
-    - 1280
-  - *id009
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id010
-    - 640
-    - 824
-  - *id010
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel14:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道14_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道14_区域2
-      state: 默认
   boxes:
-  - &id011
-    - 640
-    - 424
-    - 1280
-  - *id011
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id012
-    - 640
-    - 824
-  - *id012
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel15:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道15_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道15_区域2
-      state: 默认
   boxes:
-  - &id013
-    - 640
-    - 424
-    - 1280
-  - *id013
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id014
-    - 640
-    - 824
-  - *id014
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel16:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道16_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道16_区域2
-      state: 默认
   boxes:
-  - &id015
-    - 640
-    - 424
-    - 1280
-  - *id015
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id016
-    - 640
-    - 824
-  - *id016
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel2:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道2_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道2_区域2
-      state: 默认
   boxes:
-  - &id017
-    - 640
-    - 424
-    - 1280
-  - *id017
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id018
-    - 640
-    - 824
-  - *id018
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel3:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道3_区域2
-      state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道3_区域2
+      name: 通道3_区域1
       state: 默认
   boxes:
-  - &id019
-    - 640
-    - 424
-    - 1280
-  - *id019
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id020
-    - 640
-    - 824
-  - *id020
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel4:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道4_区域2
-      state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道4_区域2
+      name: 通道4_区域1
       state: 默认
   boxes:
-  - &id021
-    - 640
-    - 424
-    - 1280
-  - *id021
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id022
-    - 640
-    - 824
-  - *id022
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel5:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道5_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道5_区域2
-      state: 默认
   boxes:
-  - &id023
-    - 640
-    - 424
-    - 1280
-  - *id023
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id024
-    - 640
-    - 824
-  - *id024
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel6:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道6_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道6_区域2
-      state: 默认
   boxes:
-  - &id025
-    - 640
-    - 424
-    - 1280
-  - *id025
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id026
-    - 640
-    - 824
-  - *id026
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel7:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
-      name: 通道7_区域2
-      state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道7_区域2
+      name: 通道7_区域1
       state: 默认
   boxes:
-  - &id027
-    - 640
-    - 424
-    - 1280
-  - *id027
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id028
-    - 640
-    - 824
-  - *id028
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel8:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道8_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道8_区域2
-      state: 默认
   boxes:
-  - &id029
-    - 640
-    - 424
-    - 1280
-  - *id029
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id030
-    - 640
-    - 824
-  - *id030
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'
 channel9:
-  annotation_count: 2
+  annotation_count: 1
   areas:
     area_1:
       height: 20mm
       init_status: 0
       name: 通道9_区域1
       state: 默认
-    area_2:
-      height: 20mm
-      init_status: 0
-      name: 通道9_区域2
-      state: 默认
   boxes:
-  - &id031
-    - 640
-    - 424
-    - 1280
-  - *id031
+  - - 650
+    - 455
+    - 896
   fixed_bottoms:
-  - 824
-  - 824
+  - 635
   fixed_init_levels:
   - 0.0
-  - 0.0
   fixed_tops:
-  - 24
-  - 24
+  - 189
   init_levels:
-  - &id032
-    - 640
-    - 824
-  - *id032
-  last_updated: '2026-03-25 00:00:00'
+  - - 632
+    - 633
+  last_updated: '2026-04-13 00:00:00'

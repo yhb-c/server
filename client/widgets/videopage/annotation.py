@@ -98,29 +98,36 @@ class AnnotationWidget(QtWidgets.QWidget):
         """初始化UI"""
         self.setWindowTitle("ROI预览窗口")
         self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint)
-        
+
         # 主布局
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
-        
-        # 图像显示区域
-        self.image_label = QtWidgets.QLabel()
-        self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setStyleSheet("""
-            QLabel {
-                background-color: #000000;
-                border: none;
-            }
-        """)
-        # 全屏模式下，图像标签会自动填充整个窗口
-        self.image_label.mousePressEvent = self._onMousePress
-        self.image_label.mouseMoveEvent = self._onMouseMove
-        self.image_label.mouseReleaseEvent = self._onMouseRelease
-        self.image_label.mouseDoubleClickEvent = self._onMouseDoubleClick
-        
-        main_layout.addWidget(self.image_label)
-        
+
+        # 使用QGraphicsView实现高性能绘制
+        self.graphics_view = QtWidgets.QGraphicsView()
+        self.graphics_scene = QtWidgets.QGraphicsScene()
+        self.graphics_view.setScene(self.graphics_scene)
+        self.graphics_view.setStyleSheet("background-color: #000000; border: none;")
+        self.graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.graphics_view.setRenderHint(QtGui.QPainter.Antialiasing, False)  # 关闭抗锯齿提升性能
+        self.graphics_view.setViewportUpdateMode(QtWidgets.QGraphicsView.MinimalViewportUpdate)  # 最小更新模式
+
+        # 背景图像项（只设置一次）
+        self.background_pixmap_item = None
+
+        # 图形项列表（框、线条）
+        self.graphics_items = []
+
+        # 鼠标事件
+        self.graphics_view.mousePressEvent = self._onMousePress
+        self.graphics_view.mouseMoveEvent = self._onMouseMove
+        self.graphics_view.mouseReleaseEvent = self._onMouseRelease
+        self.graphics_view.mouseDoubleClickEvent = self._onMouseDoubleClick
+
+        main_layout.addWidget(self.graphics_view)
+
         # 使用QTimer延迟调用showFullScreen，让窗口和控件先完成初始化
         QtCore.QTimer.singleShot(100, self._applyFullScreen)
     
@@ -130,10 +137,28 @@ class AnnotationWidget(QtWidgets.QWidget):
     
     def _applyFullScreen(self):
         """应用全屏模式（延迟调用，确保控件已初始化）"""
+        with open('/tmp/annotation_focus_debug.log', 'a') as f:
+            f.write("[焦点调试] _applyFullScreen 开始\n")
         self.showFullScreen()
+        with open('/tmp/annotation_focus_debug.log', 'a') as f:
+            f.write(f"[焦点调试] showFullScreen完成，窗口是否激活: {self.isActiveWindow()}\n")
+        self.setFocus()
+        with open('/tmp/annotation_focus_debug.log', 'a') as f:
+            f.write(f"[焦点调试] setFocus完成，窗口是否有焦点: {self.hasFocus()}\n")
+        self.activateWindow()
+        with open('/tmp/annotation_focus_debug.log', 'a') as f:
+            f.write(f"[焦点调试] activateWindow完成，窗口是否激活: {self.isActiveWindow()}\n")
         if self.current_frame is not None:
             self._updateDisplay()
-    
+        with open('/tmp/annotation_focus_debug.log', 'a') as f:
+            f.write("[焦点调试] _applyFullScreen 完成\n")
+
+    def resizeEvent(self, event):
+        """窗口大小变化时重新调整视图"""
+        super(AnnotationWidget, self).resizeEvent(event)
+        if self.background_pixmap_item is not None:
+            self.graphics_view.fitInView(self.graphics_scene.sceneRect(), Qt.KeepAspectRatio)
+
     def setAnnotationEngine(self, engine):
         """设置标注引擎"""
         self.annotation_engine = engine
@@ -189,28 +214,29 @@ class AnnotationWidget(QtWidgets.QWidget):
             return False
         self.current_frame = frame.copy()
         self.frameLoadRequested.emit()
-        QtCore.QTimer.singleShot(120, self._updateDisplay)
+        self._updateDisplay()
         return True
     
     def _updateDisplay(self):
         """更新显示（完整渲染，包含文字）"""
         if self.current_frame is None:
             return
-        img = self.current_frame.copy()
+
+        self._displayImage(self.current_frame)
+
         if self.annotation_engine is not None:
-            self._drawAnnotations(img)
-        self._drawInstructionText(img)
-        self._displayImage(img)
+            self._drawAnnotationsAsGraphicsItems()
+
         self._updateStatus()
     
     def _updateDisplayLightweight(self):
-        """轻量级更新显示（拖动时使用，只画框不画文字，减少延迟）"""
+        """轻量级更新显示（拖动时使用，只更新图形项，不重绘背景）"""
         if self.current_frame is None:
             return
-        img = self.current_frame.copy()
+
+        # 只更新标注图形项，不重绘背景图像
         if self.annotation_engine is not None:
-            self._drawAnnotationsLightweight(img)
-        self._displayImage(img)
+            self._drawAnnotationsAsGraphicsItems()
     
     def _drawAnnotationsLightweight(self, img):
         """轻量级绘制标注（只画框和线条，不画文字）"""
@@ -284,6 +310,76 @@ class AnnotationWidget(QtWidgets.QWidget):
         scaled_height = int(frame_height * self.scale_factor)
         self.offset_x = (label_width - scaled_width) // 2
         self.offset_y = (label_height - scaled_height) // 2
+
+    def _drawAnnotationsAsGraphicsItems(self):
+        """使用QGraphicsItem绘制标注（高性能，只更新图形项）"""
+        if self.annotation_engine is None:
+            return
+
+        # 清除旧的图形项
+        for item in self.graphics_items:
+            self.graphics_scene.removeItem(item)
+        self.graphics_items.clear()
+
+        # 绘制已完成的框（黄色）
+        for i, (cx, cy, size) in enumerate(self.annotation_engine.boxes):
+            half = size // 2
+            rect = QtCore.QRectF(cx - half, cy - half, size, size)
+            rect_item = self.graphics_scene.addRect(rect, QtGui.QPen(QtGui.QColor(255, 255, 0), 3))
+            self.graphics_items.append(rect_item)
+
+        # 绘制底部线条（绿色）
+        for i, pt in enumerate(self.annotation_engine.bottom_points):
+            if i < len(self.annotation_engine.boxes):
+                _, _, size = self.annotation_engine.boxes[i]
+                line_length = int(size * 1.1)
+            else:
+                line_length = 30
+            half_length = line_length // 2
+            x, y = pt
+            line_item = self.graphics_scene.addLine(x - half_length, y, x + half_length, y,
+                                                     QtGui.QPen(QtGui.QColor(0, 255, 0), 2))
+            self.graphics_items.append(line_item)
+
+        # 绘制顶部线条（红色）
+        for i, pt in enumerate(self.annotation_engine.top_points):
+            if i < len(self.annotation_engine.boxes):
+                _, _, size = self.annotation_engine.boxes[i]
+                line_length = int(size * 1.1)
+            else:
+                line_length = 30
+            half_length = line_length // 2
+            x, y = pt
+            line_item = self.graphics_scene.addLine(x - half_length, y, x + half_length, y,
+                                                     QtGui.QPen(QtGui.QColor(0, 0, 255), 2))
+            self.graphics_items.append(line_item)
+
+        # 绘制初始液位线（橙色）
+        if hasattr(self.annotation_engine, 'init_level_points'):
+            for i, pt in enumerate(self.annotation_engine.init_level_points):
+                if i < len(self.annotation_engine.boxes):
+                    _, _, size = self.annotation_engine.boxes[i]
+                    line_length = int(size * 1.1)
+                else:
+                    line_length = 30
+                half_length = line_length // 2
+                x, y = pt
+                line_item = self.graphics_scene.addLine(x - half_length, y, x + half_length, y,
+                                                         QtGui.QPen(QtGui.QColor(255, 165, 0), 2))
+                self.graphics_items.append(line_item)
+
+        # 如果正在画框，显示临时框
+        if self.drawing_box:
+            dx = self.current_mouse_pos[0] - self.box_start[0]
+            dy = self.current_mouse_pos[1] - self.box_start[1]
+            length = max(abs(dx), abs(dy))
+            length = ((length + 31) // 32) * 32
+            x2 = self.box_start[0] + (length if dx >= 0 else -length)
+            y2 = self.box_start[1] + (length if dy >= 0 else -length)
+            temp_rect = QtCore.QRectF(min(self.box_start[0], x2), min(self.box_start[1], y2),
+                                       abs(x2 - self.box_start[0]), abs(y2 - self.box_start[1]))
+            temp_rect_item = self.graphics_scene.addRect(temp_rect, QtGui.QPen(QtGui.QColor(255, 255, 0), 3))
+            self.graphics_items.append(temp_rect_item)
 
     def _drawAnnotations(self, img):
         """绘制标注内容"""
@@ -468,21 +564,26 @@ class AnnotationWidget(QtWidgets.QWidget):
             pass
     
     def _displayImage(self, img):
-        """显示图像"""
+        """显示图像（只设置背景，不绘制标注）"""
         if img is None:
             return
-        self._calculateDisplayParams()
-        img_height, img_width = img.shape[:2]
-        scaled_width = int(img_width * self.scale_factor)
-        scaled_height = int(img_height * self.scale_factor)
-        img_scaled = cv2.resize(img, (scaled_width, scaled_height))
-        rgb_image = cv2.cvtColor(img_scaled, cv2.COLOR_BGR2RGB)
+
+        # 转换为QPixmap
+        rgb_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         qt_image = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         pixmap = QtGui.QPixmap.fromImage(qt_image)
-        self.image_label.setPixmap(pixmap)
-        self.image_label.setAlignment(Qt.AlignCenter)
+
+        # 只在第一次或图像尺寸变化时重新设置背景
+        if self.background_pixmap_item is None:
+            self.background_pixmap_item = self.graphics_scene.addPixmap(pixmap)
+            self.graphics_scene.setSceneRect(0, 0, w, h)
+            # 只在第一次设置时调用fitInView
+            self.graphics_view.fitInView(self.graphics_scene.sceneRect(), Qt.KeepAspectRatio)
+        else:
+            # 直接更新pixmap，不重建整个场景，不调用fitInView
+            self.background_pixmap_item.setPixmap(pixmap)
     
     def _updateStatus(self):
         """更新状态显示"""
@@ -490,10 +591,16 @@ class AnnotationWidget(QtWidgets.QWidget):
 
     def _onMousePress(self, event):
         """鼠标按下事件"""
+        with open('/tmp/annotation_focus_debug.log', 'a') as f:
+            f.write(f"[焦点调试] _onMousePress 触发，按钮: {event.button()}, 窗口是否有焦点: {self.hasFocus()}\n")
         if self.annotation_engine is None or self.current_frame is None:
+            with open('/tmp/annotation_focus_debug.log', 'a') as f:
+                f.write(f"[焦点调试] _onMousePress - annotation_engine为None: {self.annotation_engine is None}, current_frame为None: {self.current_frame is None}\n")
             return
-        
+
         image_x, image_y = self._labelToImageCoords(event.x(), event.y())
+        with open('/tmp/annotation_focus_debug.log', 'a') as f:
+            f.write(f"[焦点调试] _onMousePress - 图像坐标: ({image_x}, {image_y})\n")
         
         if event.button() == Qt.RightButton:
             self._showContextMenu(event.globalPos(), image_x, image_y)
@@ -795,13 +902,17 @@ class AnnotationWidget(QtWidgets.QWidget):
         screen_y = int(image_y * scale_factor + offset_y)
         return (screen_x, screen_y)
     
-    def _labelToImageCoords(self, label_x, label_y):
-        """将标签坐标转换为图像坐标"""
+    def _labelToImageCoords(self, view_x, view_y):
+        """将视图坐标转换为图像坐标（scene坐标）"""
         if self.current_frame is None:
             return 0, 0
-        self._calculateDisplayParams()
-        image_x = int((label_x - self.offset_x) / self.scale_factor)
-        image_y = int((label_y - self.offset_y) / self.scale_factor)
+
+        # 将view坐标转换为scene坐标
+        scene_pos = self.graphics_view.mapToScene(int(view_x), int(view_y))
+        image_x = int(scene_pos.x())
+        image_y = int(scene_pos.y())
+
+        # 限制在图像范围内
         img_height, img_width = self.current_frame.shape[:2]
         image_x = max(0, min(image_x, img_width - 1))
         image_y = max(0, min(image_y, img_height - 1))
@@ -1020,6 +1131,8 @@ class AnnotationWidget(QtWidgets.QWidget):
     
     def keyPressEvent(self, event):
         """键盘事件处理"""
+        with open('/tmp/annotation_focus_debug.log', 'a') as f:
+            f.write(f"[焦点调试] keyPressEvent 触发，按键: {event.key()}, 窗口是否有焦点: {self.hasFocus()}\n")
         if event.key() == Qt.Key_Escape and self.edit_widget is not None:
             self._cancelEdit()
             return

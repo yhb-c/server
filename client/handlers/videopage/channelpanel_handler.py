@@ -618,35 +618,19 @@ class ChannelPanelHandler:
         if panel and hasattr(panel, 'setChannelName'):
             panel.setChannelName(channel_name)
         
-        # 关键修复：在主线程中预先获取面板引用
-        # 检测是否为本地视频文件，决定渲染模式
+        # 获取面板引用
         panel = self._channel_panels_map.get(channel_id)
         if panel:
             self.logger.debug(f"[DEBUG] 主线程获取 {channel_id} 面板引用")
-
-            # 检测是否为本地视频文件
-            rtsp_url = channel_config.get('address', '')
-            is_local_video = rtsp_url.endswith(('.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v'))
-
-            if is_local_video:
-                # 本地视频使用HWND直接渲染模式（高性能，无CPU开销）
-                if hasattr(panel, 'setHwndRenderMode'):
-                    panel.setHwndRenderMode(True)
-                    self.logger.debug(f"[DEBUG] 主线程设置 {channel_id} HWND直接渲染模式（本地视频）")
-            else:
-                # RTSP流使用Qt渲染模式
-                if hasattr(panel, 'setHwndRenderMode'):
-                    panel.setHwndRenderMode(False)
-                    self.logger.debug(f"[DEBUG] 主线程设置 {channel_id} Qt渲染模式（RTSP流）")
 
         # 切换到视频监控页面
         self.showVideoPage()
 
         # 在后台线程中打开通道（避免阻塞UI）
-        # 不再传递HWND参数
+        # Qt渲染模式
         thread = threading.Thread(
             target=self._connectChannelThread,
-            args=(channel_id, channel_config, None),
+            args=(channel_id, channel_config),
             daemon=True
         )
         thread.start()
@@ -1096,13 +1080,12 @@ class ChannelPanelHandler:
             )
             return False
     
-    def _connectChannelThread(self, channel_id, channel_config, hwnd=None):
+    def _connectChannelThread(self, channel_id, channel_config):
         """在后台线程中打开通道（直接连接RTSP相机）
 
         Args:
             channel_id: 通道ID
             channel_config: 通道配置
-            hwnd: 窗口句柄（已废弃，不再使用）
         """
         try:
             self.logger.debug(f"[通道连接] {channel_id} 开始连接RTSP相机")
@@ -1125,10 +1108,7 @@ class ChannelPanelHandler:
 
             from HKcapture import HKcapture
 
-            # 检测是否为本地视频文件
-            is_local_video = rtsp_url.endswith(('.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v'))
-
-            # 创建HKcapture对象
+            # 创建HKcapture对象（使用Qt渲染模式）
             cap = HKcapture(
                 source=rtsp_url,
                 username=username,
@@ -1139,18 +1119,7 @@ class ChannelPanelHandler:
                 debug=False  # 关闭调试输出，减少性能开销
             )
 
-            # 本地视频使用HWND直接渲染模式
-            if is_local_video:
-                # 获取面板的HWND
-                panel = self._channel_panels_map.get(channel_id)
-                if panel and hasattr(panel, 'getVideoHwnd'):
-                    video_hwnd = panel.getVideoHwnd()
-                    cap.set_hwnd(video_hwnd)
-                    self.logger.debug(f"[通道连接] 本地视频使用HWND直接渲染模式，HWND={video_hwnd}")
-                else:
-                    self.logger.debug(f"[通道连接] 无法获取HWND，回退到Qt渲染模式")
-            else:
-                self.logger.debug(f"[通道连接] RTSP流使用Qt渲染模式")
+            self.logger.debug(f"[通道连接] 使用Qt渲染模式")
 
             # 打开相机连接
             if not cap.open():
@@ -1170,10 +1139,8 @@ class ChannelPanelHandler:
             # 移除连接中标记
             self._channels_connecting.discard(channel_id)
 
-            # 启动视频显示
-            # 修复：无论是否为本地视频，都启动Qt显示线程
-            # 因为HWND模式需要在面板上正确设置，这里统一使用Qt渲染
-            self._startVideoStream(channel_id, hwnd)
+            # 启动视频显示（Qt渲染模式）
+            self._startVideoStream(channel_id)
             self.logger.debug(f"[通道连接] {channel_id} 已启动Qt显示线程")
             
             # 更新UI状态（在主线程中执行）
@@ -1696,13 +1663,12 @@ class ChannelPanelHandler:
                 self.tr("保存通道配置失败: {}").format(str(e))
             )
             return False
-    
-    def _startVideoStream(self, channel_id, hwnd=None):
+
+    def _startVideoStream(self, channel_id):
         """启动视频流显示（使用Qt渲染模式）
 
         Args:
             channel_id: 通道ID
-            hwnd: 窗口句柄（已废弃，不再使用）
         """
         self.logger.debug(f"[视频流] {channel_id} 开始启动视频显示（Qt渲染模式）")
 
@@ -1863,8 +1829,6 @@ class ChannelPanelHandler:
         Args:
             channel_id: 通道ID
         """
-        self.logger.debug(f"[Qt显示] {channel_id} 开始运行（合并捕获和显示）")
-
         frame_count = 0
         last_frame_time = time.time()
 
@@ -1876,7 +1840,6 @@ class ChannelPanelHandler:
             video_fps = 25  # 默认25fps
 
         frame_interval = 1.0 / video_fps if video_fps > 0 else 0.04
-        self.logger.debug(f"[Qt显示] {channel_id} 视频帧率: {video_fps} fps, 帧间隔: {frame_interval:.4f}s")
 
         while self._display_flags.get(channel_id, False):
             try:
@@ -1892,14 +1855,6 @@ class ChannelPanelHandler:
 
                 if ret and frame is not None:
                     frame_count += 1
-                    current_time = time.time()
-
-                    # 每秒统计一次帧率
-                    if current_time - last_frame_time >= 1.0:
-                        fps = frame_count / (current_time - last_frame_time)
-                        self.logger.debug(f"[Qt显示] {channel_id} 显示帧率: {fps:.1f} fps")
-                        frame_count = 0
-                        last_frame_time = current_time
 
                     # 更新视频显示
                     self._updateVideoDisplay(channel_id, frame)
@@ -1916,8 +1871,6 @@ class ChannelPanelHandler:
             except Exception as e:
                 self.logger.debug(f"[Qt显示] {channel_id} 异常: {e}")
                 time.sleep(0.1)
-
-        self.logger.debug(f"[Qt显示] {channel_id} 已停止")
         
                 
 
@@ -2265,14 +2218,12 @@ class ChannelPanelHandler:
     def _updateVideoDisplay(self, channel_id, frame_or_data):
         """
         更新视频显示（线程安全）
-        
+
         通过 Qt 信号机制将数据传递到主线程处理。
-        
+
         Args:
             channel_id: 通道ID
-            frame_or_data: 
-                - HWND模式：dict，包含液位线数据 {'liquid_positions': {...}, 'is_new_data': bool, ...}
-                - Qt模式：numpy.ndarray，视频帧
+            frame_or_data: numpy.ndarray，视频帧
         """
         try:
             # 直接通过信号发射，Qt 会自动在主线程中调用槽函数
@@ -2283,68 +2234,28 @@ class ChannelPanelHandler:
     
     def _updateVideoDisplayUI(self, channel_id, frame_or_data):
         """
-        在主线程中更新视频显示
-
-        使用节流机制，每200ms最多更新一次 InfoOverlay，避免频繁重绘。
+        在主线程中更新视频显示（Qt渲染模式）
 
         Args:
             channel_id: 通道ID
-            frame_or_data:
-                - HWND模式：dict，包含液位线数据
-                - Qt模式：numpy.ndarray，视频帧
+            frame_or_data: numpy.ndarray，视频帧
         """
         try:
             panel = self._channel_panels_map.get(channel_id)
             if not panel:
                 return
 
-            # 判断是 HWND 模式还是 Qt 模式
-            if isinstance(frame_or_data, dict):
-                # HWND模式：缓存液位线数据，使用节流更新
-                liquid_positions = frame_or_data.get('liquid_positions', {})
-                is_new_data = frame_or_data.get('is_new_data', True)
-                video_width = frame_or_data.get('video_width', 0)
-                video_height = frame_or_data.get('video_height', 0)
+            # Qt模式：显示视频帧
+            if hasattr(panel, 'displayFrame'):
+                panel.displayFrame(frame_or_data)
 
-                # 缓存最新数据
-                if not hasattr(self, '_liquid_line_cache'):
-                    self._liquid_line_cache = {}
-                self._liquid_line_cache[channel_id] = {
-                    'liquid_positions': liquid_positions,
-                    'is_new_data': is_new_data,
-                    'video_width': video_width,
-                    'video_height': video_height
-                }
+            # 如果当前通道正在预览窗口显示，同步更新预览窗口的画面
+            if hasattr(self, '_current_preview_channel_id') and self._current_preview_channel_id == channel_id:
+                if hasattr(self, 'previewPanel') and hasattr(self.previewPanel, 'displayFrame'):
+                    self.previewPanel.displayFrame(frame_or_data)
 
-                # 节流：每200ms最多更新一次
-                import time
-                if not hasattr(self, '_last_overlay_update'):
-                    self._last_overlay_update = {}
-
-                current_time = time.time()
-                last_update = self._last_overlay_update.get(channel_id, 0)
-
-                if current_time - last_update >= 0.2:  # 200ms
-                    self._last_overlay_update[channel_id] = current_time
-                    if hasattr(panel, 'updateLiquidLines'):
-                        panel.updateLiquidLines(liquid_positions, is_new_data, video_width, video_height)
-
-                    # 如果当前通道正在预览窗口显示，同步更新预览窗口的液位线
-                    if hasattr(self, '_current_preview_channel_id') and self._current_preview_channel_id == channel_id:
-                        if hasattr(self, 'previewPanel') and hasattr(self.previewPanel, 'updateLiquidLines'):
-                            self.previewPanel.updateLiquidLines(liquid_positions, is_new_data, video_width, video_height)
-            else:
-                # Qt模式：显示视频帧
-                if hasattr(panel, 'displayFrame'):
-                    panel.displayFrame(frame_or_data)
-
-                # 如果当前通道正在预览窗口显示，同步更新预览窗口的画面
-                if hasattr(self, '_current_preview_channel_id') and self._current_preview_channel_id == channel_id:
-                    if hasattr(self, 'previewPanel') and hasattr(self.previewPanel, 'displayFrame'):
-                        self.previewPanel.displayFrame(frame_or_data)
-
-                # 同步更新放大窗口
-                self._updateAmplifyWindows(channel_id, frame_or_data)
+            # 同步更新放大窗口
+            self._updateAmplifyWindows(channel_id, frame_or_data)
         except Exception as e:
             self.logger.debug(f"[ERROR] 更新视频显示失败: {e}")
     
@@ -2787,7 +2698,7 @@ class ChannelPanelHandler:
                 except (ValueError, TypeError):
                     converted_positions[key] = value
 
-            # 更新液位线位置数据（线程安全）- 用于非HWND模式
+            # 更新液位线位置数据（线程安全）
             if channel_id not in self._liquid_line_locks:
                 import threading
                 self._liquid_line_locks[channel_id] = threading.Lock()
@@ -2795,7 +2706,7 @@ class ChannelPanelHandler:
             with self._liquid_line_locks[channel_id]:
                 self._liquid_line_positions[channel_id] = converted_positions.copy()
 
-            # 直接更新ChannelPanel的液位线显示（用于HWND模式）
+            # 直接更新ChannelPanel的液位线显示
             panel = self._channel_panels_map.get(channel_id)
             if panel:
 
