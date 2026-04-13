@@ -544,75 +544,80 @@ class ChannelPanelHandler:
     
     def onChannelConnected(self, channel_id):
         """打开通道"""
-        self.logger.debug(f"[DEBUG] onChannelConnected被调用: {channel_id}")
+        self.logger.info(f"[打开通道-步骤1] onChannelConnected被调用: {channel_id}")
         self.statusBar().showMessage(self.tr("正在打开通道: {}").format(channel_id))
-        
+
         # 找到发送信号的通道面板（映射已在初始化时建立）
         sender = self.sender()
-        self.logger.debug(f"[DEBUG] sender: {sender}")
-        
+        self.logger.info(f"[打开通道-步骤2] sender: {sender}")
+
         # 关键修复：如果通道已经连接或正在连接，不要重复连接
         if channel_id in self._channel_captures:
-            self.logger.debug(f"[DEBUG] {channel_id} 已经连接")
+            self.logger.info(f"[打开通道-跳过] {channel_id} 已经连接")
             return
-        
+
         if channel_id in self._channels_connecting:
-            self.logger.debug(f"[DEBUG] {channel_id} 正在连接中")
+            self.logger.info(f"[打开通道-跳过] {channel_id} 正在连接中")
             return
-        
+
         # 立即标记为正在连接（防止重复调用）
         self._channels_connecting.add(channel_id)
-        self.logger.debug(f"[DEBUG] {channel_id} 标记为正在连接")
-        
+        self.logger.info(f"[打开通道-步骤3] {channel_id} 标记为正在连接")
+
         # 映射已在 initializeChannelPanels 中建立，这里不需要再建立
         # 但为了兼容性，如果映射不存在则建立（某些特殊情况）
         if sender and hasattr(sender, 'displayFrame'):
             if channel_id not in self._channel_panels_map:
                 self._channel_panels_map[channel_id] = sender
-        
+
         # 从配置文件读取通道配置
+        self.logger.info(f"[打开通道-步骤4] {channel_id} 读取配置文件")
         channel_config = self._getChannelConfigFromFile(channel_id)
         if not channel_config:
             # 如果配置文件中没有，使用默认RTSP配置
             channel_config = {'address': 'rtsp://admin:cei345678@192.168.0.27:8000/stream1'}
-            self.logger.debug(f"[DEBUG] 使用默认RTSP配置: {channel_config}")
+            self.logger.info(f"[打开通道-步骤5] {channel_id} 使用默认RTSP配置: {channel_config}")
         else:
-            self.logger.debug(f"[DEBUG] 从配置文件读取配置: {channel_config}")
-        
+            self.logger.info(f"[打开通道-步骤5] {channel_id} 从配置文件读取配置: {channel_config}")
+
         # 读取并设置通道名称到面板（调用业务逻辑方法）
         # 从 channel_id (如 'channel1') 提取通道编号
         channel_number = channel_id.replace('channel', '') if 'channel' in channel_id else '?'
         channel_name = f"通道{channel_number}"
-        self.logger.debug(f"[DEBUG] 通道名称: {channel_name}")
-        
+        self.logger.info(f"[打开通道-步骤6] {channel_id} 通道名称: {channel_name}")
+
         panel = self._channel_panels_map.get(channel_id)
         if panel and hasattr(panel, 'setChannelName'):
             panel.setChannelName(channel_name)
-        
+
         # 关键修复：在主线程中预先获取HWND和设置渲染模式
         # 这些Qt UI操作必须在主线程中执行，不能在后台线程中调用
         hwnd = None
         if panel and hasattr(panel, 'getVideoHwnd'):
             hwnd = panel.getVideoHwnd()
-            self.logger.debug(f"[DEBUG] 主线程获取 {channel_id} HWND: {hwnd}")
-            
+            self.logger.info(f"[打开通道-步骤7] {channel_id} 主线程获取HWND: {hwnd}")
+
             # 设置面板为HWND渲染模式
             if hasattr(panel, 'setHwndRenderMode'):
                 panel.setHwndRenderMode(True)
-                self.logger.debug(f"[DEBUG] 主线程设置 {channel_id} HWND渲染模式")
-        
+                self.logger.info(f"[打开通道-步骤8] {channel_id} 主线程设置HWND渲染模式")
+        else:
+            self.logger.info(f"[打开通道-步骤7] {channel_id} 未获取到HWND（panel或getVideoHwnd不存在）")
+
         # 切换到视频监控页面
+        self.logger.info(f"[打开通道-步骤9] {channel_id} 切换到视频监控页面")
         self.showVideoPage()
-        
+
         # 在后台线程中打开通道（避免阻塞UI）
         # 将预先获取的HWND传递给后台线程
+        self.logger.info(f"[打开通道-步骤10] {channel_id} 启动后台连接线程")
         thread = threading.Thread(
             target=self._connectChannelThread,
             args=(channel_id, channel_config, hwnd),
             daemon=True
         )
         thread.start()
-        self.logger.debug(f"[DEBUG] 后台线程已启动")
+        self.logger.info(f"[打开通道-步骤11] {channel_id} 后台线程已启动")
     
     def _loadTaskInfoToPanel(self, channel_id, panel):
         """
@@ -1667,33 +1672,37 @@ class ChannelPanelHandler:
     
     def _startVideoStream(self, channel_id, hwnd=None):
         """启动视频流显示（直接使用HKcapture的HWND渲染）
-        
+
         Args:
             channel_id: 通道ID
             hwnd: 预先获取的窗口句柄
         """
-        self.logger.debug(f"[视频流] {channel_id} 开始启动视频显示, hwnd={hwnd}")
-        
+        self.logger.info(f"[视频流-步骤1] {channel_id} 开始启动视频显示, hwnd={hwnd}")
+
         if channel_id not in self._channel_captures:
-            self.logger.debug(f"[视频流] {channel_id} 不在 _channel_captures 中")
+            self.logger.error(f"[视频流-错误] {channel_id} 不在 _channel_captures 中")
             return
-        
+
         cap = self._channel_captures[channel_id]
-        self.logger.debug(f"[视频流] 获取到 capture 对象: {cap}")
-        
+        self.logger.info(f"[视频流-步骤2] {channel_id} 获取到 capture 对象: {cap}")
+
         # 无论是否有HWND，都启动帧数据存储线程（供标注功能使用）
         # 注释掉帧存储功能 - 不需要存储帧
         # self._startFrameStorageThread(channel_id)
-        
+
         # 如果有HWND，HKcapture会直接渲染到窗口
         if hwnd and hasattr(cap, 'start_render'):
             try:
+                self.logger.info(f"[视频流-步骤3] {channel_id} 调用cap.start_render()")
                 cap.start_render()
-                self.logger.debug(f"[视频流] {channel_id} HWND直接渲染已启动")
+                self.logger.info(f"[视频流-步骤4] {channel_id} HWND直接渲染已启动")
             except Exception as e:
-                self.logger.debug(f"[视频流] {channel_id} HWND渲染启动失败: {e}")
+                self.logger.error(f"[视频流-错误] {channel_id} HWND渲染启动失败: {e}")
+                import traceback
+                self.logger.error(traceback.format_exc())
         else:
             # 如果没有HWND或不支持直接渲染，启动Qt显示线程
+            self.logger.info(f"[视频流-步骤3] {channel_id} 启动Qt显示线程（无HWND或不支持start_render）")
             self._startQtVideoDisplay(channel_id)
     
     def _startFrameStorageThread(self, channel_id):
