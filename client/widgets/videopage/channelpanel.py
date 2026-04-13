@@ -598,18 +598,18 @@ class ChannelPanel(QtWidgets.QWidget):
                 height, width, channel = frame.shape
                 bytes_per_line = 3 * width
 
-                # BGR转RGB（HKcapture输出BGR格式）
+                # BGR转RGB（HKcapture统一输出BGR格式）
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 rgb_frame = np.ascontiguousarray(rgb_frame)
 
-                # 转换为QImage并交换R和B通道
+                # 转换为QImage
                 q_image = QtGui.QImage(
                     rgb_frame.data,
                     width,
                     height,
                     bytes_per_line,
                     QtGui.QImage.Format_RGB888
-                ).rgbSwapped()
+                )
 
                 # 转换为QPixmap
                 pixmap = QtGui.QPixmap.fromImage(q_image)

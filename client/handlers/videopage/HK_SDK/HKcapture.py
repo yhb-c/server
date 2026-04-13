@@ -1074,12 +1074,13 @@ class HKcapture:
                     rgb_data = string_at(pBuf, rgb_size)
                     rgb_array = np.frombuffer(rgb_data, dtype=np.uint8)
                     frame_bgra = rgb_array.reshape((height, width, 4))
-                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2RGB)
+                    # 统一输出BGR格式
+                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2BGR)
 
                     if not hasattr(self, '_video_frame_debug_printed'):
                         self._video_frame_debug_printed = True
-                        print(f"[HKcapture-视频文件-调试] 解码格式: RGB32")
-                        print(f"[HKcapture-视频文件-调试] RGB帧形状: {frame.shape}")
+                        print(f"[HKcapture-视频文件-调试] 解码格式: RGB32 -> BGR")
+                        print(f"[HKcapture-视频文件-调试] BGR帧形状: {frame.shape}")
 
                     with self.frame_lock:
                         self.current_frame = frame
@@ -1327,12 +1328,13 @@ class HKcapture:
                     rgb_data = string_at(pBuf, rgb_size)
                     rgb_array = np.frombuffer(rgb_data, dtype=np.uint8)
                     frame_bgra = rgb_array.reshape((height, width, 4))
-                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2RGB)
+                    # 统一输出BGR格式
+                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2BGR)
 
                     if not hasattr(self, '_hk_frame_debug_printed'):
                         self._hk_frame_debug_printed = True
-                        print(f"[HKcapture-调试] 解码格式: RGB32")
-                        print(f"[HKcapture-调试] RGB帧形状: {frame.shape}")
+                        print(f"[HKcapture-调试] 解码格式: RGB32 -> BGR")
+                        print(f"[HKcapture-调试] BGR帧形状: {frame.shape}")
 
                     with self.frame_lock:
                         self.current_frame = frame
