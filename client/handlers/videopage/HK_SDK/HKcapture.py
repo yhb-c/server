@@ -565,21 +565,38 @@ class HKcapture:
     def _open_video_file(self):
         """打开本地视频文件（使用 PlayCtrl SDK）"""
         try:
+            if self.debug:
+                print(f"[HKcapture-视频文件] 开始打开本地视频文件: {self.source}")
+
             # 初始化 PlayCtrl SDK（如果尚未初始化）
             if not hasattr(self, 'playM4SDK') or self.playM4SDK is None:
+                if self.debug:
+                    print(f"[HKcapture-视频文件] 初始化 PlayCtrl SDK")
                 self.playM4SDK = load_library(playM4dllpath)
-            
+                if self.debug:
+                    print(f"[HKcapture-视频文件] PlayCtrl SDK 初始化成功")
+
             # 获取播放句柄
+            if self.debug:
+                print(f"[HKcapture-视频文件] 获取播放句柄")
             with _HK_SDK_LOCK:
                 ret = self.playM4SDK.PlayM4_GetPort(byref(self.PlayCtrlPort))
                 if not ret:
                     error = self.playM4SDK.PlayM4_GetLastError(c_long(0))
+                    if self.debug:
+                        print(f"[HKcapture-视频文件] 获取播放句柄失败，错误码: {error}")
                     return False
-            
+                if self.debug:
+                    print(f"[HKcapture-视频文件] 获取播放句柄成功: {self.PlayCtrlPort.value}")
+
             self.is_opened = True
+            if self.debug:
+                print(f"[HKcapture-视频文件] 本地视频文件打开成功")
             return True
-            
+
         except Exception as e:
+            if self.debug:
+                print(f"[HKcapture-视频文件] 打开本地视频文件异常: {e}")
             import traceback
             traceback.print_exc()
             return False
