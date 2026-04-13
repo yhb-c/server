@@ -24,7 +24,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 server_dir = os.path.dirname(current_dir)
 sys.path.insert(0, server_dir)
 
-from detection_service import DetectionService
+from network.detection_service import DetectionService
 
 
 class EnhancedWebSocketServer:

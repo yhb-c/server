@@ -365,16 +365,32 @@ class GeneralSetPanelHandler:
 
             self.logger.debug(f"[DEBUG] 标准化后的通道键: {channel_key}")
 
-            # 获取该通道的配置
+            # 获取该通道的配置，如果不存在则创建默认配置
             if channel_key not in config:
-                self.logger.debug(f"[DEBUG] 通道 {channel_key} 在服务端配置中不存在")
-                if self.general_set_panel:
-                    self.general_set_panel.showLoadmission_result(False, f"通道 {channel_id} 的配置在服务端不存在")
-                return
+                self.logger.debug(f"[DEBUG] 通道 {channel_key} 在服务端配置中不存在，创建默认配置")
+                channel_config = {}
+            else:
+                channel_config = config[channel_key]
+                self.logger.debug(f"[DEBUG] 找到通道 {channel_key} 的配置: {list(channel_config.keys())}")
 
-            channel_config = config[channel_key]
-            self.logger.debug(f"[DEBUG] 找到通道 {channel_key} 的配置: {list(channel_config.keys())}")
-            
+            # 如果配置中没有general字段，创建默认的空配置结构
+            if 'general' not in channel_config:
+                self.logger.debug(f"[DEBUG] 通道 {channel_key} 配置中没有general字段，创建默认配置")
+                channel_config['general'] = {
+                    'task_id': '',
+                    'task_name': '',
+                    'area_count': 0,
+                    'safe_low': '0mm',
+                    'safe_high': '20mm',
+                    'frequency': '25fps',
+                    'video_format': 'AVI',
+                    'push_address': '',
+                    'video_path': '',
+                    'save_liquid_data_path': '',
+                    'areas': {},
+                    'area_heights': {}
+                }
+
             general_config = channel_config.get('general', {})
             self.logger.debug(f"[DEBUG] 通道 {channel_id} 的通用配置: {general_config}")
             

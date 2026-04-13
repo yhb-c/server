@@ -190,10 +190,14 @@ class DetectionTaskManager:
             task_config = self.tasks[channel_id]['config']
             self.logger.info(f"任务配置: {task_config}")
             rtsp_url = task_config.get('rtsp_url')
-            self.logger.info(f"RTSP地址: {rtsp_url}")
+            file_path = task_config.get('file_path')
+            self.logger.info(f"RTSP地址: {rtsp_url}, 文件路径: {file_path}")
 
-            if not rtsp_url:
-                self.logger.error(f"RTSP地址未配置: {channel_id}")
+            # 确定视频源（优先使用rtsp_url，其次使用file_path）
+            video_source = rtsp_url if rtsp_url else file_path
+
+            if not video_source:
+                self.logger.error(f"视频源未配置: {channel_id}，需要配置rtsp_url或file_path")
                 self.logger.error(f"完整任务配置: {self.tasks[channel_id]}")
                 return False
 
@@ -218,9 +222,9 @@ class DetectionTaskManager:
                 self.logger.info(f"检测引擎已存在: {channel_id}")
 
             # 创建视频捕获
-            self.logger.info(f"开始创建视频捕获: {rtsp_url}")
+            self.logger.info(f"开始创建视频捕获: {video_source}")
             factory = VideoCaptureFactory()
-            video_capture = factory.create_capture(rtsp_url, channel_id)
+            video_capture = factory.create_capture(video_source, channel_id)
             self.logger.info(f"视频捕获创建结果: {video_capture is not None}")
             if not video_capture:
                 self.logger.error(f"视频捕获创建失败: {channel_id}")
@@ -300,8 +304,8 @@ class DetectionTaskManager:
                 return
 
             # 从配置文件读取FPS限制
-            fps_limit = self.config_manager.system_config.get('detection', {}).get('fps_limit', 25)
-            frame_interval = 1.0 / fps_limit if fps_limit > 0 else 0.04  # 默认25FPS
+            fps_limit = self.config_manager.system_config.get('detection', {}).get('fps', 10)
+            frame_interval = 1.0 / fps_limit if fps_limit > 0 else 0.1  # 默认10FPS
             self.logger.info(f"[{channel_id}] FPS限制: {fps_limit}, 帧间隔: {frame_interval:.4f}秒")
 
             frame_count = 0
@@ -336,8 +340,8 @@ class DetectionTaskManager:
 
                     # 无论检测是否成功，都调用回调函数
                     if detection_result:
-                        # 添加时间戳到检测结果
-                        detection_result['timestamp'] = time.time()
+                        # 添加13位毫秒时间戳到检测结果
+                        detection_result['timestamp'] = int(time.time() * 1000)
 
                         # 记录日志（仅在检测成功时）
                         if detection_result.get('success'):

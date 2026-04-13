@@ -70,7 +70,7 @@ class CSVWriter:
             detection_result: 检测结果字典
                 {
                     'height_mm': float,
-                    'timestamp': float
+                    'timestamp': float or int (支持秒或毫秒格式)
                 }
         """
         if not self.csv_writer:
@@ -78,12 +78,21 @@ class CSVWriter:
 
         try:
             with self.lock:
-                # 获取Unix时间戳
+                # 获取Unix时间戳并转换为13位毫秒格式
                 timestamp = detection_result.get('timestamp', time.time())
+
+                # 判断时间戳格式并转换为13位毫秒
+                if isinstance(timestamp, (int, float)):
+                    if timestamp < 10000000000:  # 小于10位数，是秒格式
+                        timestamp_ms = int(timestamp * 1000)
+                    else:  # 已经是毫秒格式
+                        timestamp_ms = int(timestamp)
+                else:
+                    timestamp_ms = int(time.time() * 1000)
 
                 # 构建数据行
                 row = [
-                    timestamp,
+                    timestamp_ms,
                     round(detection_result.get('height_mm', 0), 2)
                 ]
 
@@ -91,7 +100,7 @@ class CSVWriter:
                 self.cache_buffer.append(row)
 
                 # 估算单行数据大小（时间戳16字节 + 逗号1字节 + 高度6字节 + 换行1字节）
-                row_size = sys.getsizeof(str(timestamp)) + sys.getsizeof(str(row[1])) + 2
+                row_size = sys.getsizeof(str(timestamp_ms)) + sys.getsizeof(str(row[1])) + 2
                 self.cache_size += row_size
 
                 # 检查是否需要刷新

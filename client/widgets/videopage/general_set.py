@@ -614,11 +614,6 @@ class GeneralSetPanel(QtWidgets.QWidget):
     
     def showLoadmission_result(self, success, message):
         """显示加载结果（由handler调用）"""
-        self.logger.debug(f"[DEBUG] showLoadmission_result 被调用: success={success}, message={message}")
-        import traceback
-        self.logger.debug(f"[DEBUG] 调用堆栈:")
-        traceback.print_stack()
-        
         icon = QtWidgets.QMessageBox.Information if success else QtWidgets.QMessageBox.Warning
         QtWidgets.QMessageBox.information(self, "加载设置", message)
     

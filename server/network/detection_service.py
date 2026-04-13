@@ -57,8 +57,8 @@ class DetectionService:
         # 通道状态管理
         self.channel_status: Dict[str, Dict] = {}
 
-        # CSV写入器管理（每个通道一个CSV写入器）
-        self.csv_writers: Dict[str, CSVWriter] = {}
+        # CSV写入器管理（每个通道的每个ROI一个CSV写入器）
+        self.csv_writers: Dict[str, Dict[str, CSVWriter]] = {}  # {channel_id: {roi_id: CSVWriter}}
 
         # CSV保存路径
         self.csv_save_path = os.path.join(project_root, 'server', 'database', 'detection_results')
@@ -73,10 +73,10 @@ class DetectionService:
     def _initialize_channels_from_config(self):
         """从配置文件初始化通道状态"""
         try:
-            # 读取default_config.yaml文件
+            # 读取default_config.yaml文件（使用ConfigManager的路径）
             default_config_path = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                'database', 'config', 'default_config.yaml'
+                'config', 'default_config.yaml'
             )
 
             if not os.path.exists(default_config_path):
@@ -160,7 +160,8 @@ class DetectionService:
 
                 # 创建任务配置
                 task_config = {
-                    'rtsp_url': self.channel_status[channel_id].get('rtsp_url') or self.channel_status[channel_id].get('file_path', ''),
+                    'rtsp_url': self.channel_status[channel_id].get('rtsp_url', ''),
+                    'file_path': self.channel_status[channel_id].get('file_path', ''),
                     'model_path': model_path,
                     'device': device
                 }
@@ -492,12 +493,14 @@ class DetectionService:
             success = self.task_manager.stop_task(channel_id)
 
             if success:
-                # 强制刷新并关闭CSV写入器
+                # 强制刷新并关闭所有ROI的CSV写入器
                 if channel_id in self.csv_writers:
-                    self.csv_writers[channel_id].force_flush()
-                    self.csv_writers[channel_id].close()
+                    for roi_id, csv_writer in self.csv_writers[channel_id].items():
+                        csv_writer.force_flush()
+                        csv_writer.close()
+                        self.logger.info(f"关闭通道 {channel_id} ROI {roi_id} 的CSV写入器")
                     del self.csv_writers[channel_id]
-                    self.logger.info(f"关闭通道 {channel_id} 的CSV写入器")
+                    self.logger.info(f"关闭通道 {channel_id} 的所有CSV写入器")
 
                 # 更新状态
                 self.channel_status[channel_id].update({
@@ -661,36 +664,53 @@ class DetectionService:
 
     def _save_to_csv(self, channel_id: str, detection_result: dict):
         """
-        保存检测结果到CSV文件
+        保存检测结果到CSV文件（每个ROI独立文件）
 
         Args:
             channel_id: 通道ID
             detection_result: 检测结果数据
         """
         try:
-            # 如果该通道还没有CSV写入器，创建一个
+            # 确保该通道有CSV写入器字典
             if channel_id not in self.csv_writers:
-                self.csv_writers[channel_id] = CSVWriter(self.csv_save_path, channel_id)
-                self.logger.info(f"为通道 {channel_id} 创建CSV写入器")
+                self.csv_writers[channel_id] = {}
 
             # 从检测结果中提取液位数据
             liquid_line_positions = detection_result.get('liquid_line_positions', {})
 
-            # 如果有液位数据，遍历每个液位位置并保存
+            # 如果有液位数据，遍历每个液位位置并保存到独立文件
             if liquid_line_positions:
                 for position_key, position_data in liquid_line_positions.items():
                     if isinstance(position_data, dict):
+                        # 为每个ROI创建独立的CSV写入器
+                        roi_key = f"{channel_id}_roi{position_key}"
+                        if position_key not in self.csv_writers[channel_id]:
+                            self.csv_writers[channel_id][position_key] = CSVWriter(
+                                self.csv_save_path,
+                                roi_key
+                            )
+                            self.logger.info(f"为 {channel_id} 的ROI {position_key} 创建CSV写入器")
+
+                        # 保存数据
                         csv_data = {
                             'height_mm': position_data.get('height_mm', 0),
                             'liquid_level': position_data.get('liquid_level', 0),
                             'confidence': position_data.get('confidence', 0),
                             'timestamp': detection_result.get('timestamp', time.time()),
                             'status': 'normal',
-                            'note': f'位置{position_key}'
+                            'note': f'ROI{position_key}'
                         }
-                        self.csv_writers[channel_id].write(csv_data)
+                        self.csv_writers[channel_id][position_key].write(csv_data)
             else:
-                # 没有检测到液位线，也记录一条数据（高度为404表示未检测到）
+                # 没有检测到液位线，记录到通道的默认文件
+                if 'default' not in self.csv_writers.get(channel_id, {}):
+                    if channel_id not in self.csv_writers:
+                        self.csv_writers[channel_id] = {}
+                    self.csv_writers[channel_id]['default'] = CSVWriter(
+                        self.csv_save_path,
+                        f"{channel_id}_no_detection"
+                    )
+
                 csv_data = {
                     'height_mm': 404,
                     'liquid_level': 0,
@@ -699,7 +719,7 @@ class DetectionService:
                     'status': 'no_detection',
                     'note': '未检测到液位'
                 }
-                self.csv_writers[channel_id].write(csv_data)
+                self.csv_writers[channel_id]['default'].write(csv_data)
 
         except Exception as e:
             self.logger.error(f"CSV保存失败 - 通道: {channel_id}, 错误: {str(e)}")

@@ -583,16 +583,27 @@ class HKcapture:
     def open(self):
         """
         打开摄像头连接
-        
+
         返回:
             bool: 成功返回True，失败返回False
         """
         if self.is_opened:
+            if self.debug:
+                print(f"[HKcapture] 已经打开，跳过")
             return True
-            
+
+        if self.debug:
+            print(f"[HKcapture] 开始打开视频源: {self.source}")
+            print(f"[HKcapture] is_hikvision: {self.is_hikvision}")
+            print(f"[HKcapture] is_video_file: {self.is_video_file}")
+
         if self.is_hikvision:
+            if self.debug:
+                print(f"[HKcapture] 使用海康威视SDK打开")
             return self._open_hikvision()
         else:
+            if self.debug:
+                print(f"[HKcapture] 使用RTSP/视频文件方式打开")
             return self._open_rtsp()
     
     def _open_hikvision(self):
@@ -613,49 +624,70 @@ class HKcapture:
         """打开RTSP摄像头连接或本地视频文件"""
         # 🔥 本地视频文件使用 PlayCtrl SDK
         if self.is_video_file:
+            if self.debug:
+                print(f"[HKcapture] 检测到本地视频文件，调用_open_video_file()")
             return self._open_video_file()
-        
+
         # RTSP流使用 OpenCV
+        if self.debug:
+            print(f"[HKcapture] 使用OpenCV打开RTSP流")
         try:
             self.cv_cap = cv2.VideoCapture(self.source)
             if not self.cv_cap.isOpened():
+                if self.debug:
+                    print(f"[HKcapture] OpenCV打开失败")
                 return False
-            
+
             # 获取视频属性
             self.frame_width = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             self.frame_height = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             actual_fps = self.cv_cap.get(cv2.CAP_PROP_FPS)
-            
+
             # RTSP流：尝试设置帧率（通常不生效，由服务器控制）
             if self.target_fps > 0:
                 self.cv_cap.set(cv2.CAP_PROP_FPS, self.target_fps)
             # 使用配置的帧率（RTSP流的FPS通常不准确）
             self.fps = self.target_fps if self.target_fps > 0 else (int(actual_fps) or 25)
-            
+
             self.is_opened = True
+            if self.debug:
+                print(f"[HKcapture] OpenCV打开成功: {self.frame_width}x{self.frame_height} @ {self.fps}fps")
             return True
-            
+
         except Exception as e:
+            if self.debug:
+                print(f"[HKcapture] OpenCV打开异常: {e}")
             return False
     
     def _open_video_file(self):
-        """打开本地视频文件（使用 PlayCtrl SDK）"""
+        """打开本地视频文件（使用 OpenCV）"""
         try:
-            # 初始化 PlayCtrl SDK（如果尚未初始化）
-            if not hasattr(self, 'playM4SDK') or self.playM4SDK is None:
-                self.playM4SDK = load_library(playM4dllpath)
-            
-            # 获取播放句柄
-            with _HK_SDK_LOCK:
-                ret = self.playM4SDK.PlayM4_GetPort(byref(self.PlayCtrlPort))
-                if not ret:
-                    error = self.playM4SDK.PlayM4_GetLastError(c_long(0))
-                    return False
-            
+            if self.debug:
+                print(f"[HKcapture-视频文件] 开始打开本地视频文件: {self.source}")
+
+            # 使用 OpenCV 打开本地视频文件
+            self.cv_cap = cv2.VideoCapture(self.source)
+            if not self.cv_cap.isOpened():
+                if self.debug:
+                    print(f"[HKcapture-视频文件] OpenCV打开失败")
+                return False
+
+            # 获取视频属性
+            self.frame_width = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            self.frame_height = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.original_fps = self.cv_cap.get(cv2.CAP_PROP_FPS)
+
+            # 本地视频文件：使用原始帧率
+            self.fps = int(self.original_fps) if self.original_fps > 0 else 25
+
             self.is_opened = True
+            if self.debug:
+                print(f"[HKcapture-视频文件] 本地视频文件打开成功: {self.frame_width}x{self.frame_height} @ {self.fps}fps")
             return True
-            
+
         except Exception as e:
+            if self.debug:
+                print(f"[HKcapture-视频文件] 打开本地视频文件异常: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -831,21 +863,15 @@ class HKcapture:
         import sys
         print(f"[HKcapture] _start_rtsp_capture: is_video_file={self.is_video_file}")
         sys.stdout.flush()
-        
-        # 🔥 本地视频文件使用 PlayCtrl SDK 播放
-        if self.is_video_file:
-            print(f"[HKcapture] _start_rtsp_capture: 走本地视频文件分支")
-            sys.stdout.flush()
-            return self._start_video_file_capture()
-        
-        # RTSP流使用 OpenCV
-        print(f"[HKcapture] _start_rtsp_capture: 走OpenCV RTSP分支")
+
+        # 🔥 本地视频文件和RTSP流都使用 OpenCV 读取线程
+        print(f"[HKcapture] _start_rtsp_capture: 启动OpenCV读取线程")
         sys.stdout.flush()
         self.stop_thread = False
         self.capture_thread = threading.Thread(target=self._rtsp_capture_loop)
         self.capture_thread.daemon = True
         self.capture_thread.start()
-        
+
         self.is_reading = True
         return True
     
@@ -1048,12 +1074,13 @@ class HKcapture:
                     rgb_data = string_at(pBuf, rgb_size)
                     rgb_array = np.frombuffer(rgb_data, dtype=np.uint8)
                     frame_bgra = rgb_array.reshape((height, width, 4))
-                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2RGB)
+                    # 统一输出BGR格式
+                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2BGR)
 
                     if not hasattr(self, '_video_frame_debug_printed'):
                         self._video_frame_debug_printed = True
-                        print(f"[HKcapture-视频文件-调试] 解码格式: RGB32")
-                        print(f"[HKcapture-视频文件-调试] RGB帧形状: {frame.shape}")
+                        print(f"[HKcapture-视频文件-调试] 解码格式: RGB32 -> BGR")
+                        print(f"[HKcapture-视频文件-调试] BGR帧形状: {frame.shape}")
 
                     with self.frame_lock:
                         self.current_frame = frame
@@ -1092,16 +1119,51 @@ class HKcapture:
             traceback.print_exc()
 
     def _rtsp_capture_loop(self):
-        """RTSP流捕获循环线程（仅用于非海康RTSP流）"""
+        """RTSP流捕获循环线程（仅用于非海康RTSP流和本地视频文件）"""
+        import sys
+        print(f"[HKcapture] _rtsp_capture_loop 线程启动")
+        print(f"[HKcapture] cv_cap: {self.cv_cap}")
+        print(f"[HKcapture] cv_cap.isOpened(): {self.cv_cap.isOpened() if self.cv_cap else 'N/A'}")
+        print(f"[HKcapture] is_video_file: {self.is_video_file}")
+        print(f"[HKcapture] fps: {self.fps}")
+        sys.stdout.flush()
+
+        # 计算帧间隔（根据视频帧率）
+        frame_interval = 1.0 / self.fps if self.fps > 0 else 0.04
+        print(f"[HKcapture] 帧间隔: {frame_interval:.4f}s ({self.fps} fps)")
+        sys.stdout.flush()
+
+        frame_count = 0
+        last_read_time = time.time()
+
         while not self.stop_thread and self.cv_cap and self.cv_cap.isOpened():
+            loop_start = time.time()
+
             ret, frame = self.cv_cap.read()
             if ret and frame is not None:
+                frame_count += 1
+                if frame_count % 30 == 1:  # 每30帧打印一次
+                    print(f"[HKcapture] 已读取 {frame_count} 帧, 帧大小: {frame.shape}")
+                    sys.stdout.flush()
+
                 with self.frame_lock:
                     self.current_frame = frame
                     self.frame_sequence += 1  # 新帧，序列号+1
                     self.last_frame_time = time.time()
+
+                # 根据视频帧率控制读取速度
+                elapsed = time.time() - loop_start
+                sleep_time = frame_interval - elapsed
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
             else:
+                if frame_count == 0:
+                    print(f"[HKcapture] 读取第一帧失败: ret={ret}")
+                    sys.stdout.flush()
                 time.sleep(0.1)
+
+        print(f"[HKcapture] _rtsp_capture_loop 线程退出, 总共读取 {frame_count} 帧")
+        sys.stdout.flush()
                 
     def _real_data_callback(self, lPlayHandle, dwDataType, pBuffer, dwBufSize, pUser):
         """海康威视实时数据回调函数（纯CPU解码模式，无渲染）"""
@@ -1266,12 +1328,13 @@ class HKcapture:
                     rgb_data = string_at(pBuf, rgb_size)
                     rgb_array = np.frombuffer(rgb_data, dtype=np.uint8)
                     frame_bgra = rgb_array.reshape((height, width, 4))
-                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2RGB)
+                    # 统一输出BGR格式
+                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2BGR)
 
                     if not hasattr(self, '_hk_frame_debug_printed'):
                         self._hk_frame_debug_printed = True
-                        print(f"[HKcapture-调试] 解码格式: RGB32")
-                        print(f"[HKcapture-调试] RGB帧形状: {frame.shape}")
+                        print(f"[HKcapture-调试] 解码格式: RGB32 -> BGR")
+                        print(f"[HKcapture-调试] BGR帧形状: {frame.shape}")
 
                     with self.frame_lock:
                         self.current_frame = frame

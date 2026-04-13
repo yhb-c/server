@@ -155,7 +155,7 @@ def start_websocket_local():
     """
     try:
         project_root = Path(__file__).parent.parent.parent
-        server_dir = project_root / 'server' / 'websocket'
+        server_dir = project_root / 'server' / 'network'
         start_script = server_dir / 'start_websocket_server.py'
         log_dir = project_root / 'logs'
 
