@@ -256,6 +256,8 @@ class VideoRenderWidget(QtWidgets.QWidget):
 
     def update_info(self, channel_name=None, task_name=None, fps=None, resolution=None):
         """更新显示信息"""
+        resolution_changed = False
+
         if channel_name is not None:
             self.channel_name = channel_name
         if task_name is not None:
@@ -268,10 +270,23 @@ class VideoRenderWidget(QtWidgets.QWidget):
             try:
                 parts = resolution.split('x')
                 if len(parts) == 2:
-                    self.video_width = int(parts[0])
-                    self.video_height = int(parts[1])
+                    new_width = int(parts[0])
+                    new_height = int(parts[1])
+                    # 检查分辨率是否变化
+                    if new_width != self.video_width or new_height != self.video_height:
+                        self.video_width = new_width
+                        self.video_height = new_height
+                        resolution_changed = True
+                        print(f"[VideoRenderWidget] 视频分辨率更新: {self.video_width}x{self.video_height}")
             except:
                 pass
+
+        # 如果分辨率变化且有通道名称，重新加载ROI配置
+        if resolution_changed and self.channel_name:
+            channel_id = self.channel_name.lower().replace('通道', 'channel')
+            print(f"[VideoRenderWidget] 分辨率变化，重新加载ROI配置: {channel_id}")
+            self.load_roi_config(channel_id)
+
         self.update()
 
     def paintEvent(self, event):
@@ -318,6 +333,11 @@ class VideoRenderWidget(QtWidgets.QWidget):
             scale_x = 1.0
             scale_y = 1.0
 
+        print(f"\n[ROI绘制] 视频原始尺寸: {self.video_width}x{self.video_height}")
+        print(f"[ROI绘制] Pixmap显示尺寸: {self._pixmap.width()}x{self._pixmap.height()}")
+        print(f"[ROI绘制] 绘制缩放比例: scale_x={scale_x:.4f}, scale_y={scale_y:.4f}")
+        print(f"[ROI绘制] 偏移量: offset_x={offset_x}, offset_y={offset_y}")
+
         # 设置ROI框样式：蓝色半透明矩形
         roi_color = QtGui.QColor(0, 255, 255, 100)  # 青色半透明
         roi_border_color = QtGui.QColor(0, 255, 255)  # 青色边框
@@ -327,6 +347,8 @@ class VideoRenderWidget(QtWidgets.QWidget):
             try:
                 left, top, right, bottom = box
 
+                print(f"[ROI绘制] ROI[{i}] 原始坐标: left={left}, top={top}, right={right}, bottom={bottom}")
+
                 # 应用缩放和偏移
                 scaled_left = int(left * scale_x) + offset_x
                 scaled_top = int(top * scale_y) + offset_y
@@ -335,6 +357,9 @@ class VideoRenderWidget(QtWidgets.QWidget):
 
                 width = scaled_right - scaled_left
                 height = scaled_bottom - scaled_top
+
+                print(f"[ROI绘制] ROI[{i}] 缩放后坐标: left={scaled_left}, top={scaled_top}, right={scaled_right}, bottom={scaled_bottom}")
+                print(f"[ROI绘制] ROI[{i}] 宽高: width={width}, height={height}")
 
                 # 绘制半透明填充
                 painter.fillRect(scaled_left, scaled_top, width, height, roi_color)
@@ -351,6 +376,7 @@ class VideoRenderWidget(QtWidgets.QWidget):
                 painter.drawText(scaled_left + 5, scaled_top + 15, label)
 
             except Exception as e:
+                print(f"[ROI绘制] 绘制ROI[{i}]失败: {e}")
                 continue
 
     def _draw_liquid_lines(self, painter, offset_x, offset_y):

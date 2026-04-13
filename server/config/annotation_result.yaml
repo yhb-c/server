@@ -1,17 +1,17 @@
 channel1:
   boxes:
-  - - 650
-    - 469
-    - 864
+  - - 638
+    - 451
+    - 800
   fixed_bottoms:
-  - 640
+  - 771
   fixed_tops:
-  - 185
+  - 131
   init_levels:
-  - - 634
-    - 637
+  - - 638
+    - 451
   fixed_init_levels:
-  - 0.13
+  - 10.0
   annotation_count: 1
   areas:
     area_1:
@@ -19,9 +19,9 @@ channel1:
       height: 20mm
       state: 默认
       init_status: 0
-  last_updated: '2026-04-13 19:07:42'
-  annotation_width: 1920
-  annotation_height: 1080
+  last_updated: '2026-04-13 19:33:53'
+  annotation_width: 1280
+  annotation_height: 848
 channel10:
   annotation_count: 2
   areas:
