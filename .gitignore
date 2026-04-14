@@ -109,6 +109,9 @@ sdk/hikvision/SdkLog_Python/
 client/logs/
 client/SdkLog_Python/
 
+# Client folder - do not track
+client/
+
 # Large SDK demo files
 server/lib/lib/CH-HCNetSDKV6.1.9.48_build20230410_linux64_*/
 
