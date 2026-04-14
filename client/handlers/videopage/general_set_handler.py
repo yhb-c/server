@@ -672,7 +672,6 @@ class GeneralSetPanelHandler:
             
             # 检查网络命令管理器状态
             self.logger.debug(f"[检测启动] 检查网络命令管理器状态...")
-            print(f"  - hasattr(self, 'ws_client'): {hasattr(self, 'ws_client')}")
 
             if not hasattr(self, 'ws_client') or self.ws_client is None:
                 self.logger.debug(f"[检测启动] 网络命令管理器不存在")
@@ -682,9 +681,6 @@ class GeneralSetPanelHandler:
                     "网络命令管理器未初始化，请检查系统配置"
                 )
                 return
-
-            print(f"  - self.ws_client: {self.ws_client}")
-            print(f"  - 网络命令管理器存在，检查连接状态...")
 
             # 检查连接状态
             is_connected = False

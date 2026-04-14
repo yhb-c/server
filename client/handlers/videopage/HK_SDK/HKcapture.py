@@ -133,16 +133,16 @@ class HKcapture:
         if hwnd:
             self._render_mode = True
         if self.debug:
-            print(f"[HKcapture] 设置HWND: {hwnd}, _render_mode={self._render_mode}")
-    
+            pass
+
     def enable_frame_grab(self, enabled=True):
         """启用/禁用帧抓取（已废弃，保留接口兼容性）
-        
+
         注意：现在使用YUV队列模式，此方法仅保留接口兼容性
         实际帧数据通过 enable_yuv_queue() 获取
         """
         if self.debug:
-            print(f"[HKcapture] enable_frame_grab已废弃，请使用enable_yuv_queue")
+            pass
         pass
     
     def start_render(self):
@@ -192,19 +192,15 @@ class HKcapture:
         Returns:
             bool: 是否切换成功
         """
-        print(f"[HKcapture] switch_render_hwnd 被调用: new_hwnd={new_hwnd}, is_reading={self.is_reading}, is_video_file={self.is_video_file}")
 
         if not self.is_reading:
-            print(f"[HKcapture] 当前未在播放，无法切换")
             return False
 
         try:
             port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
-            print(f"[HKcapture] 当前Port: {port}, 旧HWND: {self._hwnd}")
 
             # 对于实时流，不能简单地Stop/Play，需要重新设置播放窗口
             if not self.is_video_file:
-                print(f"[HKcapture] 实时流模式，使用PlayM4_RefreshPlay切换HWND")
 
                 # 更新HWND
                 old_hwnd = self._hwnd
@@ -215,28 +211,22 @@ class HKcapture:
                 ret = self.playM4SDK.PlayM4_RefreshPlay(c_long(port))
 
                 if ret:
-                    print(f"[HKcapture] RefreshPlay成功")
                     # 重新设置播放窗口
                     ret2 = self.playM4SDK.PlayM4_Play(c_long(port), c_void_p(hwnd_value))
                     if ret2:
-                        print(f"[HKcapture] 已切换渲染到新HWND: {new_hwnd}")
                         return True
                     else:
                         error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
-                        print(f"[HKcapture] Play失败，错误码: {error}")
                         self._hwnd = old_hwnd
                         return False
                 else:
-                    print(f"[HKcapture] RefreshPlay失败")
                     self._hwnd = old_hwnd
                     return False
             else:
                 # 本地视频文件，使用Stop/Play方式
-                print(f"[HKcapture] 本地视频模式，使用Stop/Play切换HWND")
 
                 # 停止当前播放
                 self.playM4SDK.PlayM4_Stop(c_long(port))
-                print(f"[HKcapture] PlayM4_Stop完成")
 
                 # 更新HWND
                 self._hwnd = new_hwnd
@@ -246,15 +236,12 @@ class HKcapture:
                 ret = self.playM4SDK.PlayM4_Play(c_long(port), c_void_p(hwnd_value))
 
                 if ret:
-                    print(f"[HKcapture] 已切换渲染到新HWND: {new_hwnd}")
                     return True
                 else:
                     error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
-                    print(f"[HKcapture] 切换HWND失败，错误码: {error}")
                     return False
 
         except Exception as e:
-            print(f"[HKcapture] 切换HWND异常: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -276,7 +263,6 @@ class HKcapture:
         self._yuv_queue_enabled = enabled
         self._yuv_send_interval = interval
         
-        print(f"[HKcapture] YUV队列设置: enabled={enabled}, interval={interval}s, _yuv_queue_enabled={self._yuv_queue_enabled}")
         
         if not enabled:
             # 清空队列
@@ -285,10 +271,10 @@ class HKcapture:
                     self._yuv_queue.get_nowait()
                 except:
                     break
-        
+
         if self.debug:
-            print(f"[HKcapture] YUV队列: {'启用' if enabled else '禁用'}, 间隔: {interval}s")
-    
+            pass
+
     def get_yuv_data(self, timeout=0.1):
         """获取YUV数据（供检测线程调用）
         
@@ -372,7 +358,6 @@ class HKcapture:
         if self.source and self.source.startswith('rtsp://'):
             # 检查URL中是否包含认证信息（格式：rtsp://user:pass@ip）
             if '@' in self.source:
-                print(f"[HKcapture] RTSP流包含认证信息，使用海康SDK处理")
                 return True
         
         # 如果source包含admin:cei345678字段，则认为是海康威视设备
@@ -589,21 +574,19 @@ class HKcapture:
         """
         if self.is_opened:
             if self.debug:
-                print(f"[HKcapture] 已经打开，跳过")
+                pass
             return True
 
         if self.debug:
-            print(f"[HKcapture] 开始打开视频源: {self.source}")
-            print(f"[HKcapture] is_hikvision: {self.is_hikvision}")
-            print(f"[HKcapture] is_video_file: {self.is_video_file}")
+            pass
 
         if self.is_hikvision:
             if self.debug:
-                print(f"[HKcapture] 使用海康威视SDK打开")
+                pass
             return self._open_hikvision()
         else:
             if self.debug:
-                print(f"[HKcapture] 使用RTSP/视频文件方式打开")
+                pass
             return self._open_rtsp()
     
     def _open_hikvision(self):
@@ -619,23 +602,23 @@ class HKcapture:
         
         self.is_opened = True
         return True
-    
+
     def _open_rtsp(self):
         """打开RTSP摄像头连接或本地视频文件"""
         # 🔥 本地视频文件使用 PlayCtrl SDK
         if self.is_video_file:
             if self.debug:
-                print(f"[HKcapture] 检测到本地视频文件，调用_open_video_file()")
+                pass
             return self._open_video_file()
 
         # RTSP流使用 OpenCV
         if self.debug:
-            print(f"[HKcapture] 使用OpenCV打开RTSP流")
+            pass
         try:
             self.cv_cap = cv2.VideoCapture(self.source)
             if not self.cv_cap.isOpened():
                 if self.debug:
-                    print(f"[HKcapture] OpenCV打开失败")
+                    pass
                 return False
 
             # 获取视频属性
@@ -651,12 +634,12 @@ class HKcapture:
 
             self.is_opened = True
             if self.debug:
-                print(f"[HKcapture] OpenCV打开成功: {self.frame_width}x{self.frame_height} @ {self.fps}fps")
+                pass
             return True
 
         except Exception as e:
             if self.debug:
-                print(f"[HKcapture] OpenCV打开异常: {e}")
+                pass
             return False
     
     def _open_video_file(self):
@@ -797,26 +780,20 @@ class HKcapture:
     def start_capture(self):
         """开始视频捕获"""
         import sys
-        print(f"[HKcapture] start_capture: is_opened={self.is_opened}, is_reading={self.is_reading}")
-        print(f"[HKcapture] start_capture: is_hikvision={self.is_hikvision}, is_video_file={self.is_video_file}")
         sys.stdout.flush()
         
         if not self.is_opened:
-            print(f"[HKcapture] start_capture: 视频源未打开")
             sys.stdout.flush()
             return False
             
         if self.is_reading:
-            print(f"[HKcapture] start_capture: 已在读取中，跳过")
             sys.stdout.flush()
             return True
             
         if self.is_hikvision:
-            print(f"[HKcapture] start_capture: 走海康威视分支")
             sys.stdout.flush()
             return self._start_hikvision_capture()
         else:
-            print(f"[HKcapture] start_capture: 走RTSP/本地视频分支")
             sys.stdout.flush()
             return self._start_rtsp_capture()
     
@@ -825,15 +802,12 @@ class HKcapture:
         import sys
         
         # 🔥 调试日志：确认HWND渲染模式状态
-        print(f"[HKcapture] _start_hikvision_capture: _render_mode={self._render_mode}, _hwnd={self._hwnd}")
         sys.stdout.flush()
         
         # 根据是否设置HWND选择回调函数
         if self._render_mode and self._hwnd:
-            print(f"[HKcapture] 使用HWND直接渲染回调 (_real_data_callback_hwnd)")
             self.funcRealDataCallBack_V30 = REALDATACALLBACK(self._real_data_callback_hwnd)
         else:
-            print(f"[HKcapture] 使用传统回调 (_real_data_callback)，不渲染到窗口")
             self.funcRealDataCallBack_V30 = REALDATACALLBACK(self._real_data_callback)
         sys.stdout.flush()
         
@@ -861,11 +835,9 @@ class HKcapture:
     def _start_rtsp_capture(self):
         """开始RTSP视频捕获"""
         import sys
-        print(f"[HKcapture] _start_rtsp_capture: is_video_file={self.is_video_file}")
         sys.stdout.flush()
 
         # 🔥 本地视频文件和RTSP流都使用 OpenCV 读取线程
-        print(f"[HKcapture] _start_rtsp_capture: 启动OpenCV读取线程")
         sys.stdout.flush()
         self.stop_thread = False
         self.capture_thread = threading.Thread(target=self._rtsp_capture_loop)
@@ -879,10 +851,6 @@ class HKcapture:
         """开始本地视频文件播放（使用 PlayCtrl SDK 直接渲染到 HWND）"""
         import sys
         
-        print(f"[HKcapture] ========== 开始本地视频播放 ==========")
-        print(f"[HKcapture] 视频源: {self.source}")
-        print(f"[HKcapture] HWND: {self._hwnd}")
-        print(f"[HKcapture] 渲染模式: {self._render_mode}")
         sys.stdout.flush()
         
         # 初始化调试日志记录器（用于FPS统计）
@@ -902,46 +870,37 @@ class HKcapture:
         
         try:
             port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
-            print(f"[HKcapture] 播放端口: {port}")
             sys.stdout.flush()
             
             # 检查文件是否存在
             import os
             if not os.path.exists(self.source):
-                print(f"[HKcapture] 视频文件不存在: {self.source}")
                 sys.stdout.flush()
                 return False
             
-            print(f"[HKcapture] 视频文件存在, 大小: {os.path.getsize(self.source)} bytes")
             sys.stdout.flush()
             
             # 打开视频文件
             file_bytes = self.source.encode('gbk')
-            print(f"[HKcapture] 调用 PlayM4_OpenFile, 文件路径: {file_bytes}")
             sys.stdout.flush()
             
             ret = self.playM4SDK.PlayM4_OpenFile(c_long(port), c_char_p(file_bytes))
-            print(f"[HKcapture] PlayM4_OpenFile 返回: {ret}")
             sys.stdout.flush()
             
             if not ret:
                 error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
-                print(f"[HKcapture] 打开视频文件失败, 错误码: {error}")
                 sys.stdout.flush()
                 return False
             
-            print(f"[HKcapture] 视频文件已打开")
             sys.stdout.flush()
             
             # 设置解码回调（用于FPS记录和帧抓取）
             # 只在需要帧数据时才设置解码回调，避免不必要的CPU开销
             # 纯播放模式下跳过解码回调，让PlayCtrl SDK直接渲染，减少CPU负载
             if self._yuv_queue_enabled:
-                print(f"[HKcapture] 设置解码回调（YUV队列模式）...")
                 sys.stdout.flush()
                 self._setup_video_file_decode_callback()
             else:
-                print(f"[HKcapture] 跳过解码回调（纯播放模式，减少CPU负载）")
                 sys.stdout.flush()
             
             # 🔥 启用QSV解码（Intel Quick Sync Video）
@@ -952,32 +911,24 @@ class HKcapture:
             
             # 获取 HWND 值
             hwnd_value = self._hwnd if self._hwnd else 0
-            print(f"[HKcapture] 准备播放到 HWND: {hwnd_value}")
-            print(f"[HKcapture] HWND 类型: {type(hwnd_value)}")
             sys.stdout.flush()
             
             # 开始播放到 HWND
-            print(f"[HKcapture] 调用 PlayM4_Play(port={port}, hwnd={hwnd_value})...")
             sys.stdout.flush()
-            
+
             ret = self.playM4SDK.PlayM4_Play(c_long(port), c_void_p(hwnd_value))
-            print(f"[HKcapture] PlayM4_Play 返回: {ret}")
             sys.stdout.flush()
-            
+
             if ret:
-                print(f"[HKcapture] 本地视频 PlayCtrl 播放已启动!")
-                print(f"[HKcapture]    - Port: {port}")
-                print(f"[HKcapture]    - HWND: {hwnd_value}")
                 if hwnd_value == 0:
-                    print(f"[HKcapture]    - 渲染模式: 纯CPU解码（无窗口渲染，通过回调获取帧）")
+                    pass
                 else:
-                    print(f"[HKcapture]    - 渲染模式: HWND直接渲染")
+                    pass
                 sys.stdout.flush()
                 self.is_reading = True
                 return True
             else:
                 error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
-                print(f"[HKcapture] 本地视频播放失败, 错误码: {error}")
                 # 常见错误码解释
                 error_msgs = {
                     1: "输入参数非法",
@@ -994,12 +945,11 @@ class HKcapture:
                     12: "内存不足",
                 }
                 if error in error_msgs:
-                    print(f"[HKcapture]    错误说明: {error_msgs[error]}")
+                    pass
                 sys.stdout.flush()
                 return False
                 
         except Exception as e:
-            print(f"[HKcapture] 本地视频播放异常: {e}")
             import traceback
             traceback.print_exc()
             sys.stdout.flush()
@@ -1017,20 +967,20 @@ class HKcapture:
             ret = self.playM4SDK.PlayM4_SetDecCallBackExMend(
                 c_long(port), 
                 self.FuncDecCB, 
-                None, 
-                0, 
+                None,
+                0,
                 None
             )
-            
+
             if ret:
                 if self.debug:
-                    print(f"[HKcapture] 视频文件解码回调已设置")
+                    pass
+                pass
             else:
                 error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
-                print(f"[HKcapture] 设置解码回调失败, 错误码: {error}")
-                
+
         except Exception as e:
-            print(f"[HKcapture] 设置解码回调异常: {e}")
+            pass
     
     def _video_file_decode_callback(self, nPort, pBuf, nSize, pFrameInfo, nUser, nReserved2):
         """本地视频文件解码回调（支持RGB和YUV格式）
@@ -1145,13 +1095,12 @@ class HKcapture:
                     time.sleep(sleep_time)
             else:
                 if frame_count == 0:
-                    print(f"[HKcapture] 读取第一帧失败: ret={ret}")
+                    pass
                 time.sleep(0.1)
                 
     def _real_data_callback(self, lPlayHandle, dwDataType, pBuffer, dwBufSize, pUser):
         """海康威视实时数据回调函数（纯CPU解码模式，无渲染）"""
         if dwDataType == NET_DVR_SYSHEAD:
-            print(f"[HKcapture] 收到系统头数据，初始化纯CPU解码模式（无渲染）...")
             import sys
             sys.stdout.flush()
 
@@ -1160,23 +1109,19 @@ class HKcapture:
 
             # 打开码流
             if self.playM4SDK.PlayM4_OpenStream(self.PlayCtrlPort, pBuffer, dwBufSize, 1024 * 1024):
-                print(f"[HKcapture] 码流打开成功，设置CPU软件解码...")
                 sys.stdout.flush()
 
                 # 禁用硬件解码，强制使用CPU软件解码
                 port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
                 self.playM4SDK.PlayM4_SetDecodeEngine(c_long(port), 0)  # 0=软件解码
-                print(f"[HKcapture] 已设置为CPU软件解码模式")
 
                 # 设置解码回调（用于获取解码后的帧数据）
                 self._setup_hikvision_decode_callback()
 
                 # 开始解码播放（不渲染到窗口）
                 self.playM4SDK.PlayM4_Play(self.PlayCtrlPort, None)
-                print(f"[HKcapture] 纯CPU解码已启动（无渲染）")
                 sys.stdout.flush()
             else:
-                print(f"[HKcapture] 码流打开失败!")
                 sys.stdout.flush()
 
         elif dwDataType == NET_DVR_STREAMDATA:
@@ -1194,7 +1139,7 @@ class HKcapture:
         """
         if dwDataType == NET_DVR_SYSHEAD:
             if self.debug:
-                print(f"[HKcapture] 收到系统头数据，初始化纯CPU解码模式（无渲染）...")
+                pass
             import sys
             sys.stdout.flush()
 
@@ -1206,21 +1151,17 @@ class HKcapture:
                 # 禁用硬件解码，强制使用CPU软件解码
                 port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
                 self.playM4SDK.PlayM4_SetDecodeEngine(c_long(port), 0)  # 0=软件解码
-                print(f"[HKcapture] 已设置为CPU软件解码模式")
 
                 # 设置解码回调（用于获取YUV数据送检测线程）
                 self._setup_hikvision_decode_callback()
 
                 # 开始解码播放（不渲染到窗口，传入None）
                 if self.playM4SDK.PlayM4_Play(self.PlayCtrlPort, None):
-                    print(f"[HKcapture] 纯CPU解码已启动（无渲染）")
                     sys.stdout.flush()
                 else:
                     error = self.playM4SDK.PlayM4_GetLastError(self.PlayCtrlPort)
-                    print(f"[HKcapture] 解码启动失败，错误码: {error}")
                     sys.stdout.flush()
             else:
-                print(f"[HKcapture] 码流打开失败")
                 sys.stdout.flush()
 
         elif dwDataType == NET_DVR_STREAMDATA:
@@ -1239,19 +1180,18 @@ class HKcapture:
             ret = self.playM4SDK.PlayM4_SetDecCallBackExMend(
                 c_long(port), 
                 self.FuncDecCB, 
-                None, 
-                0, 
+                None,
+                0,
                 None
             )
-            
+
             if ret:
-                print(f"[HKcapture] 海康实时流解码回调已设置（YUV队列模式）")
+                pass
             else:
                 error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
-                print(f"[HKcapture] 设置解码回调失败, 错误码: {error}")
-                
+
         except Exception as e:
-            print(f"[HKcapture] 设置解码回调异常: {e}")
+            pass
     
     def _hikvision_decode_callback(self, nPort, pBuf, nSize, pFrameInfo, nUser, nReserved2):
         """海康威视实时流解码回调（支持RGB和YUV格式）
@@ -1385,7 +1325,6 @@ class HKcapture:
             decode_engine = 1
             decode_name = "硬件解码(HXVA)"
         
-        print(f"[HKcapture] 设置解码引擎: {decode_name}, Port={port}")
         sys.stdout.flush()
         
         # 方案1：PlayM4_SetDecodeEngine（旧版API，更兼容）
@@ -1394,18 +1333,14 @@ class HKcapture:
             if ret:
                 if decode_engine == 1:
                     self._qsv_decode_enabled = True
-                print(f"[HKcapture] {decode_name}已启用 (PlayM4_SetDecodeEngine={decode_engine})")
                 sys.stdout.flush()
                 return True
             else:
                 error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
-                print(f"[HKcapture] PlayM4_SetDecodeEngine 失败, 错误码={error}")
                 sys.stdout.flush()
         except AttributeError:
-            print(f"[HKcapture] PlayM4_SetDecodeEngine API不存在，尝试Ex版本")
             sys.stdout.flush()
         except Exception as e:
-            print(f"[HKcapture] PlayM4_SetDecodeEngine 异常: {e}")
             sys.stdout.flush()
         
         # 方案2：PlayM4_SetDecodeEngineEx（新版API）
@@ -1414,22 +1349,17 @@ class HKcapture:
             if ret:
                 if decode_engine == 1:
                     self._qsv_decode_enabled = True
-                print(f"[HKcapture] {decode_name}已启用 (PlayM4_SetDecodeEngineEx={decode_engine})")
                 sys.stdout.flush()
                 return True
             else:
                 error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
-                print(f"[HKcapture] PlayM4_SetDecodeEngineEx 失败, 错误码={error}")
                 sys.stdout.flush()
         except AttributeError:
-            print(f"[HKcapture] PlayM4_SetDecodeEngineEx API不存在")
             sys.stdout.flush()
         except Exception as e:
-            print(f"[HKcapture] PlayM4_SetDecodeEngineEx 异常: {e}")
             sys.stdout.flush()
         
         # 解码引擎设置失败
-        print(f"[HKcapture] 解码引擎设置失败，将使用默认解码方式")
         sys.stdout.flush()
         return False
     
@@ -1447,8 +1377,6 @@ class HKcapture:
         """
         import sys
         
-        print(f"[HKcapture] ========== 解码模式调试信息 ==========")
-        print(f"[HKcapture] 配置 decode_device: {self.decode_device}")
         sys.stdout.flush()
         
         # 1. 检查HXVA.dll是否存在（硬解码依赖）
@@ -1462,11 +1390,9 @@ class HKcapture:
         for path in hxva_paths:
             if os.path.exists(path):
                 hxva_found = True
-                print(f"[HKcapture] HXVA.dll 已找到: {path}")
                 sys.stdout.flush()
                 break
         if not hxva_found:
-            print(f"[HKcapture] HXVA.dll 未找到（硬解码可能不可用）")
             sys.stdout.flush()
         
         # 2. 列出PlayCtrl SDK可用的解码相关API
@@ -1482,7 +1408,6 @@ class HKcapture:
         for api in decode_apis:
             if hasattr(self.playM4SDK, api):
                 available_apis.append(api)
-        print(f"[HKcapture] 可用解码API: {available_apis}")
         sys.stdout.flush()
         
         # 3. 尝试获取当前解码引擎类型
@@ -1492,36 +1417,30 @@ class HKcapture:
                 engine_type = self.playM4SDK.PlayM4_GetDecodeEngine(c_long(port))
                 engine_names = {0: "CPU软解码", 1: "硬件解码(HXVA)"}
                 engine_name = engine_names.get(engine_type, f"未知({engine_type})")
-                print(f"[HKcapture] PlayM4_GetDecodeEngine 返回: {engine_type} ({engine_name})")
                 sys.stdout.flush()
         except Exception as e:
-            print(f"[HKcapture] PlayM4_GetDecodeEngine 调用失败: {e}")
             sys.stdout.flush()
         
         try:
             if hasattr(self.playM4SDK, 'PlayM4_GetDecodeEngineEx'):
                 engine_type_ex = self.playM4SDK.PlayM4_GetDecodeEngineEx(c_long(port))
-                print(f"[HKcapture] PlayM4_GetDecodeEngineEx 返回: {engine_type_ex}")
                 sys.stdout.flush()
         except Exception as e:
-            print(f"[HKcapture] PlayM4_GetDecodeEngineEx 调用失败: {e}")
             sys.stdout.flush()
         
         # 4. 检查内部状态变量
         qsv_enabled = getattr(self, '_qsv_decode_enabled', False)
-        print(f"[HKcapture] 内部状态 _qsv_decode_enabled: {qsv_enabled}")
         sys.stdout.flush()
-        
+
         # 5. 结论
         if self.decode_device == 'cpu':
-            print(f"[HKcapture] 当前使用: CPU软件解码（配置指定）")
+            pass
         elif qsv_enabled and engine_type == 1:
-            print(f"[HKcapture] 当前使用: 硬件解码(HXVA) - Intel QSV/NVIDIA NVDEC")
+            pass
         elif qsv_enabled:
-            print(f"[HKcapture] 硬件解码已设置，等待播放后生效")
+            pass
         else:
-            print(f"[HKcapture] 硬件解码设置失败，回退到CPU软解码")
-        print(f"[HKcapture] ==========================================")
+            pass
         sys.stdout.flush()
     
     def read(self):

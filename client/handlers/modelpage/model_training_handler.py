@@ -794,41 +794,31 @@ class ModelTrainingHandler(ModelTestHandler):
     def _convertPtToDatAndCleanup(self, weights_dir):
         """立即转换PT文件为DAT格式并删除PT文件"""
         self._appendLog("\n" + "="*70 + "\n")
-        self._appendLog("[调试] _convertPtToDatAndCleanup 方法已启动\n")
-        self._appendLog(f"[调试] 权重目录: {weights_dir}\n")
         self._appendLog("="*70 + "\n")
         
         try:
             if not self.file_converter:
-                self._appendLog("[调试] 文件转换器未初始化，退出方法\n")
                 return []
             
             if not os.path.exists(weights_dir):
-                self._appendLog(f"[调试] 权重目录不存在，退出方法\n")
                 return []
             
             converted_files = []
             pt_files_found = []
             
             # 查找所有PT文件
-            self._appendLog("[调试] 开始扫描PT文件...\n")
             for file in os.listdir(weights_dir):
                 if file.endswith('.pt'):
                     pt_files_found.append(file)
-                    self._appendLog(f"[调试] 发现PT文件: {file}\n")
             
             if not pt_files_found:
-                self._appendLog("[调试] 未发现PT文件，退出方法\n")
                 return []
             
-            self._appendLog(f"[调试] 共发现 {len(pt_files_found)} 个PT文件\n")
             
             # 获取模型名称用于文件重命名
             model_name = getattr(self, 'current_exp_name', 'trained_model')
-            self._appendLog(f"[调试] 模型名称: {model_name}\n")
             
             # 转换每个PT文件
-            self._appendLog("\n[调试] 开始转换PT文件为DAT格式...\n")
             for file in pt_files_found:
                 pt_path = os.path.join(weights_dir, file)
                 
@@ -845,42 +835,32 @@ class ModelTrainingHandler(ModelTestHandler):
                 
                 dat_path = os.path.join(weights_dir, dat_filename)
                 
-                self._appendLog(f"[调试] 转换: {file} -> {dat_filename}\n")
                 
                 try:
                     converted_path = self.file_converter.convert_file(pt_path, dat_path)
-                    
+
                     if converted_path and os.path.exists(converted_path):
                         converted_files.append(converted_path)
-                        self._appendLog(f"[调试] ✓ 转换成功: {dat_filename}\n")
-                        
+
                         # 立即删除PT文件
-                        self._appendLog(f"[调试] 尝试删除PT文件: {file}\n")
                         try:
                             os.remove(pt_path)
-                            self._appendLog(f"[调试] ✓ PT文件已删除: {file}\n")
                         except OSError as remove_error:
-                            self._appendLog(f"[调试] ✗ PT文件删除失败: {file}\n")
-                            self._appendLog(f"[调试]   错误信息: {str(remove_error)}\n")
+                            pass
                     else:
-                        self._appendLog(f"[调试] ✗ 转换失败: {dat_filename}\n")
-                        
+                        pass
+
                 except Exception as convert_error:
-                    self._appendLog(f"[调试] ✗ 转换异常: {file}\n")
-                    self._appendLog(f"[调试]   错误信息: {str(convert_error)}\n")
+                    pass
             
             # 强制清理任何残留的PT文件
-            self._appendLog("\n[调试] 调用 _forceCleanupPtFiles 强制清理残留PT文件...\n")
             self._forceCleanupPtFiles(weights_dir)
             
-            self._appendLog(f"\n[调试] _convertPtToDatAndCleanup 方法执行完成，共转换 {len(converted_files)} 个文件\n")
             self._appendLog("="*70 + "\n")
             return converted_files
             
         except Exception as e:
-            self._appendLog(f"\n[调试] ✗ _convertPtToDatAndCleanup 方法发生异常: {str(e)}\n")
             import traceback
-            self._appendLog(f"[调试] 详细错误:\n{traceback.format_exc()}\n")
             self._appendLog("="*70 + "\n")
             return []
     
@@ -944,32 +924,24 @@ class ModelTrainingHandler(ModelTestHandler):
     def _forceCleanupPtFiles(self, weights_dir):
         """强制清理指定目录下的所有PT文件（带重试机制）"""
         self._appendLog("\n" + "-"*70 + "\n")
-        self._appendLog("[调试] _forceCleanupPtFiles 方法已启动\n")
-        self._appendLog(f"[调试] 权重目录: {weights_dir}\n")
         self._appendLog("-"*70 + "\n")
         
         try:
             if not os.path.exists(weights_dir):
-                self._appendLog("[调试] 权重目录不存在，退出方法\n")
                 return
             
             import time
             import gc
             
             pt_files = []
-            self._appendLog("[调试] 开始扫描残留的PT文件...\n")
             for file in os.listdir(weights_dir):
                 if file.endswith('.pt'):
                     pt_files.append((file, os.path.join(weights_dir, file)))
-                    self._appendLog(f"[调试] 发现残留PT文件: {file}\n")
             
             if not pt_files:
-                self._appendLog("[调试] 未发现残留PT文件，退出方法\n")
                 self._appendLog("-"*70 + "\n")
                 return
             
-            self._appendLog(f"[调试] 共发现 {len(pt_files)} 个残留PT文件，开始强制清理...\n")
-            self._appendLog("[调试] 执行垃圾回收释放文件句柄...\n")
             
             # 强制垃圾回收，释放可能的文件句柄
             gc.collect()
@@ -979,29 +951,23 @@ class ModelTrainingHandler(ModelTestHandler):
             fail_count = 0
             
             for filename, pt_file in pt_files:
-                self._appendLog(f"\n[调试] 处理文件: {filename}\n")
                 deleted = False
                 last_error = None
                 
                 for attempt in range(10):  # 增加到10次重试
-                    self._appendLog(f"[调试]   尝试删除 (第{attempt+1}/10次)...\n")
                     try:
                         if os.path.exists(pt_file):
                             os.remove(pt_file)
                             deleted = True
-                            self._appendLog(f"[调试]   ✓ 删除成功\n")
                             break
                         else:
-                            self._appendLog(f"[调试]   文件不存在（可能已被删除）\n")
                             deleted = True
                             break
                     except OSError as e:
                         last_error = str(e)
-                        self._appendLog(f"[调试]   ✗ 删除失败: {last_error}\n")
                         if attempt < 9:
                             # 每次重试前强制垃圾回收
                             gc.collect()
-                            self._appendLog(f"[调试]   等待0.5秒后重试...\n")
                             time.sleep(0.5)  # 等待0.5秒后重试
                 
                 if deleted:
@@ -1016,15 +982,10 @@ class ModelTrainingHandler(ModelTestHandler):
                     self._appendLog(f"  文件路径: {pt_file}\n")
                     self._appendLog(f"  请手动删除此文件\n")
             
-            self._appendLog(f"\n[调试] _forceCleanupPtFiles 执行完成\n")
-            self._appendLog(f"[调试]   成功: {success_count} 个\n")
-            self._appendLog(f"[调试]   失败: {fail_count} 个\n")
             self._appendLog("-"*70 + "\n")
                         
         except Exception as e:
-            self._appendLog(f"\n[调试] ✗ _forceCleanupPtFiles 方法发生异常: {str(e)}\n")
             import traceback
-            self._appendLog(f"[调试] 详细错误:\n{traceback.format_exc()}\n")
             self._appendLog("-"*70 + "\n")
     
     def _saveTrainingLogToWeightsDir(self, exp_name, weights_dir=None):

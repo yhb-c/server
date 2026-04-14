@@ -792,11 +792,7 @@ class TrainingWorker(QThread):
                                 self.training_report["weights_dir"] = weights_dir
                                 
                                 # 立即转换PT文件为DAT格式并删除PT文件
-                                self.log_output.emit(f"\n[调试] ========== 准备调用转换和删除方法 ==========\n")
-                                self.log_output.emit(f"[调试] 调用位置: 训练完成 - 正常路径\n")
-                                self.log_output.emit(f"[调试] Weights目录: {weights_dir}\n")
                                 self._convertPtToDatAndCleanup(weights_dir)
-                                self.log_output.emit(f"[调试] 转换和删除方法调用完成\n")
                                 
                                 # 整理训练结果文件
                                 self._organizeTrainingResults(save_dir_abs)
@@ -813,11 +809,7 @@ class TrainingWorker(QThread):
                                         if os.path.exists(possible_dir):
                                             weights_dir = possible_dir
                                             self.training_report["weights_dir"] = weights_dir
-                                            self.log_output.emit(f"\n[调试] ========== 准备调用转换和删除方法 ==========\n")
-                                            self.log_output.emit(f"[调试] 调用位置: 训练完成 - 备用路径\n")
-                                            self.log_output.emit(f"[调试] Weights目录: {weights_dir}\n")
                                             self._convertPtToDatAndCleanup(weights_dir)
-                                            self.log_output.emit(f"[调试] 转换和删除方法调用完成\n")
                                             break
                                     else:
                                         self.log_output.emit(f"[ERROR] 未找到权重目录，跳过转换\n")
@@ -863,11 +855,7 @@ class TrainingWorker(QThread):
                                     self.training_report["weights_dir"] = weights_dir
                                     
                                     # 立即转换PT文件为DAT格式并删除PT文件
-                                    self.log_output.emit(f"\n[调试] ========== 准备调用转换和删除方法 ==========\n")
-                                    self.log_output.emit(f"[调试] 调用位置: 继续训练完成 - 正常路径\n")
-                                    self.log_output.emit(f"[调试] Weights目录: {weights_dir}\n")
                                     self._convertPtToDatAndCleanup(weights_dir)
-                                    self.log_output.emit(f"[调试] 转换和删除方法调用完成\n")
                                     
                                     # 整理训练结果文件
                                     self._organizeTrainingResults(save_dir_abs)
@@ -884,11 +872,7 @@ class TrainingWorker(QThread):
                                             if os.path.exists(possible_dir):
                                                 weights_dir = possible_dir
                                                 self.training_report["weights_dir"] = weights_dir
-                                                self.log_output.emit(f"\n[调试] ========== 准备调用转换和删除方法 ==========\n")
-                                                self.log_output.emit(f"[调试] 调用位置: 继续训练完成 - 备用路径\n")
-                                                self.log_output.emit(f"[调试] Weights目录: {weights_dir}\n")
                                                 self._convertPtToDatAndCleanup(weights_dir)
-                                                self.log_output.emit(f"[调试] 转换和删除方法调用完成\n")
                                                 break
                                         else:
                                             self.log_output.emit(f"[ERROR] 未找到权重目录，跳过转换\n")
@@ -913,11 +897,7 @@ class TrainingWorker(QThread):
                             self.training_report["weights_dir"] = weights_dir
                             
                             # 立即转换PT文件为DAT格式并删除PT文件
-                            self.log_output.emit(f"\n[调试] ========== 准备调用转换和删除方法 ==========\n")
-                            self.log_output.emit(f"[调试] 调用位置: 用户停止训练\n")
-                            self.log_output.emit(f"[调试] Weights目录: {weights_dir}\n")
                             self._convertPtToDatAndCleanup(weights_dir)
-                            self.log_output.emit(f"[调试] 转换和删除方法调用完成\n")
                             
                             # 整理训练结果文件：将train目录下的其他文件移动到training_results目录
                             self._organizeTrainingResults(save_dir_abs)
@@ -1011,10 +991,7 @@ class TrainingWorker(QThread):
                                 self.log_output.emit("⚠ 所有保存方法均失败\n")
                             else:
                                 # 保存成功后，立即转换为DAT并删除PT
-                                self.log_output.emit("\n[调试] ========== 保存检查点后转换并删除PT ==========\n")
-                                self.log_output.emit(f"[调试] 检查点已保存，开始转换为DAT格式...\n")
                                 self._convertPtToDatAndCleanup(weights_dir)
-                                self.log_output.emit(f"[调试] 检查点转换和删除完成\n")
                         else:
                             self.log_output.emit(f"⚠ 权重目录不存在: {weights_dir}\n")
                     except Exception as save_error:
@@ -1092,10 +1069,7 @@ class TrainingWorker(QThread):
                                 self.log_output.emit("⚠ 所有保存方法均失败\n")
                             else:
                                 # 保存成功后，立即转换为DAT并删除PT
-                                self.log_output.emit("\n[调试] ========== 保存检查点后转换并删除PT ==========\n")
-                                self.log_output.emit(f"[调试] 检查点已保存，开始转换为DAT格式...\n")
                                 self._convertPtToDatAndCleanup(weights_dir)
-                                self.log_output.emit(f"[调试] 检查点转换和删除完成\n")
                         else:
                             self.log_output.emit(f"⚠ 权重目录不存在: {weights_dir}\n")
                     except Exception as save_error:
@@ -1148,10 +1122,7 @@ class TrainingWorker(QThread):
                             self.log_output.emit("⚠ 所有保存方法均失败\n")
                         else:
                             # 保存成功后，立即转换为DAT并删除PT
-                            self.log_output.emit("\n[调试] ========== 保存检查点后转换并删除PT ==========\n")
-                            self.log_output.emit(f"[调试] 检查点已保存，开始转换为DAT格式...\n")
                             self._convertPtToDatAndCleanup(weights_dir)
-                            self.log_output.emit(f"[调试] 检查点转换和删除完成\n")
                     else:
                         self.log_output.emit(f"⚠ 权重目录不存在: {weights_dir}\n")
                 else:

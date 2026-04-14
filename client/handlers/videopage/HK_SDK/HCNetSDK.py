@@ -19,12 +19,9 @@ try:
         sys.path.insert(0, project_root)
 
     from main import USE_WINDOWS_SDK
-    print(f"[HCNetSDK] 成功从main导入USE_WINDOWS_SDK: {USE_WINDOWS_SDK}")
 except ImportError as e:
     # 如果导入失败，自动检测系统平台
-    print(f"[HCNetSDK] 导入main失败: {e}")
     USE_WINDOWS_SDK = (platform.system().lower() == 'windows')
-    print(f"[HCNetSDK] 使用自动检测: USE_WINDOWS_SDK={USE_WINDOWS_SDK}")
 
 
 def get_hk_lib_path():
@@ -60,9 +57,6 @@ def system_get_platform_info():
 
     python_bit = platform.architecture()[0]
     python_bit_num = re.findall(r'(\d+)\w*', python_bit)[0]
-
-    print(f"[HCNetSDK] SDK平台配置: USE_WINDOWS_SDK={USE_WINDOWS_SDK}")
-    print(f"[HCNetSDK] 使用SDK平台: {sys_platform}{python_bit_num}")
 
     return sys_platform, python_bit_num
 

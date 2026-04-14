@@ -571,7 +571,6 @@ class ChannelPanelHandler:
                 self._channel_panels_map[channel_id] = sender
         
         # 从配置文件读取通道配置（RTSP地址和本地视频文件）
-        print(f"[调试] 开始读取 {channel_id} 的配置")
         channel_config = {}
 
         # 从default_config.yaml读取配置
@@ -583,51 +582,32 @@ class ChannelPanelHandler:
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
             config_path = os.path.join(project_root, 'client', 'config', 'default_config.yaml')
 
-            print(f"[调试] 当前文件: {current_file}")
-            print(f"[调试] 项目根目录: {project_root}")
-            print(f"[调试] 配置文件路径: {config_path}")
-            print(f"[调试] 配置文件是否存在: {os.path.exists(config_path)}")
-
             if os.path.exists(config_path):
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f) or {}
 
-                print(f"[调试] 配置文件内容: {config}")
-                print(f"[调试] channel_id: {channel_id}")
-                print(f"[调试] channel_id in config: {channel_id in config}")
-
                 if channel_id in config:
                     channel_data = config[channel_id]
-                    print(f"[调试] {channel_id} 的配置数据: {channel_data}")
 
                     # 优先使用RTSP地址
                     if 'address' in channel_data and channel_data['address']:
                         channel_config['address'] = channel_data['address']
-                        print(f"[调试] 使用RTSP地址: {channel_data['address']}")
                         self.logger.debug(f"[DEBUG] 从配置文件读取RTSP地址: {channel_data['address']}")
                     # 如果没有RTSP地址，使用本地视频文件
                     elif 'file_path' in channel_data and channel_data['file_path']:
                         channel_config['address'] = channel_data['file_path']
-                        print(f"[调试] 使用本地视频文件: {channel_data['file_path']}")
                         self.logger.debug(f"[DEBUG] 从配置文件读取本地视频文件: {channel_data['file_path']}")
-                    else:
-                        print(f"[调试] {channel_id} 没有address或file_path字段")
-                else:
-                    print(f"[调试] 配置文件中没有 {channel_id}")
         except Exception as e:
-            print(f"[调试] 读取配置文件失败: {e}")
             import traceback
             traceback.print_exc()
             self.logger.debug(f"[DEBUG] 读取配置文件失败: {e}")
 
         # 如果既没有RTSP地址也没有本地视频文件，无法连接
         if 'address' not in channel_config:
-            print(f"[调试] {channel_id} 最终没有获取到地址，无法连接")
             self.logger.debug(f"[DEBUG] {channel_id} 没有配置RTSP地址或本地视频文件，无法连接")
             self._channels_connecting.discard(channel_id)
             return
 
-        print(f"[调试] 最终使用配置: {channel_config}")
         self.logger.debug(f"[DEBUG] 最终使用配置: {channel_config}")
         
         # 读取并设置通道名称到面板（调用业务逻辑方法）

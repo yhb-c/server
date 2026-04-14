@@ -1493,7 +1493,6 @@ def main():
     app.setOrganizationName('Detection')
     
     # 暂时禁用全局字体配置，测试是否解决重复显示问题
-    # print(f"[调试] 跳过全局字体应用到应用程序")
     # FontManager.applyToApplication(app)
     
     # 设置应用样式（可选）
