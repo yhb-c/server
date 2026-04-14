@@ -21,19 +21,41 @@ def is_local_host(host):
     Returns:
         bool: 是本地地址返回 True，否则返回 False
     """
+    import netifaces
+
     local_addresses = ['localhost', '127.0.0.1', '0.0.0.0']
 
     # 检查是否为常见的本地地址
     if host in local_addresses:
         return True
 
-    # 获取本机所有IP地址
+    # 获取本机所有网络接口的IP地址
     try:
-        hostname = socket.gethostname()
-        local_ips = socket.gethostbyname_ex(hostname)[2]
+        local_ips = []
+
+        # 方法1: 使用netifaces获取所有网络接口的IP
+        for interface in netifaces.interfaces():
+            addrs = netifaces.ifaddresses(interface)
+            # 获取IPv4地址
+            if netifaces.AF_INET in addrs:
+                for addr_info in addrs[netifaces.AF_INET]:
+                    if 'addr' in addr_info:
+                        local_ips.append(addr_info['addr'])
+
+        print(f"[DEBUG] 本机IP地址列表: {local_ips}")
+        print(f"[DEBUG] 检查地址: {host}")
+        print(f"[DEBUG] 是否匹配: {host in local_ips}")
+
         return host in local_ips
-    except Exception:
-        return False
+    except Exception as e:
+        print(f"[DEBUG] is_local_host异常: {e}")
+        # 备用方法：使用socket
+        try:
+            hostname = socket.gethostname()
+            local_ips = socket.gethostbyname_ex(hostname)[2]
+            return host in local_ips
+        except Exception:
+            return False
 
 
 def check_port_listening(port):
@@ -119,15 +141,23 @@ def start_api_local():
         api_executable = api_dir / 'liquid-api'
         log_dir = project_root / 'logs'
 
+        print(f"[DEBUG-API] 项目根目录: {project_root}")
+        print(f"[DEBUG-API] API目录: {api_dir}")
+        print(f"[DEBUG-API] API可执行文件: {api_executable}")
+        print(f"[DEBUG-API] 可执行文件存在: {api_executable.exists()}")
+
         # 创建日志目录
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / 'api.log'
+        print(f"[DEBUG-API] 日志文件: {log_file}")
 
         # 检查可执行文件是否存在
         if not api_executable.exists():
+            print(f"[DEBUG-API] 错误: API可执行文件不存在")
             return False
 
         # 启动API服务（后台运行）
+        print(f"[DEBUG-API] 正在启动API服务...")
         with open(log_file, 'w') as log:
             process = subprocess.Popen(
                 [str(api_executable)],
@@ -137,12 +167,24 @@ def start_api_local():
                 start_new_session=True
             )
 
+        print(f"[DEBUG-API] 进程已启动，PID: {process.pid}")
+
         # 等待服务启动
         time.sleep(2)
 
+        # 检查进程是否还在运行
+        poll_result = process.poll()
+        if poll_result is not None:
+            print(f"[DEBUG-API] 警告: 进程已退出，退出码: {poll_result}")
+            return False
+
+        print(f"[DEBUG-API] API服务启动成功")
         return True
 
-    except Exception:
+    except Exception as e:
+        print(f"[DEBUG-API] 异常: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -159,12 +201,19 @@ def start_websocket_local():
         start_script = server_dir / 'start_websocket_server.py'
         log_dir = project_root / 'logs'
 
+        print(f"[DEBUG-WS] 项目根目录: {project_root}")
+        print(f"[DEBUG-WS] 服务器目录: {server_dir}")
+        print(f"[DEBUG-WS] 启动脚本: {start_script}")
+        print(f"[DEBUG-WS] 启动脚本存在: {start_script.exists()}")
+
         # 创建日志目录
         log_dir.mkdir(exist_ok=True)
         log_file = log_dir / 'websocket.log'
+        print(f"[DEBUG-WS] 日志文件: {log_file}")
 
         # 检查启动脚本是否存在
         if not start_script.exists():
+            print(f"[DEBUG-WS] 错误: 启动脚本不存在")
             return False
 
         # 激活conda环境并启动服务
@@ -173,8 +222,10 @@ def start_websocket_local():
         start_cmd = f'cd {server_dir} && python start_websocket_server.py'
 
         full_cmd = f'{conda_activate} && {export_env} && {start_cmd}'
+        print(f"[DEBUG-WS] 执行命令: {full_cmd}")
 
         # 启动WebSocket服务（后台运行）
+        print(f"[DEBUG-WS] 正在启动WebSocket服务...")
         with open(log_file, 'w') as log:
             process = subprocess.Popen(
                 full_cmd,
@@ -185,12 +236,24 @@ def start_websocket_local():
                 start_new_session=True
             )
 
+        print(f"[DEBUG-WS] 进程已启动，PID: {process.pid}")
+
         # 等待服务启动
         time.sleep(3)
 
+        # 检查进程是否还在运行
+        poll_result = process.poll()
+        if poll_result is not None:
+            print(f"[DEBUG-WS] 警告: 进程已退出，退出码: {poll_result}")
+            return False
+
+        print(f"[DEBUG-WS] WebSocket服务启动成功")
         return True
 
-    except Exception:
+    except Exception as e:
+        print(f"[DEBUG-WS] 异常: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -211,6 +274,10 @@ def check_and_start_services(config):
                 'ws_server': bool    # WebSocket服务器连接状态
             }
     """
+    print("\n" + "="*60)
+    print("[DEBUG] 开始检测和启动服务")
+    print("="*60)
+
     status = {
         'api_server': False,
         'ws_server': False
@@ -225,33 +292,65 @@ def check_and_start_services(config):
     ws_host = ws_url.split('://')[1].split(':')[0] if '://' in ws_url else '192.168.0.121'
     ws_port = int(ws_url.split(':')[-1]) if ':' in ws_url else 8085
 
+    print(f"[DEBUG] API服务器配置: {api_host}:{api_port}")
+    print(f"[DEBUG] WebSocket服务器配置: {ws_host}:{ws_port}")
+
     # 判断是否为本地模式
     is_local = is_local_host(api_host)
+    print(f"[DEBUG] 是否为本地模式: {is_local}")
 
     # 1. 检测 API 服务器
+    print(f"\n[DEBUG] 检测API服务器连接...")
     status['api_server'] = check_port(api_host, api_port)
+    print(f"[DEBUG] API服务器连接状态: {status['api_server']}")
 
     # 2. 检测 WebSocket 服务器
+    print(f"\n[DEBUG] 检测WebSocket服务器连接...")
     status['ws_server'] = check_port(ws_host, ws_port, is_websocket=True)
+    print(f"[DEBUG] WebSocket服务器连接状态: {status['ws_server']}")
 
     # 只有在本地模式下才尝试启动服务
     if is_local:
+        print(f"\n[DEBUG] 本地模式，检查端口监听状态...")
         # 检查本地端口监听状态，避免重复启动
         api_listening = check_port_listening(api_port)
         ws_listening = check_port_listening(ws_port)
 
+        print(f"[DEBUG] API端口{api_port}监听状态: {api_listening}")
+        print(f"[DEBUG] WebSocket端口{ws_port}监听状态: {ws_listening}")
+
         # 自动启动未运行的服务
         if not api_listening or not ws_listening:
+            print(f"\n[DEBUG] 需要启动服务...")
+
             # 启动API服务
             if not api_listening:
+                print(f"\n[DEBUG] 尝试启动API服务...")
                 if start_api_local():
+                    print(f"[DEBUG] API服务启动函数返回成功，等待1秒...")
                     time.sleep(1)
                     status['api_server'] = check_port(api_host, api_port)
+                    print(f"[DEBUG] API服务启动后连接状态: {status['api_server']}")
+                else:
+                    print(f"[DEBUG] API服务启动函数返回失败")
 
             # 启动WebSocket服务
             if not ws_listening:
+                print(f"\n[DEBUG] 尝试启动WebSocket服务...")
                 if start_websocket_local():
+                    print(f"[DEBUG] WebSocket服务启动函数返回成功，等待2秒...")
                     time.sleep(2)
                     status['ws_server'] = check_port(ws_host, ws_port, is_websocket=True)
+                    print(f"[DEBUG] WebSocket服务启动后连接状态: {status['ws_server']}")
+                else:
+                    print(f"[DEBUG] WebSocket服务启动函数返回失败")
+        else:
+            print(f"[DEBUG] 服务已在运行，无需启动")
+    else:
+        print(f"[DEBUG] 远程模式，不启动本地服务")
+
+    print("\n" + "="*60)
+    print(f"[DEBUG] 最终状态 - API: {status['api_server']}, WebSocket: {status['ws_server']}")
+    print("="*60 + "\n")
 
     return status
