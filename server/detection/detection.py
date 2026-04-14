@@ -549,23 +549,19 @@ class LiquidDetectionEngine:
     
     def __init__(self, model_path=None, device='cuda', batch_size=4):
         """初始化液位检测引擎"""
-        print(f"[DEBUG] 开始初始化LiquidDetectionEngine")
-        print(f"[DEBUG] 参数: model_path={model_path}, device={device}, batch_size={batch_size}")
-        
         try:
             # 模型相关
             self.model = None
             self.model_path = model_path
             self.device = validate_device(device)
             self.batch_size = batch_size
-            print(f"[DEBUG] 设备验证完成: {self.device}")
-            
+
             # 标注数据
             self.targets = []
             self.fixed_container_bottoms = []
             self.fixed_container_tops = []
             self.actual_heights = []
-            
+
             # 检测状态
             self.kalman_filters = []
             self.no_liquid_count = []
@@ -575,19 +571,19 @@ class LiquidDetectionEngine:
             self.last_observations = []
             self.last_accepted_observations = []
             self.rejected_observations_buffer = []
-            
+
             # InitError 状态（按通道存储，支持多通道共享引擎）
             self.detect_initstatus = []
             self.init_mask_pixel_counts = []
             self.is_inference_error = []
-            
+
             # 多通道状态存储：{channel_id: {'init_mask_pixel_counts': [], 'is_inference_error': []}}
             self._channel_init_states = {}
-            
+
             # 调试开关
             self.debug = False
             self.modeldebug = True
-            
+
             # 滤波参数
             self.smooth_window = 5
             self.error_percentage = 30  # 硬阈值
@@ -595,28 +591,21 @@ class LiquidDetectionEngine:
             self.trend_confirm_frames = 3
             self.trend_buffers = []
             self.trend_directions = []
-            
+
             # 满液状态
             self.full_threshold_ratio = 0.9
             self.full_count = []
             self.full_confirm_frames = 3
-            
-            print(f"[DEBUG] 基本属性初始化完成")
-            
+
             # 相机姿态检测状态（按通道存储）
             # {channel_id: {'ref_set_time': float, 'camera_status': str, 'last_check_time': float}}
             self._camera_position_states = {}
             self._camera_check_interval = 10.0  # 每10秒重置基准帧检测一次
-            
-            print(f"[DEBUG] 开始初始化相机姿态检测...")
+
             # 从配置文件读取相机姿态检测开关
             self._camera_position_enabled = self._get_camera_position_enabled()
-            print(f"[DEBUG] 相机姿态检测开关: {self._camera_position_enabled}")
-            
-            print(f"[DEBUG] LiquidDetectionEngine初始化完成")
-            
+
         except Exception as e:
-            print(f"[DEBUG] LiquidDetectionEngine初始化异常: {e}")
             import traceback
             traceback.print_exc()
             raise
@@ -639,23 +628,17 @@ class LiquidDetectionEngine:
     
     def load_model(self, model_path):
         """加载YOLO模型"""
-        print(f"[DEBUG] 开始加载YOLO模型: {model_path}")
-        
         try:
             model, actual_path = load_model(model_path, self.device)
-            print(f"[DEBUG] load_model函数返回: model={model is not None}, actual_path={actual_path}")
-            
+
             if model is not None:
                 self.model = model
                 self.model_path = actual_path
-                print(f"[DEBUG] YOLO模型加载成功")
                 return True
             else:
-                print(f"[DEBUG] YOLO模型加载失败: load_model返回None")
                 return False
-                
+
         except Exception as e:
-            print(f"[DEBUG] YOLO模型加载异常: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -672,24 +655,10 @@ class LiquidDetectionEngine:
             annotation_initstatus: 从标注结果读取的初始状态列表 [0/1/2, ...]
                                    0=默认, 1=满, 2=空
         """
-        print(f"[DEBUG-检测引擎] ========== configure被调用（检测引擎） ==========")
-        print(f"[DEBUG-检测引擎] 输入参数:")
-        print(f"[DEBUG-检测引擎]   boxes: {boxes}")
-        print(f"[DEBUG-检测引擎]   fixed_bottoms: {fixed_bottoms}")
-        print(f"[DEBUG-检测引擎]   fixed_tops: {fixed_tops}")
-        print(f"[DEBUG-检测引擎]   actual_heights: {actual_heights}")
-        print(f"[DEBUG-检测引擎]   annotation_initstatus: {annotation_initstatus}")
-
         self.targets = parse_targets(boxes)
         self.fixed_container_bottoms = list(fixed_bottoms)
         self.fixed_container_tops = list(fixed_tops)
         self.actual_heights = [float(h) for h in actual_heights]
-
-        print(f"[DEBUG-检测引擎] 解析后的配置:")
-        print(f"[DEBUG-检测引擎]   self.targets: {self.targets}")
-        print(f"[DEBUG-检测引擎]   self.fixed_container_bottoms: {self.fixed_container_bottoms}")
-        print(f"[DEBUG-检测引擎]   self.fixed_container_tops: {self.fixed_container_tops}")
-        print(f"[DEBUG-检测引擎]   self.actual_heights: {self.actual_heights}")
 
         num_targets = len(self.targets)
         self._init_state_lists(num_targets)
@@ -699,8 +668,6 @@ class LiquidDetectionEngine:
         self.detect_initstatus = calculate_initstatus(num_targets, annotation_initstatus)
         self.init_mask_pixel_counts = [0] * num_targets
         self.is_inference_error = [False] * num_targets
-
-        print(f"[DEBUG-检测引擎] 配置完成，ROI数量: {num_targets}")
         
 
     
@@ -1250,8 +1217,6 @@ class LiquidDetectionEngine:
                 state['ref_set_time'] = current_time
                 state['ref_initialized'] = True
                 state['camera_status'] = 'normal'
-                if self.debug:
-                    print(f"📷 [相机检测] channel={channel_id} 基准帧已重置")
             return {'status': 'normal', 'moved': False, 'message': '基准帧已重置', 'roi_coords': roi_coords, 'small_roi_list': small_roi_list}
         
         # 检测相机是否移动（使用详细版本获取特征点信息）
@@ -1278,7 +1243,7 @@ class LiquidDetectionEngine:
         
         return result
 
-    def detect(self, frame_or_roi_frames, annotation_config=None, channel_id=None):
+    def detect(self, frame_or_roi_frames, annotation_config=None, channel_id=None, frame_timestamp=None):
         """
         检测帧中的液位高度
 
@@ -1288,31 +1253,27 @@ class LiquidDetectionEngine:
                 - ROI图像列表 (list[np.ndarray]): 预裁剪的ROI图像，跳过内部裁剪
             annotation_config: 可选的标注配置字典
             channel_id: 通道ID（用于多通道状态隔离）
+            frame_timestamp: 帧时间戳（毫秒），如果为None则自动生成
 
         Returns:
-            dict: 检测结果 {'liquid_line_positions': {...}, 'success': bool}
+            dict: 检测结果 {'liquid_line_positions': {...}, 'success': bool, 'frame_timestamp': int}
         """
         if self.model is None:
-            return {'liquid_line_positions': {}, 'success': False}
+            return {'liquid_line_positions': {}, 'success': False, 'frame_timestamp': frame_timestamp or int(time.time() * 1000)}
+
+        # 生成或使用传入的帧时间戳（毫秒）
+        if frame_timestamp is None:
+            frame_timestamp = int(time.time() * 1000)
 
         # 判断输入类型：列表为预裁剪ROI，否则为完整帧
         is_roi_frames = isinstance(frame_or_roi_frames, list)
 
         if annotation_config:
-            print(f"[DEBUG-检测引擎] {channel_id}: ========== detect方法被调用 ==========")
-            print(f"[DEBUG-检测引擎] {channel_id}: 使用annotation_config参数")
-
             targets = parse_targets(annotation_config.get('boxes', []))
             fixed_bottoms = annotation_config.get('fixed_bottoms', [])
             fixed_tops = annotation_config.get('fixed_tops', [])
             actual_heights = annotation_config.get('actual_heights', [])
             fixed_init_levels = annotation_config.get('fixed_init_levels', [])  # 读取初始液位
-
-            print(f"[DEBUG-检测引擎] {channel_id}: 从annotation_config读取的配置:")
-            print(f"[DEBUG-检测引擎] {channel_id}:   targets: {targets}")
-            print(f"[DEBUG-检测引擎] {channel_id}:   fixed_bottoms: {fixed_bottoms}")
-            print(f"[DEBUG-检测引擎] {channel_id}:   fixed_tops: {fixed_tops}")
-            print(f"[DEBUG-检测引擎] {channel_id}:   actual_heights: {actual_heights}")
 
             # 从annotation_config中读取init_status，为当前通道创建独立的detect_initstatus
             areas = annotation_config.get('areas', {})
@@ -1330,21 +1291,12 @@ class LiquidDetectionEngine:
             if channel_id is None:
                 channel_id = annotation_config.get('channel_id', 'default')
         else:
-            print(f"[DEBUG-检测引擎] {channel_id}: ========== detect方法被调用 ==========")
-            print(f"[DEBUG-检测引擎] {channel_id}: 使用引擎实例配置")
-
             targets = self.targets
             fixed_bottoms = self.fixed_container_bottoms
             fixed_tops = self.fixed_container_tops
             actual_heights = self.actual_heights
             fixed_init_levels = []  # 无配置时为空
             current_detect_initstatus = self.detect_initstatus if self.detect_initstatus else [0] * len(targets)
-
-            print(f"[DEBUG-检测引擎] {channel_id}: 引擎实例配置:")
-            print(f"[DEBUG-检测引擎] {channel_id}:   self.targets: {targets}")
-            print(f"[DEBUG-检测引擎] {channel_id}:   self.fixed_container_bottoms: {fixed_bottoms}")
-            print(f"[DEBUG-检测引擎] {channel_id}:   self.fixed_container_tops: {fixed_tops}")
-            print(f"[DEBUG-检测引擎] {channel_id}:   self.actual_heights: {actual_heights}")
 
             if channel_id is None:
                 channel_id = 'default'
@@ -1360,8 +1312,6 @@ class LiquidDetectionEngine:
 
         # 获取或创建通道特定状态（传入fixed_init_levels用于卡尔曼滤波器初始化）
         channel_init_state = self._get_or_create_channel_init_state(channel_id, len(targets), fixed_init_levels)
-
-        print(f"[DEBUG-检测引擎] {channel_id}: 准备开始检测，ROI数量={len(targets)}")
         
         try:
             liquid_line_positions = {}
@@ -1443,6 +1393,7 @@ class LiquidDetectionEngine:
             detection_result = {
                 'liquid_line_positions': liquid_line_positions,
                 'success': len(liquid_line_positions) > 0,
+                'frame_timestamp': frame_timestamp,  # 添加帧时间戳
                 # 相机姿态检测结果
                 'camera_status': camera_status_result.get('status', 'normal'),
                 'camera_moved': camera_status_result.get('moved', False),
@@ -1456,13 +1407,11 @@ class LiquidDetectionEngine:
                 'camera_rotation': camera_status_result.get('rotation', 0.0),
                 'camera_scale_change': camera_status_result.get('scale_change', 0.0)
             }
-            
+
             return detection_result
-            
+
         except Exception as e:
-            if self.debug:
-                print(f"❌ [detect] 异常: {e}")
-            return {'liquid_line_positions': {}, 'success': False}
+            return {'liquid_line_positions': {}, 'success': False, 'frame_timestamp': frame_timestamp}
     
     def _process_detect_result(self, result, idx, top, left, right, bottom,
                                fixed_bottoms, fixed_tops, actual_heights, channel_init_state):
@@ -1538,30 +1487,15 @@ class LiquidDetectionEngine:
             channel_id: 通道ID（用于日志记录）
         """
         try:
-            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: ========== 开始检测单个目标 ==========")
-            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 输入图像shape={cropped.shape if cropped is not None else None}")
-            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 传入的ROI配置参数:")
-            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   container_bottom={container_bottom}")
-            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   container_top={container_top}")
-            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   container_height_mm={container_height_mm}")
-
             if container_bottom is None or container_top is None:
-                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 参数为None，使用引擎实例配置:")
                 container_bottom = self.fixed_container_bottoms[idx] if idx < len(self.fixed_container_bottoms) else 0
                 container_top = self.fixed_container_tops[idx] if idx < len(self.fixed_container_tops) else 0
                 container_height_mm = self.actual_heights[idx] if idx < len(self.actual_heights) else 20.0
-                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   self.fixed_container_bottoms[{idx}]={container_bottom}")
-                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   self.fixed_container_tops[{idx}]={container_top}")
-                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}:   self.actual_heights[{idx}]={container_height_mm}")
 
             container_pixel_height = container_bottom - container_top
-            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 计算得到 container_pixel_height={container_pixel_height}")
-            
-            # YOLO推理
-            # TensorRT模型已内置FP16，不需要再设置half参数
+
             is_tensorrt = self.model_path and self.model_path.endswith('.engine')
-            
-            # TensorRT推理时不传递device参数，让模型自动使用构建时的设备
+
             predict_kwargs = {
                 'source': cropped,
                 'imgsz': 640,
@@ -1571,111 +1505,89 @@ class LiquidDetectionEngine:
                 'verbose': False,
                 'stream': False
             }
-            
+
             if is_tensorrt:
-                # TensorRT模型：不设置half和device，使用模型内置配置
                 pass
             else:
-                # PyTorch模型：设置device和half
                 predict_kwargs['device'] = self.device
                 predict_kwargs['half'] = self.device != 'cpu'
-            
+
             results = self.model.predict(**predict_kwargs)
             result = results[0]
-            
-            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 模型推理完成，masks={result.masks is not None}")
-            
+
             if result.masks is None:
-                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 未检测到masks")
                 return None, False, 'detect_zero', []
-            
+
             masks = result.masks.data.cpu().numpy() > 0.5
             classes = result.boxes.cls.cpu().numpy().astype(int)
             confidences = result.boxes.conf.cpu().numpy()
-            
-            print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 检测到 {len(masks)} 个masks")
-            
+
             afterinit_mask = []
-            low_conf_masks = []  # 保存低置信度mask用于绘制
+            low_conf_masks = []
             for i in range(len(masks)):
-                resized_mask = cv2.resize(masks[i].astype(np.uint8), 
+                resized_mask = cv2.resize(masks[i].astype(np.uint8),
                                          (cropped.shape[1], cropped.shape[0])) > 0.5
                 class_name = self.model.names[classes[i]]
                 conf = confidences[i]
                 if conf >= 0.3:
                     afterinit_mask.append((resized_mask, class_name, conf))
-                    print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: mask{i} {class_name} conf={conf:.2f} (有效)")
                 else:
                     low_conf_masks.append((resized_mask, class_name, conf))
-                    print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: mask{i} {class_name} conf={conf:.2f} (低置信度)")
-            
+
             if not afterinit_mask:
                 error_flag = 'detect_low' if len(masks) > 0 else 'detect_zero'
-                # detect_low时返回低置信度mask用于蓝色绘制，detect_zero时返回空列表
                 return None, False, error_flag, low_conf_masks if error_flag == 'detect_low' else []
-            
-            # InitError处理（使用通道特定的状态，避免多通道共享引擎时状态混乱）
+
             detect_initstatus_to_use = current_detect_initstatus if current_detect_initstatus else self.detect_initstatus
-            
-            # 使用通道特定的状态，如果没有则使用引擎实例级别的状态（向后兼容）
+
             if channel_init_state:
                 init_mask_pixel_counts = channel_init_state['init_mask_pixel_counts']
                 is_inference_error = channel_init_state['is_inference_error']
             else:
                 init_mask_pixel_counts = self.init_mask_pixel_counts
                 is_inference_error = self.is_inference_error
-            
-            # 记录InitError处理前的状态
+
             init_status_val = detect_initstatus_to_use[idx] if idx < len(detect_initstatus_to_use) else 0
             before_init_count = len(afterinit_mask)
-            
+
             afterinit_mask, init_mask_pixel_counts, is_inference_error = process_masks(
                 afterinit_mask, idx, detect_initstatus_to_use,
                 init_mask_pixel_counts, is_inference_error,
                 channel_id=channel_id
             )
-            
-            # 更新状态（写回通道特定状态或引擎实例状态）
+
             if channel_init_state:
                 channel_init_state['init_mask_pixel_counts'] = init_mask_pixel_counts
                 channel_init_state['is_inference_error'] = is_inference_error
             else:
                 self.init_mask_pixel_counts = init_mask_pixel_counts
                 self.is_inference_error = is_inference_error
-            
+
             if not afterinit_mask:
                 return 0.0, False, 'init_error_corrected', []
-            
-            # 坐标转换
+
             container_bottom_in_crop = container_bottom - crop_top_y
-            
-            # 统计mask类别数量
+
             liquid_count = len([m for m, c, _ in afterinit_mask if c == 'liquid'])
             foam_count = len([m for m, c, _ in afterinit_mask if c == 'foam'])
             air_count = len([m for m, c, _ in afterinit_mask if c == 'air'])
-            
-            # 分析mask获取液位（使用通道特定状态）
+
             raw_height = self.analyze_masks_to_height(
                 afterinit_mask, container_bottom_in_crop,
                 container_pixel_height, container_height_mm, idx,
                 channel_state=channel_init_state
             )
-            
+
             if raw_height is not None:
-                # 获取卡尔曼预测值
                 kalman_filters = channel_init_state['kalman_filters'] if channel_init_state else self.kalman_filters
                 predicted_before = kalman_filters[idx].statePre[0][0] if idx < len(kalman_filters) else 0
-                
-                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 原始液位高度={raw_height:.2f}mm")
-                
+
                 height, is_full = self.apply_kalman_smooth(
                     raw_height, idx, container_height_mm,
                     channel_state=channel_init_state,
                     channel_id=channel_id
                 )
-                
-                print(f"[DEBUG-检测引擎] {channel_id} ROI{idx}: 卡尔曼滤波后液位高度={height:.2f}mm, 满液={is_full}")
-                
+
                 return height, is_full, None, afterinit_mask
             else:
                 kalman_filters = channel_init_state['kalman_filters'] if channel_init_state else self.kalman_filters
@@ -1686,10 +1598,8 @@ class LiquidDetectionEngine:
                     )
                     return height, is_full, 'detect_zero', afterinit_mask
                 return None, False, 'detect_zero', afterinit_mask
-                
+
         except Exception as e:
-            if self.debug:
-                print(f"❌ [目标{idx}] 检测异常: {e}")
             return None, False, 'detect_zero', []
     
     def reset_target(self, target_idx):

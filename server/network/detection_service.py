@@ -316,93 +316,72 @@ class DetectionService:
             bool: 启动是否成功
         """
         try:
-            self.logger.info(f"========== 开始启动检测 ==========")
-            self.logger.info(f"通道: {channel_id}")
-
-            # 检查通道状态
             if channel_id not in self.channel_status:
                 self.logger.error(f"通道不存在: {channel_id}")
-                self.logger.error(f"现有通道列表: {list(self.channel_status.keys())}")
                 return False
 
             channel_state = self.channel_status[channel_id]
-            self.logger.info(f"通道状态: {channel_state}")
 
-            # 检查前置条件
-            self.logger.info(f"检查前置条件 - model_loaded: {channel_state['model_loaded']}")
             if not channel_state['model_loaded']:
                 self.logger.error(f"模型未加载 - 通道: {channel_id}")
-                self.logger.error(f"模型路径: {channel_state.get('model_path')}")
-                self.logger.error(f"配置模型路径: {channel_state.get('config_model_path')}")
                 self._send_status_update(channel_id, 'detection_error', {
                     'success': False,
                     'error': '模型未加载'
                 })
                 return False
 
-            self.logger.info(f"检查前置条件 - configured: {channel_state['configured']}")
             if not channel_state['configured']:
                 self.logger.error(f"通道未配置 - 通道: {channel_id}")
-                self.logger.error(f"配置信息: {channel_state.get('config')}")
                 self._send_status_update(channel_id, 'detection_error', {
                     'success': False,
                     'error': '通道未配置'
                 })
                 return False
 
-            self.logger.info(f"检查前置条件 - detecting: {channel_state['detecting']}")
             if channel_state['detecting']:
                 self.logger.warning(f"检测已在运行 - 通道: {channel_id}")
                 return True
 
-            # 启动检测任务
-            self.logger.info(f"调用task_manager.start_task - 通道: {channel_id}")
             success = self.task_manager.start_task(channel_id)
-            self.logger.info(f"task_manager.start_task返回: {success}")
-            
+
             if success:
-                # 更新状态
                 self.channel_status[channel_id].update({
                     'detecting': True,
                     'start_time': time.time(),
                     'error': None
                 })
-                
+
                 self.logger.info(f"检测启动成功 - 通道: {channel_id}")
-                
-                # 通知客户端检测开始
+
                 self._send_status_update(channel_id, 'detection_started', {
                     'success': True,
                     'channel_id': channel_id,
                     'start_time': time.time()
                 })
-                
+
             else:
                 self.logger.error(f"检测启动失败 - 通道: {channel_id}")
-                
-                # 通知客户端启动失败
+
                 self._send_status_update(channel_id, 'detection_error', {
                     'success': False,
                     'error': '检测启动失败'
                 })
-            
+
             return success
-            
+
         except Exception as e:
             error_msg = f"启动检测异常 - 通道: {channel_id}, 错误: {str(e)}"
             self.logger.error(error_msg)
             self.logger.error(traceback.format_exc())
-            
-            # 更新错误状态
+
             if channel_id in self.channel_status:
                 self.channel_status[channel_id]['error'] = str(e)
-            
-            # 通知客户端异常
+
             self._send_status_update(channel_id, 'detection_error', {
                 'success': False,
                 'error': str(e)
             })
-            
+
             return False
 
     def start_all_detections(self) -> dict:
@@ -671,38 +650,33 @@ class DetectionService:
             detection_result: 检测结果数据
         """
         try:
-            # 确保该通道有CSV写入器字典
             if channel_id not in self.csv_writers:
                 self.csv_writers[channel_id] = {}
 
-            # 从检测结果中提取液位数据
             liquid_line_positions = detection_result.get('liquid_line_positions', {})
+            frame_timestamp = detection_result.get('frame_timestamp')
 
-            # 如果有液位数据，遍历每个液位位置并保存到独立文件
             if liquid_line_positions:
                 for position_key, position_data in liquid_line_positions.items():
                     if isinstance(position_data, dict):
-                        # 为每个ROI创建独立的CSV写入器
                         roi_key = f"{channel_id}_roi{position_key}"
                         if position_key not in self.csv_writers[channel_id]:
                             self.csv_writers[channel_id][position_key] = CSVWriter(
                                 self.csv_save_path,
                                 roi_key
                             )
-                            self.logger.info(f"为 {channel_id} 的ROI {position_key} 创建CSV写入器")
 
-                        # 保存数据
                         csv_data = {
                             'height_mm': position_data.get('height_mm', 0),
                             'liquid_level': position_data.get('liquid_level', 0),
                             'confidence': position_data.get('confidence', 0),
                             'timestamp': detection_result.get('timestamp', time.time()),
+                            'frame_timestamp': frame_timestamp,
                             'status': 'normal',
                             'note': f'ROI{position_key}'
                         }
                         self.csv_writers[channel_id][position_key].write(csv_data)
             else:
-                # 没有检测到液位线，记录到通道的默认文件
                 if 'default' not in self.csv_writers.get(channel_id, {}):
                     if channel_id not in self.csv_writers:
                         self.csv_writers[channel_id] = {}
@@ -716,6 +690,7 @@ class DetectionService:
                     'liquid_level': 0,
                     'confidence': 0,
                     'timestamp': detection_result.get('timestamp', time.time()),
+                    'frame_timestamp': frame_timestamp,
                     'status': 'no_detection',
                     'note': '未检测到液位'
                 }
@@ -736,7 +711,6 @@ class DetectionService:
         """
         try:
             if self.websocket_server and self.event_loop:
-                # 从同步线程安全地调度到异步事件循环
                 future = asyncio.run_coroutine_threadsafe(
                     self.websocket_server.broadcast_to_channel(channel_id, result_data),
                     self.event_loop
@@ -771,7 +745,6 @@ class DetectionService:
             }
 
             if self.websocket_server and self.event_loop:
-                # 从同步线程安全地调度到异步事件循环
                 asyncio.run_coroutine_threadsafe(
                     self.websocket_server.broadcast_to_channel(channel_id, update_data),
                     self.event_loop

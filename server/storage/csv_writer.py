@@ -57,6 +57,7 @@ class CSVWriter:
         # 写入表头
         headers = [
             '时间戳',
+            '帧时间戳',
             '液位高度(mm)'
         ]
         self.csv_writer.writerow(headers)
@@ -70,7 +71,8 @@ class CSVWriter:
             detection_result: 检测结果字典
                 {
                     'height_mm': float,
-                    'timestamp': float or int (支持秒或毫秒格式)
+                    'timestamp': float or int (支持秒或毫秒格式),
+                    'frame_timestamp': int (帧时间戳，毫秒)
                 }
         """
         if not self.csv_writer:
@@ -90,17 +92,21 @@ class CSVWriter:
                 else:
                     timestamp_ms = int(time.time() * 1000)
 
+                # 获取帧时间戳
+                frame_timestamp = detection_result.get('frame_timestamp', timestamp_ms)
+
                 # 构建数据行
                 row = [
                     timestamp_ms,
+                    frame_timestamp,
                     round(detection_result.get('height_mm', 0), 2)
                 ]
 
                 # 添加到缓存
                 self.cache_buffer.append(row)
 
-                # 估算单行数据大小（时间戳16字节 + 逗号1字节 + 高度6字节 + 换行1字节）
-                row_size = sys.getsizeof(str(timestamp_ms)) + sys.getsizeof(str(row[1])) + 2
+                # 估算单行数据大小（时间戳16字节 + 帧时间戳16字节 + 逗号2字节 + 高度6字节 + 换行1字节）
+                row_size = sys.getsizeof(str(timestamp_ms)) + sys.getsizeof(str(frame_timestamp)) + sys.getsizeof(str(row[2])) + 3
                 self.cache_size += row_size
 
                 # 检查是否需要刷新
@@ -124,18 +130,12 @@ class CSVWriter:
             return
 
         try:
-            # 批量写入所有缓存数据
             self.csv_writer.writerows(self.cache_buffer)
             self.csv_file.flush()
 
-            # 清空缓存
-            cache_count = len(self.cache_buffer)
-            cache_size_mb = self.cache_size / (1024 * 1024)
             self.cache_buffer.clear()
             self.cache_size = 0
             self.last_flush_time = time.time()
-
-            print(f"[CSVWriter] [{self.channel_id}] 刷新缓存: {cache_count}条数据, {cache_size_mb:.2f}MB")
 
         except Exception as e:
             print(f"[CSVWriter] 刷新缓存失败: {e}")

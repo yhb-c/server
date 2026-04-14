@@ -149,15 +149,6 @@ class DetectionTaskManager:
                 height_value = float(height_str.replace('mm', '').strip())
                 actual_heights.append(height_value)
 
-            self.logger.info(f"[{channel_id}] ========== 配置ROI（任务管理器） ==========")
-            self.logger.info(f"[{channel_id}] 配置来源: annotation_config参数")
-            self.logger.info(f"[{channel_id}] ROI数量: {len(boxes)}")
-            self.logger.info(f"[{channel_id}] boxes: {boxes}")
-            self.logger.info(f"[{channel_id}] fixed_bottoms: {fixed_bottoms}")
-            self.logger.info(f"[{channel_id}] fixed_tops: {fixed_tops}")
-            self.logger.info(f"[{channel_id}] actual_heights: {actual_heights}")
-            self.logger.info(f"[{channel_id}] areas配置: {areas}")
-
             # 配置检测引擎
             detection_engine.configure(
                 boxes=boxes,
@@ -168,7 +159,7 @@ class DetectionTaskManager:
 
             # 保存配置到任务
             self.tasks[channel_id]['annotation_config'] = annotation_config
-            self.logger.info(f"[{channel_id}] ROI标注配置成功，已保存到tasks['{channel_id}']['annotation_config']")
+            self.logger.info(f"[{channel_id}] ROI标注配置成功")
             return True
 
         except Exception as e:
@@ -180,65 +171,48 @@ class DetectionTaskManager:
     def start_task(self, channel_id: str) -> bool:
         """启动检测任务"""
         try:
-            self.logger.info(f"========== start_task被调用 ==========")
-            self.logger.info(f"通道: {channel_id}")
-            self.logger.info(f"现有任务列表: {list(self.tasks.keys())}")
-
             if channel_id not in self.tasks:
                 self.logger.error(f"任务不存在: {channel_id}")
                 return False
 
-            self.logger.info(f"检查检测线程状态...")
             if channel_id in self.detection_threads and self.detection_threads[channel_id].is_alive():
                 self.logger.warning(f"任务已在运行: {channel_id}")
                 return False
 
             # 获取任务配置
             task_config = self.tasks[channel_id]['config']
-            self.logger.info(f"任务配置: {task_config}")
             rtsp_url = task_config.get('rtsp_url')
             file_path = task_config.get('file_path')
-            self.logger.info(f"RTSP地址: {rtsp_url}, 文件路径: {file_path}")
 
             # 确定视频源（优先使用rtsp_url，其次使用file_path）
             video_source = rtsp_url if rtsp_url else file_path
 
             if not video_source:
-                self.logger.error(f"视频源未配置: {channel_id}，需要配置rtsp_url或file_path")
-                self.logger.error(f"完整任务配置: {self.tasks[channel_id]}")
+                self.logger.error(f"视频源未配置: {channel_id}")
                 return False
 
             # 如果模型未加载，尝试加载默认模型
-            self.logger.info(f"检查检测引擎: {channel_id in self.detection_engines}")
             if channel_id not in self.detection_engines:
-                self.logger.warning(f"检测引擎不存在，尝试加载默认模型")
                 default_config = self.config_manager.get_default_config()
                 model_key = f"{channel_id}_model_path"
                 model_path = default_config.get(model_key)
-                self.logger.info(f"默认模型路径: {model_path}")
 
                 if model_path:
-                    self.logger.info(f"自动加载默认模型: {channel_id} -> {model_path}")
                     if not self.load_model(channel_id, model_path, device='cpu'):
                         self.logger.error(f"默认模型加载失败: {channel_id}")
                         return False
                 else:
                     self.logger.error(f"未找到默认模型配置: {model_key}")
                     return False
-            else:
-                self.logger.info(f"检测引擎已存在: {channel_id}")
 
             # 创建视频捕获
-            self.logger.info(f"开始创建视频捕获: {video_source}")
             factory = VideoCaptureFactory()
             video_capture = factory.create_capture(video_source, channel_id)
-            self.logger.info(f"视频捕获创建结果: {video_capture is not None}")
             if not video_capture:
                 self.logger.error(f"视频捕获创建失败: {channel_id}")
                 return False
 
             self.video_captures[channel_id] = video_capture
-            self.logger.info(f"视频捕获已保存到字典")
             
             # 创建停止事件
             stop_event = threading.Event()
@@ -298,93 +272,50 @@ class DetectionTaskManager:
     def _detection_worker(self, channel_id: str, stop_event: threading.Event):
         """检测工作线程"""
         try:
-            self.logger.info(f"[{channel_id}] ========== 检测线程启动 ==========")
+            self.logger.info(f"[{channel_id}] 检测线程启动")
 
             video_capture = self.video_captures.get(channel_id)
             detection_engine = self.detection_engines.get(channel_id)
             result_callback = self.tasks[channel_id]['result_callback']
 
-            self.logger.info(f"[{channel_id}] 检查资源: video_capture={video_capture is not None}, detection_engine={detection_engine is not None}, callback={result_callback is not None}")
-
             if not video_capture or not detection_engine:
-                self.logger.error(f"[{channel_id}] 检测资源不完整: video_capture={video_capture}, detection_engine={detection_engine}")
+                self.logger.error(f"[{channel_id}] 检测资源不完整")
                 return
-
-            # 输出检测引擎当前的ROI配置
-            self.logger.info(f"[{channel_id}] ========== 检测引擎当前ROI配置 ==========")
-            self.logger.info(f"[{channel_id}] detection_engine.targets: {detection_engine.targets}")
-            self.logger.info(f"[{channel_id}] detection_engine.fixed_container_bottoms: {detection_engine.fixed_container_bottoms}")
-            self.logger.info(f"[{channel_id}] detection_engine.fixed_container_tops: {detection_engine.fixed_container_tops}")
-            self.logger.info(f"[{channel_id}] detection_engine.actual_heights: {detection_engine.actual_heights}")
 
             # 从配置文件读取FPS限制
             fps_limit = self.config_manager.system_config.get('detection', {}).get('fps', 10)
             frame_interval = 1.0 / fps_limit if fps_limit > 0 else 0.1  # 默认10FPS
-            self.logger.info(f"[{channel_id}] FPS限制: {fps_limit}, 帧间隔: {frame_interval:.4f}秒")
 
             frame_count = 0
             last_fps_time = time.time()
             fps_counter = 0
-
-            self.logger.info(f"[{channel_id}] 进入检测循环...")
 
             while not stop_event.is_set():
                 try:
                     # 获取视频帧
                     ret, frame = video_capture.read()
 
-                    if frame_count == 0:
-                        self.logger.info(f"[{channel_id}] 第一帧读取: ret={ret}, frame={'None' if frame is None else f'{frame.shape}'}")
-
                     if not ret or frame is None:
-                        if frame_count == 0:
-                            self.logger.error(f"[{channel_id}] 无法读取第一帧，视频源可能有问题")
                         time.sleep(0.01)  # 没有新帧，短暂等待
                         continue
 
-                    # 执行检测
-                    if frame_count == 0:
-                        self.logger.info(f"[{channel_id}] 开始执行第一帧检测...")
-                        self.logger.info(f"[{channel_id}] ========== 第一帧检测前再次确认ROI配置 ==========")
-                        self.logger.info(f"[{channel_id}] detection_engine.targets: {detection_engine.targets}")
-                        self.logger.info(f"[{channel_id}] detection_engine.fixed_container_bottoms: {detection_engine.fixed_container_bottoms}")
-                        self.logger.info(f"[{channel_id}] detection_engine.fixed_container_tops: {detection_engine.fixed_container_tops}")
-                        self.logger.info(f"[{channel_id}] detection_engine.actual_heights: {detection_engine.actual_heights}")
+                    # 生成帧时间戳（毫秒）
+                    frame_timestamp = int(time.time() * 1000)
 
-                    detection_result = detection_engine.detect(frame, channel_id=channel_id)
-
-                    if frame_count == 0:
-                        result_str = 'None' if detection_result is None else f'success={detection_result.get("success")}'
-                        self.logger.info(f"[{channel_id}] 第一帧检测完成: result={result_str}")
+                    # 执行检测（传入帧时间戳）
+                    detection_result = detection_engine.detect(frame, channel_id=channel_id, frame_timestamp=frame_timestamp)
 
                     # 无论检测是否成功，都调用回调函数
                     if detection_result:
-                        # 添加13位毫秒时间戳到检测结果
-                        detection_result['timestamp'] = int(time.time() * 1000)
+                        # 添加13位毫秒时间戳到检测结果（系统时间戳）
+                        detection_result['timestamp'] = frame_timestamp
 
-                        # 记录日志（仅在检测成功时）
-                        if detection_result.get('success'):
-                            liquid_positions = detection_result.get('liquid_line_positions', {})
-
-                            if frame_count == 0:
-                                self.logger.info(f"[{channel_id}] 第一帧检测成功: {len(liquid_positions)}个ROI")
-
-                            for roi_id, position_data in liquid_positions.items():
-                                height_mm = position_data.get('height_mm', 0)
-                                is_full = position_data.get('is_full', False)
-                                self.logger.info(f"[{channel_id}] ROI{roi_id} 检测结果: 高度={height_mm}mm, 满液={is_full}")
-                        else:
-                            if frame_count == 0:
-                                self.logger.warning(f"[{channel_id}] 第一帧检测失败或无结果")
+                        # 日志：检查帧时间戳是否存在
+                        if frame_count % 30 == 0:  # 每30帧记录一次
+                            self.logger.info(f"[{channel_id}] 帧{frame_count} - frame_timestamp在detection_result中: {detection_result.get('frame_timestamp')}")
 
                         # 调用回调函数（无论成功或失败）
-                        if frame_count == 0:
-                            self.logger.info(f"[{channel_id}] 调用回调函数推送结果...")
-
                         result_callback(channel_id, detection_result)
-
-                        if frame_count == 0:
-                            self.logger.info(f"[{channel_id}] 回调函数调用完成")
 
                     frame_count += 1
                     fps_counter += 1
@@ -408,7 +339,7 @@ class DetectionTaskManager:
             self.logger.error(f"[{channel_id}] 检测线程异常: {e}")
             self.logger.error(traceback.format_exc())
         finally:
-            self.logger.info(f"[{channel_id}] ========== 检测线程结束 ==========")
+            self.logger.info(f"[{channel_id}] 检测线程结束")
     
     def _cleanup_task_resources(self, channel_id: str):
         """清理任务资源"""
