@@ -62,27 +62,37 @@ class DetectionTaskManager:
     def load_model(self, channel_id: str, model_path: str, device: str = 'cuda') -> bool:
         """加载检测模型"""
         try:
+            self.logger.info(f"[调试] 开始加载模型 - 通道: {channel_id}, 模型路径: {model_path}, 设备: {device}")
+
             if channel_id not in self.tasks:
                 self.logger.error(f"任务不存在: {channel_id}")
                 return False
-                
+
+            self.logger.info(f"[调试] 任务存在，开始创建检测引擎")
+
             # 创建检测引擎
             detection_engine = LiquidDetectionEngine(device=device)
-            
+
+            self.logger.info(f"[调试] 检测引擎创建成功，开始加载模型文件")
+
             # 加载模型
             if not detection_engine.load_model(model_path):
-                self.logger.error(f"模型加载失败: {model_path}")
+                self.logger.error(f"[调试] 检测引擎load_model返回False - 模型路径: {model_path}")
                 return False
-                
+
+            self.logger.info(f"[调试] 模型加载成功，保存到detection_engines字典")
+
             self.detection_engines[channel_id] = detection_engine
             self.tasks[channel_id]['model_path'] = model_path
             self.tasks[channel_id]['device'] = device
-            
+
             self.logger.info(f"模型加载成功 {channel_id}: {model_path}")
             return True
-            
+
         except Exception as e:
             self.logger.error(f"加载模型失败 {channel_id}: {e}")
+            import traceback
+            self.logger.error(f"[调试] 异常堆栈:\n{traceback.format_exc()}")
             return False
     
     def configure_detection(self, channel_id: str, detection_config: dict) -> bool:
@@ -346,17 +356,26 @@ class DetectionTaskManager:
                     # 获取当前帧ID
                     current_frame_id = get_frame_id(video_capture, context)
 
+                    # 调试日志：每10帧输出一次当前帧ID
+                    if frame_count % 10 == 0:
+                        self.logger.info(f"[{channel_id}] 读取帧 {frame_count}, 识别到帧ID: {current_frame_id}")
+
                     # 如果设置了起始帧ID，检查是否到达起始帧
                     if not frame_started and current_frame_id is not None:
                         if current_frame_id >= start_frame_id:
                             frame_started = True
-                            self.logger.info(f"[{channel_id}] 到达起始帧ID: {current_frame_id}，开始检测")
+                            self.logger.info(f"[{channel_id}] 到达起始帧ID: {current_frame_id} (>= {start_frame_id})，开始检测")
+                            self.logger.info(f"[{channel_id}] 已跳过 {skipped_frame_count} 帧")
                         else:
                             # 跳过此帧，继续读取下一帧
+                            skipped_frame_count += 1
+                            if skipped_frame_count % 10 == 0:
+                                self.logger.info(f"[{channel_id}] 跳过帧 {frame_count}, 帧ID: {current_frame_id} (< {start_frame_id}), 已跳过 {skipped_frame_count} 帧")
                             continue
 
                     # 如果还没到达起始帧，跳过检测
                     if not frame_started:
+                        skipped_frame_count += 1
                         continue
 
                     # 执行检测（传入当前帧ID）

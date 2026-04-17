@@ -629,17 +629,22 @@ class LiquidDetectionEngine:
     def load_model(self, model_path):
         """加载YOLO模型"""
         try:
+            print(f"[调试] LiquidDetectionEngine.load_model 开始 - 模型路径: {model_path}, 设备: {self.device}")
             model, actual_path = load_model(model_path, self.device)
+            print(f"[调试] load_model函数返回 - model: {model}, actual_path: {actual_path}")
 
             if model is not None:
                 self.model = model
                 self.model_path = actual_path
+                print(f"[调试] 模型加载成功")
                 return True
             else:
+                print(f"[调试] 模型加载失败 - load_model返回None")
                 return False
 
         except Exception as e:
             import traceback
+            print(f"[调试] 模型加载异常: {e}")
             traceback.print_exc()
             return False
     
