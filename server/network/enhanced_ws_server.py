@@ -157,10 +157,11 @@ class EnhancedWebSocketServer:
                     data = json.loads(message)
                     self.server_stats['total_commands'] += 1
 
-                    # 记录接收到的命令
+                    # 记录接收到的命令和完整消息
                     command = data.get('command') or data.get('type')
                     channel_id = data.get('channel_id', 'N/A')
-                    self.logger.info(f"[{client_id}] 收到命令: {command}, 通道: {channel_id}, 完整消息: {data}")
+                    self.logger.info(f"[{client_id}] 收到命令: {command}, 通道: {channel_id}")
+                    self.logger.info(f"[{client_id}] 完整消息内容: {json.dumps(data, ensure_ascii=False)}")
 
                     # 处理命令
                     await self._handle_command(websocket, data)

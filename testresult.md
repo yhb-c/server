@@ -60,3 +60,4 @@ while True:
 服务端和客户端必须读取完全相同的视频文件
 帧序号从0开始，每读一帧递增1
 通过帧ID直接匹配，100%准确
+修改start_detection指令响应根据start_detection指令中的frame_id信息，从frame_id帧开始检测

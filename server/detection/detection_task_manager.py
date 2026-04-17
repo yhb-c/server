@@ -220,34 +220,10 @@ class DetectionTaskManager:
                 self.logger.error(f"视频捕获创建失败: {channel_id}")
                 return False
 
-            # 如果指定了frame_id，定位到指定帧
+            # 如果指定了frame_id，记录起始帧ID（在检测循环中跳过之前的帧）
             if frame_id is not None:
-                from server.detection.frame_id_identify import get_frame_id_identifier
-                identifier = get_frame_id_identifier()
-
-                # 检测视频源类型
-                video_source_type = identifier.detect_video_source_type(video_capture)
-                self.logger.info(f"检测到视频源类型: {video_source_type} - 通道: {channel_id}")
-
-                # 验证帧ID是否有效
-                if not identifier.validate_frame_id(video_capture, frame_id, video_source_type):
-                    self.logger.error(f"无效的帧ID: {frame_id} (类型: {video_source_type}) - 通道: {channel_id}")
-                    if hasattr(video_capture, 'release'):
-                        video_capture.release()
-                    return False
-
-                # 定位到指定帧
-                seek_success = identifier.seek_to_frame(video_capture, frame_id, video_source_type)
-                if not seek_success:
-                    self.logger.error(f"定位到帧 {frame_id} 失败 (类型: {video_source_type}) - 通道: {channel_id}")
-                    if hasattr(video_capture, 'release'):
-                        video_capture.release()
-                    return False
-
-                if video_source_type == 'local_video':
-                    self.logger.info(f"成功定位到帧序号 {frame_id} - 通道: {channel_id}")
-                else:
-                    self.logger.info(f"成功定位到SCR时间戳 {frame_id} - 通道: {channel_id}")
+                self.tasks[channel_id]['start_frame_id'] = frame_id
+                self.logger.info(f"设置起始帧ID: {frame_id} - 通道: {channel_id}")
 
             self.video_captures[channel_id] = video_capture
             
@@ -323,24 +299,24 @@ class DetectionTaskManager:
             fps_limit = self.config_manager.system_config.get('detection', {}).get('fps', 10)
             frame_interval = 1.0 / fps_limit if fps_limit > 0 else 0.1  # 默认10FPS
 
+            # 获取起始帧ID（如果设置了）
+            start_frame_id = self.tasks[channel_id].get('start_frame_id', None)
+            frame_started = (start_frame_id is None)  # 如果没有设置起始帧ID，直接开始检测
+
+            # 导入frame_id_manager
+            from server.detection.frame_id_manager import get_frame_id
+
+            # 创建模拟context（用于frame_id_manager）
+            class MockContext:
+                def __init__(self):
+                    self.latest_frame_id = None
+                    self.capture_count = 0
+
+            context = MockContext()
+
             frame_count = 0
             last_fps_time = time.time()
             fps_counter = 0
-
-            # 检测视频源类型，决定帧ID分配策略
-            # 支持多种视频捕获器类型
-            is_local_video = False
-            if hasattr(video_capture, 'is_video_file') and video_capture.is_video_file:
-                # HKcapture类
-                is_local_video = True
-            elif hasattr(video_capture, '_is_local_file') and video_capture._is_local_file:
-                # OpenCVCaptureWrapper类
-                is_local_video = True
-
-            if is_local_video:
-                self.logger.info(f"[{channel_id}] 检测到本地视频文件，使用帧序号作为帧ID")
-            else:
-                self.logger.info(f"[{channel_id}] 检测到RTSP流，帧ID功能暂未实现")
 
             while not stop_event.is_set():
                 try:
@@ -351,35 +327,44 @@ class DetectionTaskManager:
                         time.sleep(0.01)  # 没有新帧，短暂等待
                         continue
 
-                    # 帧ID分配策略
-                    if is_local_video:
-                        # 本地视频：使用帧序号作为帧ID
-                        frame_id = frame_count
-                    else:
-                        # RTSP流：使用NVR时间戳作为帧ID（后续实现）
-                        frame_id = None
+                    frame_count += 1
 
-                    # 执行检测（传入帧ID）
+                    # 更新context
+                    context.capture_count = frame_count
+                    context.latest_frame_id = frame_count
+
+                    # 如果video_capture有frame_sequence属性，也更新它
+                    if hasattr(video_capture, 'frame_sequence'):
+                        video_capture.frame_sequence = frame_count
+
+                    # 获取当前帧ID
+                    current_frame_id = get_frame_id(video_capture, context)
+
+                    # 如果设置了起始帧ID，检查是否到达起始帧
+                    if not frame_started and current_frame_id is not None:
+                        if current_frame_id >= start_frame_id:
+                            frame_started = True
+                            self.logger.info(f"[{channel_id}] 到达起始帧ID: {current_frame_id}，开始检测")
+                        else:
+                            # 跳过此帧，继续读取下一帧
+                            continue
+
+                    # 如果还没到达起始帧，跳过检测
+                    if not frame_started:
+                        continue
+
+                    # 执行检测（传入当前帧ID）
                     detection_result = detection_engine.detect(
                         frame,
                         channel_id=channel_id,
-                        frame_id=frame_id
+                        frame_id=current_frame_id
                     )
 
                     # 无论检测是否成功，都调用回调函数
                     if detection_result:
-                        # 添加帧ID到检测结果
-                        if frame_id is not None:
-                            detection_result['frame_id'] = frame_id
-
-                        # 日志：检查帧ID
-                        if frame_count % 30 == 0:  # 每30帧记录一次
-                            self.logger.info(f"[{channel_id}] 帧{frame_count} - frame_id: {detection_result.get('frame_id')}")
-
                         # 调用回调函数（无论成功或失败）
                         result_callback(channel_id, detection_result)
 
-                    frame_count += 1
                     fps_counter += 1
 
                     # 计算FPS（仅统计，不输出日志）
