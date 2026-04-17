@@ -10,6 +10,7 @@ import sys
 import threading
 import time
 import logging
+import cv2
 from typing import Dict, Callable, Optional, Any
 import traceback
 
@@ -20,6 +21,31 @@ sys.path.insert(0, project_root)
 from server.video.video_capture_factory import VideoCaptureFactory
 from server.detection.detection import LiquidDetectionEngine
 from server.network.config_manager import ConfigManager
+
+
+def calculate_start_frame_id(client_frame_id, frame_id_type='pts'):
+    """
+    计算检测起始帧ID
+
+    从客户端接收的帧ID基础上加1980ms，作为检测起始帧ID
+
+    Args:
+        client_frame_id: 客户端传入的帧ID
+        frame_id_type: 帧ID类型，'pts'或'scr'
+
+    Returns:
+        int: 检测起始帧ID（client_frame_id + 1980）
+    """
+    if client_frame_id is None:
+        return None
+
+    # 无论是PTS还是SCR，都加1980ms
+    start_frame_id = client_frame_id + 1980
+
+    print(f"[calculate_start_frame_id] 客户端帧ID: {client_frame_id}, 类型: {frame_id_type}, 检测起始帧ID: {start_frame_id}")
+
+    return start_frame_id
+
 
 class DetectionTaskManager:
     """检测任务管理器"""
@@ -62,25 +88,17 @@ class DetectionTaskManager:
     def load_model(self, channel_id: str, model_path: str, device: str = 'cuda') -> bool:
         """加载检测模型"""
         try:
-            self.logger.info(f"[调试] 开始加载模型 - 通道: {channel_id}, 模型路径: {model_path}, 设备: {device}")
-
             if channel_id not in self.tasks:
                 self.logger.error(f"任务不存在: {channel_id}")
                 return False
 
-            self.logger.info(f"[调试] 任务存在，开始创建检测引擎")
-
             # 创建检测引擎
             detection_engine = LiquidDetectionEngine(device=device)
 
-            self.logger.info(f"[调试] 检测引擎创建成功，开始加载模型文件")
-
             # 加载模型
             if not detection_engine.load_model(model_path):
-                self.logger.error(f"[调试] 检测引擎load_model返回False - 模型路径: {model_path}")
+                self.logger.error(f"模型加载失败: {model_path}")
                 return False
-
-            self.logger.info(f"[调试] 模型加载成功，保存到detection_engines字典")
 
             self.detection_engines[channel_id] = detection_engine
             self.tasks[channel_id]['model_path'] = model_path
@@ -189,6 +207,8 @@ class DetectionTaskManager:
             bool: 启动是否成功
         """
         try:
+            self.logger.info(f"[调试] start_task被调用 - channel_id: {channel_id}, frame_id: {frame_id}, 类型: {type(frame_id)}")
+
             if channel_id not in self.tasks:
                 self.logger.error(f"任务不存在: {channel_id}")
                 return False
@@ -233,7 +253,9 @@ class DetectionTaskManager:
             # 如果指定了frame_id，记录起始帧ID（在检测循环中跳过之前的帧）
             if frame_id is not None:
                 self.tasks[channel_id]['start_frame_id'] = frame_id
-                self.logger.info(f"设置起始帧ID: {frame_id} - 通道: {channel_id}")
+                self.logger.info(f"[调试] 设置起始帧ID到tasks字典: {frame_id} - 通道: {channel_id}")
+            else:
+                self.logger.info(f"[调试] frame_id为None，不设置起始帧ID - 通道: {channel_id}")
 
             self.video_captures[channel_id] = video_capture
             
@@ -307,29 +329,40 @@ class DetectionTaskManager:
 
             # 从配置文件读取FPS限制
             fps_limit = self.config_manager.system_config.get('detection', {}).get('fps', 10)
-            frame_interval = 1.0 / fps_limit if fps_limit > 0 else 0.1  # 默认10FPS
 
-            # 获取起始帧ID（如果设置了）
-            start_frame_id = self.tasks[channel_id].get('start_frame_id', None)
+            # 获取视频FPS（用于计算跳帧）
+            video_fps = 30  # 默认30fps
+            if hasattr(video_capture, 'cv_capture'):
+                video_fps = video_capture.cv_capture.get(cv2.CAP_PROP_FPS)
+            elif hasattr(video_capture, 'cap'):
+                video_fps = video_capture.cap.get(cv2.CAP_PROP_FPS)
+
+            # 计算跳帧间隔（每隔几帧检测一次）
+            if video_fps > 0 and fps_limit > 0:
+                frame_skip = int(video_fps / fps_limit)  # 30fps / 10fps = 3，每3帧检测1帧
+            else:
+                frame_skip = 1  # 不跳帧
+
+            self.logger.info(f"[{channel_id}] 视频FPS: {video_fps}, 检测FPS: {fps_limit}, 跳帧间隔: {frame_skip}")
+
+            # 获取客户端传入的帧ID，计算检测起始帧ID
+            client_frame_id = self.tasks[channel_id].get('start_frame_id', None)
+            start_frame_id = calculate_start_frame_id(client_frame_id, frame_id_type='pts')
             frame_started = (start_frame_id is None)  # 如果没有设置起始帧ID，直接开始检测
 
             if start_frame_id is not None:
-                self.logger.info(f"[{channel_id}] 检测将从帧ID {start_frame_id} 开始")
+                self.logger.info(f"[{channel_id}] 客户端帧ID: {client_frame_id}, 检测将从帧ID {start_frame_id} 开始")
             else:
                 self.logger.info(f"[{channel_id}] 检测从头开始（未设置起始帧ID）")
 
             # 导入frame_id_manager
-            from server.detection.frame_id_manager import get_frame_id
+            from server.detection.frame_id_manager import get_local_video_frame_id
 
-            # 创建模拟context（用于frame_id_manager）
-            class MockContext:
-                def __init__(self):
-                    self.latest_frame_id = None
-                    self.capture_count = 0
+            # 判断是否为本地视频
+            is_video_file = hasattr(video_capture, 'is_video_file') and video_capture.is_video_file
 
-            context = MockContext()
-
-            frame_count = 0
+            processed_count = 0  # 已处理帧数（用于日志统计）
+            read_count = 0  # 已读取帧数（用于跳帧计算）
             skipped_frame_count = 0
             last_fps_time = time.time()
             fps_counter = 0
@@ -343,22 +376,21 @@ class DetectionTaskManager:
                         time.sleep(0.01)  # 没有新帧，短暂等待
                         continue
 
-                    frame_count += 1
+                    read_count += 1
 
-                    # 更新context
-                    context.capture_count = frame_count
-                    context.latest_frame_id = frame_count
-
-                    # 如果video_capture有frame_sequence属性，也更新它
-                    if hasattr(video_capture, 'frame_sequence'):
-                        video_capture.frame_sequence = frame_count
+                    # 跳帧逻辑：每frame_skip帧检测一次
+                    if read_count % frame_skip != 0:
+                        continue  # 跳过此帧，不进行检测
 
                     # 获取当前帧ID
-                    current_frame_id = get_frame_id(video_capture, context)
+                    if is_video_file:
+                        # 本地视频：使用PTS时间戳
+                        current_frame_id = get_local_video_frame_id(video_capture)
+                    else:
+                        # RTSP流：暂不支持帧ID
+                        current_frame_id = None
 
-                    # 调试日志：每10帧输出一次当前帧ID
-                    if frame_count % 10 == 0:
-                        self.logger.info(f"[{channel_id}] 读取帧 {frame_count}, 识别到帧ID: {current_frame_id}")
+                    processed_count += 1
 
                     # 如果设置了起始帧ID，检查是否到达起始帧
                     if not frame_started and current_frame_id is not None:
@@ -369,8 +401,6 @@ class DetectionTaskManager:
                         else:
                             # 跳过此帧，继续读取下一帧
                             skipped_frame_count += 1
-                            if skipped_frame_count % 10 == 0:
-                                self.logger.info(f"[{channel_id}] 跳过帧 {frame_count}, 帧ID: {current_frame_id} (< {start_frame_id}), 已跳过 {skipped_frame_count} 帧")
                             continue
 
                     # 如果还没到达起始帧，跳过检测
@@ -399,8 +429,6 @@ class DetectionTaskManager:
                         fps_counter = 0
                         last_fps_time = current_time
 
-                    # 控制帧率（从配置文件读取）
-                    time.sleep(frame_interval)
 
                 except Exception as e:
                     self.logger.error(f"[{channel_id}] 检测循环异常: {e}")

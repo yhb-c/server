@@ -25,6 +25,52 @@ except ImportError:
     CAMERA_POSITION_AVAILABLE = False
 
 
+# ==================== 检测起始帧判断函数 ====================
+
+def calculate_start_frame_id(client_frame_id, frame_id_type='pts'):
+    """
+    计算检测起始帧ID
+
+    从客户端接收的帧ID基础上加1980ms，作为检测起始帧ID
+
+    Args:
+        client_frame_id: 客户端传入的帧ID
+        frame_id_type: 帧ID类型，'pts'或'scr'
+
+    Returns:
+        int: 检测起始帧ID（client_frame_id + 1980）
+    """
+    if client_frame_id is None:
+        return None
+
+    # 无论是PTS还是SCR，都加1980ms
+    start_frame_id = client_frame_id + 1980
+
+    print(f"[calculate_start_frame_id] 客户端帧ID: {client_frame_id}, 类型: {frame_id_type}, 检测起始帧ID: {start_frame_id}")
+
+    return start_frame_id
+
+
+def should_start_detection(current_frame_id, start_frame_id):
+    """
+    判断是否应该开始检测
+
+    Args:
+        current_frame_id: 当前帧ID
+        start_frame_id: 检测起始帧ID
+
+    Returns:
+        bool: 是否应该开始检测
+    """
+    if start_frame_id is None:
+        return True  # 没有设置起始帧ID，直接开始检测
+
+    if current_frame_id is None:
+        return False  # 当前帧ID无效，不开始检测
+
+    return current_frame_id >= start_frame_id
+
+
 # ==================== InitError处理函数 ====================
 
 def calculate_initstatus(num_targets, annotation_initstatus=None):

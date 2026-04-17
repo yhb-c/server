@@ -342,6 +342,9 @@ class EnhancedWebSocketServer:
         channel_id = data.get('channel_id')
         frame_id = data.get('frame_id')
 
+        self.logger.info(f"[{client_id}] [调试] 接收到start_detection命令 - 原始data: {data}")
+        self.logger.info(f"[{client_id}] [调试] 提取的frame_id: {frame_id}, 类型: {type(frame_id)}")
+
         if not channel_id:
             self.logger.error(f"[{client_id}] 启动检测失败: 通道ID为空")
             await self._send_error_response(websocket, "启动检测失败", "通道ID不能为空")
@@ -356,6 +359,7 @@ class EnhancedWebSocketServer:
         else:
             self.logger.info(f"[{client_id}] 启动检测 - 通道: {channel_id}, 从头开始")
 
+        self.logger.info(f"[{client_id}] [调试] 调用detection_service.start_detection，传入frame_id: {frame_id}")
         success = self.detection_service.start_detection(channel_id, frame_id)
 
         await websocket.send(json.dumps({

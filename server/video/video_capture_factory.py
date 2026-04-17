@@ -318,11 +318,13 @@ class OpenCVCaptureWrapper:
             video_source: 视频源路径
         """
         self.cv_capture = cv_capture
+        self.cap = cv_capture  # 添加cap属性，供frame_id_manager使用
         self.channel_id = channel_id
         self.video_source = video_source
         self.logger = logging.getLogger(__name__)
         self.is_reading = True
         self._is_local_file = os.path.isfile(video_source)
+        self.is_video_file = self._is_local_file  # 公开属性，供frame_id_manager判断
 
         # 从配置文件读取循环播放开关
         self._loop_enabled = self._load_loop_config()
@@ -352,13 +354,9 @@ class OpenCVCaptureWrapper:
         try:
             ret, frame = self.cv_capture.read()
 
-            # 如果是本地文件且读取到末尾，根据配置决定是否循环播放
-            if not ret and self._is_local_file and self._loop_enabled:
-                self.logger.info(f"[{self.channel_id}] 视频文件播放完毕，重新开始")
-                self.cv_capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                ret, frame = self.cv_capture.read()
-            elif not ret and self._is_local_file and not self._loop_enabled:
-                self.logger.info(f"[{self.channel_id}] 视频文件播放完毕，循环播放已禁用")
+            # 如果是本地文件且读取到末尾，停止检测
+            if not ret and self._is_local_file:
+                self.logger.info(f"[{self.channel_id}] 视频文件播放完毕，停止检测")
 
             return ret, frame
 

@@ -317,6 +317,8 @@ class DetectionService:
             bool: 启动是否成功
         """
         try:
+            self.logger.info(f"[调试] start_detection被调用 - channel_id: {channel_id}, frame_id: {frame_id}, 类型: {type(frame_id)}")
+
             if channel_id not in self.channel_status:
                 self.logger.error(f"通道不存在: {channel_id}")
                 return False
@@ -405,6 +407,7 @@ class DetectionService:
             else:
                 self.logger.info(f"启动检测 - 通道: {channel_id}, 从头开始")
 
+            self.logger.info(f"[调试] 调用task_manager.start_task，传入frame_id: {frame_id}")
             success = self.task_manager.start_task(channel_id, frame_id)
 
             if success:
