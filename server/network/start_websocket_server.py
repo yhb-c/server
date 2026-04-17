@@ -27,6 +27,19 @@ from server.utils.logger import setup_logging
 # 配置日志 - 只输出到文件
 logger = setup_logging('websocket', log_level='INFO', console_output=False)
 
+# 配置根日志记录器，让所有子模块的日志都输出到websocket.log
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+# 清除根日志的处理器
+root_logger.handlers.clear()
+# 添加文件处理器到根日志
+log_dir = project_root / 'logs'
+log_file = log_dir / 'websocket.log'
+file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s')
+file_handler.setFormatter(formatter)
+root_logger.addHandler(file_handler)
+
 
 def signal_handler(signum, frame):
     """信号处理器"""

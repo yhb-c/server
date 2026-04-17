@@ -168,8 +168,16 @@ class DetectionTaskManager:
             self.logger.error(traceback.format_exc())
             return False
 
-    def start_task(self, channel_id: str) -> bool:
-        """启动检测任务"""
+    def start_task(self, channel_id: str, frame_id: int = None) -> bool:
+        """启动检测任务
+
+        Args:
+            channel_id: 通道ID
+            frame_id: 起始帧ID（可选，None表示从头开始）
+
+        Returns:
+            bool: 启动是否成功
+        """
         try:
             if channel_id not in self.tasks:
                 self.logger.error(f"任务不存在: {channel_id}")
@@ -211,6 +219,35 @@ class DetectionTaskManager:
             if not video_capture:
                 self.logger.error(f"视频捕获创建失败: {channel_id}")
                 return False
+
+            # 如果指定了frame_id，定位到指定帧
+            if frame_id is not None:
+                from server.detection.frame_id_identify import get_frame_id_identifier
+                identifier = get_frame_id_identifier()
+
+                # 检测视频源类型
+                video_source_type = identifier.detect_video_source_type(video_capture)
+                self.logger.info(f"检测到视频源类型: {video_source_type} - 通道: {channel_id}")
+
+                # 验证帧ID是否有效
+                if not identifier.validate_frame_id(video_capture, frame_id, video_source_type):
+                    self.logger.error(f"无效的帧ID: {frame_id} (类型: {video_source_type}) - 通道: {channel_id}")
+                    if hasattr(video_capture, 'release'):
+                        video_capture.release()
+                    return False
+
+                # 定位到指定帧
+                seek_success = identifier.seek_to_frame(video_capture, frame_id, video_source_type)
+                if not seek_success:
+                    self.logger.error(f"定位到帧 {frame_id} 失败 (类型: {video_source_type}) - 通道: {channel_id}")
+                    if hasattr(video_capture, 'release'):
+                        video_capture.release()
+                    return False
+
+                if video_source_type == 'local_video':
+                    self.logger.info(f"成功定位到帧序号 {frame_id} - 通道: {channel_id}")
+                else:
+                    self.logger.info(f"成功定位到SCR时间戳 {frame_id} - 通道: {channel_id}")
 
             self.video_captures[channel_id] = video_capture
             
@@ -290,6 +327,21 @@ class DetectionTaskManager:
             last_fps_time = time.time()
             fps_counter = 0
 
+            # 检测视频源类型，决定帧ID分配策略
+            # 支持多种视频捕获器类型
+            is_local_video = False
+            if hasattr(video_capture, 'is_video_file') and video_capture.is_video_file:
+                # HKcapture类
+                is_local_video = True
+            elif hasattr(video_capture, '_is_local_file') and video_capture._is_local_file:
+                # OpenCVCaptureWrapper类
+                is_local_video = True
+
+            if is_local_video:
+                self.logger.info(f"[{channel_id}] 检测到本地视频文件，使用帧序号作为帧ID")
+            else:
+                self.logger.info(f"[{channel_id}] 检测到RTSP流，帧ID功能暂未实现")
+
             while not stop_event.is_set():
                 try:
                     # 获取视频帧
@@ -299,20 +351,30 @@ class DetectionTaskManager:
                         time.sleep(0.01)  # 没有新帧，短暂等待
                         continue
 
-                    # 生成帧时间戳（毫秒）
-                    frame_timestamp = int(time.time() * 1000)
+                    # 帧ID分配策略
+                    if is_local_video:
+                        # 本地视频：使用帧序号作为帧ID
+                        frame_id = frame_count
+                    else:
+                        # RTSP流：使用NVR时间戳作为帧ID（后续实现）
+                        frame_id = None
 
-                    # 执行检测（传入帧时间戳）
-                    detection_result = detection_engine.detect(frame, channel_id=channel_id, frame_timestamp=frame_timestamp)
+                    # 执行检测（传入帧ID）
+                    detection_result = detection_engine.detect(
+                        frame,
+                        channel_id=channel_id,
+                        frame_id=frame_id
+                    )
 
                     # 无论检测是否成功，都调用回调函数
                     if detection_result:
-                        # 添加13位毫秒时间戳到检测结果（系统时间戳）
-                        detection_result['timestamp'] = frame_timestamp
+                        # 添加帧ID到检测结果
+                        if frame_id is not None:
+                            detection_result['frame_id'] = frame_id
 
-                        # 日志：检查帧时间戳是否存在
+                        # 日志：检查帧ID
                         if frame_count % 30 == 0:  # 每30帧记录一次
-                            self.logger.info(f"[{channel_id}] 帧{frame_count} - frame_timestamp在detection_result中: {detection_result.get('frame_timestamp')}")
+                            self.logger.info(f"[{channel_id}] 帧{frame_count} - frame_id: {detection_result.get('frame_id')}")
 
                         # 调用回调函数（无论成功或失败）
                         result_callback(channel_id, detection_result)

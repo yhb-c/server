@@ -1243,7 +1243,7 @@ class LiquidDetectionEngine:
         
         return result
 
-    def detect(self, frame_or_roi_frames, annotation_config=None, channel_id=None, frame_timestamp=None):
+    def detect(self, frame_or_roi_frames, annotation_config=None, channel_id=None, frame_id=None):
         """
         检测帧中的液位高度
 
@@ -1253,17 +1253,17 @@ class LiquidDetectionEngine:
                 - ROI图像列表 (list[np.ndarray]): 预裁剪的ROI图像，跳过内部裁剪
             annotation_config: 可选的标注配置字典
             channel_id: 通道ID（用于多通道状态隔离）
-            frame_timestamp: 帧时间戳（毫秒），如果为None则自动生成
+            frame_id: 帧ID（本地视频使用帧序号，RTSP流使用NVR时间戳）
 
         Returns:
-            dict: 检测结果 {'liquid_line_positions': {...}, 'success': bool, 'frame_timestamp': int}
+            dict: 检测结果 {'liquid_line_positions': {...}, 'success': bool, 'frame_id': int}
         """
         if self.model is None:
-            return {'liquid_line_positions': {}, 'success': False, 'frame_timestamp': frame_timestamp or int(time.time() * 1000)}
-
-        # 生成或使用传入的帧时间戳（毫秒）
-        if frame_timestamp is None:
-            frame_timestamp = int(time.time() * 1000)
+            return {
+                'liquid_line_positions': {},
+                'success': False,
+                'frame_id': frame_id
+            }
 
         # 判断输入类型：列表为预裁剪ROI，否则为完整帧
         is_roi_frames = isinstance(frame_or_roi_frames, list)
@@ -1393,7 +1393,7 @@ class LiquidDetectionEngine:
             detection_result = {
                 'liquid_line_positions': liquid_line_positions,
                 'success': len(liquid_line_positions) > 0,
-                'frame_timestamp': frame_timestamp,  # 添加帧时间戳
+                'frame_id': frame_id,  # 添加帧ID
                 # 相机姿态检测结果
                 'camera_status': camera_status_result.get('status', 'normal'),
                 'camera_moved': camera_status_result.get('moved', False),
@@ -1411,7 +1411,11 @@ class LiquidDetectionEngine:
             return detection_result
 
         except Exception as e:
-            return {'liquid_line_positions': {}, 'success': False, 'frame_timestamp': frame_timestamp}
+            return {
+                'liquid_line_positions': {},
+                'success': False,
+                'frame_id': frame_id
+            }
     
     def _process_detect_result(self, result, idx, top, left, right, bottom,
                                fixed_bottoms, fixed_tops, actual_heights, channel_init_state):

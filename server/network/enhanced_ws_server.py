@@ -152,11 +152,16 @@ class EnhancedWebSocketServer:
                 try:
                     # 更新活动时间
                     self.clients[websocket]['client_info']['last_activity'] = datetime.now().isoformat()
-                    
+
                     # 解析消息
                     data = json.loads(message)
                     self.server_stats['total_commands'] += 1
-                    
+
+                    # 记录接收到的命令
+                    command = data.get('command') or data.get('type')
+                    channel_id = data.get('channel_id', 'N/A')
+                    self.logger.info(f"[{client_id}] 收到命令: {command}, 通道: {channel_id}, 完整消息: {data}")
+
                     # 处理命令
                     await self._handle_command(websocket, data)
                     
@@ -205,7 +210,7 @@ class EnhancedWebSocketServer:
                 await self._handle_configure_channel(websocket, data)
 
             elif command == 'start_detection':
-                await self._handle_start_detection(websocket, channel_id)
+                await self._handle_start_detection(websocket, data)
 
             elif command == 'start_all':
                 await self._handle_start_all(websocket)
@@ -330,9 +335,11 @@ class EnhancedWebSocketServer:
             'timestamp': datetime.now().isoformat()
         }))
     
-    async def _handle_start_detection(self, websocket, channel_id: str):
+    async def _handle_start_detection(self, websocket, data: dict):
         """处理启动检测命令"""
         client_id = self.clients[websocket]['client_info']['id']
+        channel_id = data.get('channel_id')
+        frame_id = data.get('frame_id')
 
         if not channel_id:
             self.logger.error(f"[{client_id}] 启动检测失败: 通道ID为空")
@@ -342,7 +349,13 @@ class EnhancedWebSocketServer:
         if channel_id not in self.clients[websocket]['channels']:
             self._subscribe_channel(websocket, channel_id)
 
-        success = self.detection_service.start_detection(channel_id)
+        # 记录帧ID信息
+        if frame_id is not None:
+            self.logger.info(f"[{client_id}] 启动检测 - 通道: {channel_id}, 从帧ID: {frame_id} 开始")
+        else:
+            self.logger.info(f"[{client_id}] 启动检测 - 通道: {channel_id}, 从头开始")
+
+        success = self.detection_service.start_detection(channel_id, frame_id)
 
         await websocket.send(json.dumps({
             'type': 'command_response',
@@ -350,6 +363,7 @@ class EnhancedWebSocketServer:
             'channel_id': channel_id,
             'success': success,
             'message': f'检测{"启动成功" if success else "启动失败"}',
+            'frame_id': frame_id,
             'timestamp': datetime.now().isoformat()
         }))
 
@@ -359,6 +373,7 @@ class EnhancedWebSocketServer:
                 'channel_id': channel_id,
                 'status': 'started',
                 'message': '检测已启动',
+                'frame_id': frame_id,
                 'timestamp': datetime.now().isoformat()
             })
         else:

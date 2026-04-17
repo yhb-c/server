@@ -305,12 +305,13 @@ class DetectionService:
             
             return False
     
-    def start_detection(self, channel_id: str) -> bool:
+    def start_detection(self, channel_id: str, frame_id: Optional[int] = None) -> bool:
         """
         开始检测
 
         Args:
             channel_id: 通道ID
+            frame_id: 起始帧ID（可选，None表示从头开始）
 
         Returns:
             bool: 启动是否成功
@@ -322,27 +323,89 @@ class DetectionService:
 
             channel_state = self.channel_status[channel_id]
 
+            # 如果模型未加载，自动从配置文件加载
             if not channel_state['model_loaded']:
-                self.logger.error(f"模型未加载 - 通道: {channel_id}")
-                self._send_status_update(channel_id, 'detection_error', {
-                    'success': False,
-                    'error': '模型未加载'
-                })
-                return False
+                self.logger.info(f"模型未加载，开始自动加载 - 通道: {channel_id}")
 
+                # 从配置文件获取模型路径
+                model_path = channel_state.get('config_model_path', '')
+                if not model_path:
+                    self.logger.error(f"配置文件中未找到模型路径 - 通道: {channel_id}")
+                    self._send_status_update(channel_id, 'detection_error', {
+                        'success': False,
+                        'error': '配置文件中未找到模型路径'
+                    })
+                    return False
+
+                # 加载模型
+                load_success = self.load_model(channel_id, model_path, 'cuda')
+                if not load_success:
+                    self.logger.error(f"自动加载模型失败 - 通道: {channel_id}")
+                    self._send_status_update(channel_id, 'detection_error', {
+                        'success': False,
+                        'error': '自动加载模型失败'
+                    })
+                    return False
+
+                self.logger.info(f"模型自动加载成功 - 通道: {channel_id}")
+
+            # 如果通道未配置，自动从配置文件加载ROI配置
             if not channel_state['configured']:
-                self.logger.error(f"通道未配置 - 通道: {channel_id}")
-                self._send_status_update(channel_id, 'detection_error', {
-                    'success': False,
-                    'error': '通道未配置'
-                })
-                return False
+                self.logger.info(f"通道未配置，开始自动配置 - 通道: {channel_id}")
+
+                # 从annotation_result.yaml加载ROI配置
+                try:
+                    import yaml
+                    annotation_file = os.path.join(
+                        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        'config', 'annotation_result.yaml'
+                    )
+
+                    if os.path.exists(annotation_file):
+                        with open(annotation_file, 'r', encoding='utf-8') as f:
+                            all_annotations = yaml.safe_load(f)
+                            annotation_config = all_annotations.get(channel_id, {})
+
+                            if annotation_config:
+                                config = {
+                                    'detection_config': {
+                                        'confidence_threshold': 0.5,
+                                        'iou_threshold': 0.45
+                                    },
+                                    'annotation_config': annotation_config
+                                }
+
+                                # 配置通道
+                                config_success = self.configure_channel(channel_id, config)
+                                if not config_success:
+                                    self.logger.error(f"自动配置通道失败 - 通道: {channel_id}")
+                                    self._send_status_update(channel_id, 'detection_error', {
+                                        'success': False,
+                                        'error': '自动配置通道失败'
+                                    })
+                                    return False
+
+                                self.logger.info(f"通道自动配置成功 - 通道: {channel_id}")
+                            else:
+                                self.logger.warning(f"未找到ROI配置 - 通道: {channel_id}")
+                    else:
+                        self.logger.warning(f"ROI配置文件不存在: {annotation_file}")
+
+                except Exception as e:
+                    self.logger.error(f"加载ROI配置失败 - 通道: {channel_id}, 错误: {str(e)}")
+                    self.logger.error(traceback.format_exc())
 
             if channel_state['detecting']:
                 self.logger.warning(f"检测已在运行 - 通道: {channel_id}")
                 return True
 
-            success = self.task_manager.start_task(channel_id)
+            # 记录帧ID信息
+            if frame_id is not None:
+                self.logger.info(f"启动检测 - 通道: {channel_id}, 从帧ID: {frame_id} 开始")
+            else:
+                self.logger.info(f"启动检测 - 通道: {channel_id}, 从头开始")
+
+            success = self.task_manager.start_task(channel_id, frame_id)
 
             if success:
                 self.channel_status[channel_id].update({
@@ -463,9 +526,8 @@ class DetectionService:
             if channel_id not in self.channel_status:
                 self.logger.error(f"通道不存在: {channel_id}")
                 return False
-            
+
             if not self.channel_status[channel_id]['detecting']:
-                self.logger.warning(f"检测未在运行 - 通道: {channel_id}")
                 return True
             
             # 停止检测任务
@@ -624,16 +686,33 @@ class DetectionService:
             # 保存到CSV文件
             self._save_to_csv(channel_id, detection_result)
 
-            # 转换numpy数组为列表，使其可以JSON序列化
-            detection_result_serializable = self._convert_numpy_to_list(detection_result)
+            # 提取帧ID和液位数据
+            frame_id = detection_result.get('frame_id')
+            liquid_line_positions = detection_result.get('liquid_line_positions', {})
 
-            # 构建推送数据（保持完整的检测结果格式）
+            # 调试日志：检查液位数据
+            if frame_id is not None and frame_id % 30 == 0:  # 每30帧记录一次
+                self.logger.info(f"[{channel_id}] 帧{frame_id} - liquid_line_positions: {liquid_line_positions}")
+                self.logger.info(f"[{channel_id}] 帧{frame_id} - liquid_line_positions为空: {len(liquid_line_positions) == 0}")
+
+            # 构建简化的推送数据（只包含帧ID和液位高度）
+            roi_data = {}
+            for roi_id, position_data in liquid_line_positions.items():
+                if isinstance(position_data, dict):
+                    roi_data[roi_id] = {
+                        'height_mm': position_data.get('height_mm', 0)
+                    }
+
             push_data = {
                 'type': 'detection_result',
                 'channel_id': channel_id,
-                'timestamp': time.time(),
-                'data': detection_result_serializable
+                'frame_id': frame_id,
+                'roi_data': roi_data
             }
+
+            # 调试日志：检查推送数据
+            if frame_id is not None and frame_id % 30 == 0:
+                self.logger.info(f"[{channel_id}] 帧{frame_id} - 推送数据: {push_data}")
 
             # 通过WebSocket推送结果
             self._send_detection_result(channel_id, push_data)
@@ -654,7 +733,7 @@ class DetectionService:
                 self.csv_writers[channel_id] = {}
 
             liquid_line_positions = detection_result.get('liquid_line_positions', {})
-            frame_timestamp = detection_result.get('frame_timestamp')
+            frame_id = detection_result.get('frame_id')
 
             if liquid_line_positions:
                 for position_key, position_data in liquid_line_positions.items():
@@ -668,12 +747,7 @@ class DetectionService:
 
                         csv_data = {
                             'height_mm': position_data.get('height_mm', 0),
-                            'liquid_level': position_data.get('liquid_level', 0),
-                            'confidence': position_data.get('confidence', 0),
-                            'timestamp': detection_result.get('timestamp', time.time()),
-                            'frame_timestamp': frame_timestamp,
-                            'status': 'normal',
-                            'note': f'ROI{position_key}'
+                            'frame_id': frame_id
                         }
                         self.csv_writers[channel_id][position_key].write(csv_data)
             else:
@@ -687,12 +761,7 @@ class DetectionService:
 
                 csv_data = {
                     'height_mm': 404,
-                    'liquid_level': 0,
-                    'confidence': 0,
-                    'timestamp': detection_result.get('timestamp', time.time()),
-                    'frame_timestamp': frame_timestamp,
-                    'status': 'no_detection',
-                    'note': '未检测到液位'
+                    'frame_id': frame_id
                 }
                 self.csv_writers[channel_id]['default'].write(csv_data)
 

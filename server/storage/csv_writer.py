@@ -56,13 +56,12 @@ class CSVWriter:
 
         # 写入表头
         headers = [
-            '时间戳',
-            '帧时间戳',
+            '帧ID',
             '液位高度(mm)'
         ]
         self.csv_writer.writerow(headers)
         self.csv_file.flush()
-    
+
     def write(self, detection_result: dict):
         """
         写入检测结果到缓存
@@ -71,8 +70,7 @@ class CSVWriter:
             detection_result: 检测结果字典
                 {
                     'height_mm': float,
-                    'timestamp': float or int (支持秒或毫秒格式),
-                    'frame_timestamp': int (帧时间戳，毫秒)
+                    'frame_id': int (帧ID，本地视频为帧序号，RTSP流为NVR时间戳)
                 }
         """
         if not self.csv_writer:
@@ -80,33 +78,20 @@ class CSVWriter:
 
         try:
             with self.lock:
-                # 获取Unix时间戳并转换为13位毫秒格式
-                timestamp = detection_result.get('timestamp', time.time())
-
-                # 判断时间戳格式并转换为13位毫秒
-                if isinstance(timestamp, (int, float)):
-                    if timestamp < 10000000000:  # 小于10位数，是秒格式
-                        timestamp_ms = int(timestamp * 1000)
-                    else:  # 已经是毫秒格式
-                        timestamp_ms = int(timestamp)
-                else:
-                    timestamp_ms = int(time.time() * 1000)
-
-                # 获取帧时间戳
-                frame_timestamp = detection_result.get('frame_timestamp', timestamp_ms)
+                # 获取帧ID（本地视频为序列号，RTSP流为NVR时间戳）
+                frame_id = detection_result.get('frame_id', '')
 
                 # 构建数据行
                 row = [
-                    timestamp_ms,
-                    frame_timestamp,
+                    frame_id if frame_id is not None else '',
                     round(detection_result.get('height_mm', 0), 2)
                 ]
 
                 # 添加到缓存
                 self.cache_buffer.append(row)
 
-                # 估算单行数据大小（时间戳16字节 + 帧时间戳16字节 + 逗号2字节 + 高度6字节 + 换行1字节）
-                row_size = sys.getsizeof(str(timestamp_ms)) + sys.getsizeof(str(frame_timestamp)) + sys.getsizeof(str(row[2])) + 3
+                # 估算单行数据大小
+                row_size = sys.getsizeof(str(frame_id)) + sys.getsizeof(str(row[1])) + 2
                 self.cache_size += row_size
 
                 # 检查是否需要刷新
