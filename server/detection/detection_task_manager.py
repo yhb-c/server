@@ -303,6 +303,11 @@ class DetectionTaskManager:
             start_frame_id = self.tasks[channel_id].get('start_frame_id', None)
             frame_started = (start_frame_id is None)  # 如果没有设置起始帧ID，直接开始检测
 
+            if start_frame_id is not None:
+                self.logger.info(f"[{channel_id}] 检测将从帧ID {start_frame_id} 开始")
+            else:
+                self.logger.info(f"[{channel_id}] 检测从头开始（未设置起始帧ID）")
+
             # 导入frame_id_manager
             from server.detection.frame_id_manager import get_frame_id
 
@@ -315,6 +320,7 @@ class DetectionTaskManager:
             context = MockContext()
 
             frame_count = 0
+            skipped_frame_count = 0
             last_fps_time = time.time()
             fps_counter = 0
 
