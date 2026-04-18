@@ -65,6 +65,10 @@ class HKcapture:
         self.frame_width = 0
         self.frame_height = 0
         self.fps = self.target_fps  # 使用配置的帧率
+
+        # PTS时间戳（用于本地视频同步）
+        self.current_pts = None
+        self.pts_lock = threading.Lock()
         self.original_fps = 0  # 🔥 视频文件的原始帧率
         self.current_frame = None
         self.frame_lock = threading.Lock()
@@ -76,12 +80,7 @@ class HKcapture:
         # 健康检查相关
         self.last_frame_time = time.time()
         self.no_frame_warning_printed = False
-        self.last_frame_timestamp = None  # 保存最后一帧的时间戳（用于RTSP流的帧ID）
-        self.current_scr = None  # 当前PS包的SCR信息
-        self.scr_lock = threading.Lock()  # SCR访问锁
-        self.current_pts = None  # 当前帧的PTS时间戳（用于本地视频）
-        self.pts_lock = threading.Lock()  # PTS访问锁
-
+        
         # ========== HWND直接渲染模式相关 ==========
         self._hwnd = None                    # 渲染窗口句柄
         self._render_mode = False            # 是否启用HWND直接渲染
@@ -92,6 +91,10 @@ class HKcapture:
         self._yuv_queue = queue.Queue(maxsize=8)  # YUV数据队列
         self._yuv_send_interval = 0.1        # YUV发送间隔（秒）
         self._last_yuv_send_time = 0         # 上次发送YUV的时间
+
+        # ========== SCR时间戳解析（RTSP流时间同步）==========
+        self.current_scr = None              # 当前帧的SCR时间戳
+        self.scr_lock = threading.Lock()     # SCR访问锁
         
         if self.is_hikvision:
             # 海康威视SDK相关变量
@@ -182,12 +185,88 @@ class HKcapture:
     
     def refresh_hwnd(self, hwnd):
         """刷新渲染窗口句柄（窗口大小改变时调用）
-        
+
         Args:
             hwnd: 新的窗口句柄
         """
         self._hwnd = hwnd
-    
+
+    def switch_render_hwnd(self, new_hwnd):
+        """切换渲染目标HWND（用于预览窗口切换）
+
+        Args:
+            new_hwnd: 新的窗口句柄
+
+        Returns:
+            bool: 是否切换成功
+        """
+        print(f"[HKcapture] switch_render_hwnd 被调用: new_hwnd={new_hwnd}, is_reading={self.is_reading}, is_video_file={self.is_video_file}")
+
+        if not self.is_reading:
+            print(f"[HKcapture] 当前未在播放，无法切换")
+            return False
+
+        try:
+            port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
+            print(f"[HKcapture] 当前Port: {port}, 旧HWND: {self._hwnd}")
+
+            # 对于实时流，不能简单地Stop/Play，需要重新设置播放窗口
+            if not self.is_video_file:
+                print(f"[HKcapture] 实时流模式，使用PlayM4_RefreshPlay切换HWND")
+
+                # 更新HWND
+                old_hwnd = self._hwnd
+                self._hwnd = new_hwnd
+
+                # 使用RefreshPlay刷新播放窗口
+                hwnd_value = new_hwnd if new_hwnd else 0
+                ret = self.playM4SDK.PlayM4_RefreshPlay(c_long(port))
+
+                if ret:
+                    print(f"[HKcapture] RefreshPlay成功")
+                    # 重新设置播放窗口
+                    ret2 = self.playM4SDK.PlayM4_Play(c_long(port), c_void_p(hwnd_value))
+                    if ret2:
+                        print(f"[HKcapture] 已切换渲染到新HWND: {new_hwnd}")
+                        return True
+                    else:
+                        error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
+                        print(f"[HKcapture] Play失败，错误码: {error}")
+                        self._hwnd = old_hwnd
+                        return False
+                else:
+                    print(f"[HKcapture] RefreshPlay失败")
+                    self._hwnd = old_hwnd
+                    return False
+            else:
+                # 本地视频文件，使用Stop/Play方式
+                print(f"[HKcapture] 本地视频模式，使用Stop/Play切换HWND")
+
+                # 停止当前播放
+                self.playM4SDK.PlayM4_Stop(c_long(port))
+                print(f"[HKcapture] PlayM4_Stop完成")
+
+                # 更新HWND
+                self._hwnd = new_hwnd
+
+                # 重新开始播放到新HWND
+                hwnd_value = new_hwnd if new_hwnd else 0
+                ret = self.playM4SDK.PlayM4_Play(c_long(port), c_void_p(hwnd_value))
+
+                if ret:
+                    print(f"[HKcapture] 已切换渲染到新HWND: {new_hwnd}")
+                    return True
+                else:
+                    error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
+                    print(f"[HKcapture] 切换HWND失败，错误码: {error}")
+                    return False
+
+        except Exception as e:
+            print(f"[HKcapture] 切换HWND异常: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
     # ==================== YUV直接传递模式API（高性能检测）====================
     
     def enable_yuv_queue(self, enabled=True, interval=0.1):
@@ -245,12 +324,12 @@ class HKcapture:
     
     def has_yuv_data(self):
         """检查是否有YUV数据可用
-        
+
         Returns:
             bool: 是否有数据
         """
         return not self._yuv_queue.empty()
-        
+
         # 如果正在播放，刷新播放窗口
         if self.is_reading and self.PlayCtrlPort.value > -1:
             port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
@@ -258,6 +337,87 @@ class HKcapture:
                 self.playM4SDK.PlayM4_RefreshPlay(c_long(port))
             except:
                 pass
+
+    # ==================== SCR时间戳解析（RTSP流时间同步）====================
+
+    def _parse_ps_packet(self, data, size):
+        """解析PS包头，提取SCR时间戳
+
+        PS包头格式:
+        - 起始码: 0x000001BA (4字节)
+        - SCR: 系统时钟参考 (6字节)
+        - 其他字段...
+
+        Args:
+            data: 字节数组
+            size: 数据大小
+
+        Returns:
+            dict: SCR信息字典，包含scr_base, scr_ext, timestamp_90k, timestamp_ms
+            None: 解析失败
+        """
+        try:
+            if size < 14:
+                return None
+
+            # 检查PS包起始码 0x000001BA
+            if data[0] == 0x00 and data[1] == 0x00 and data[2] == 0x01 and data[3] == 0xBA:
+                # 解析SCR (System Clock Reference)
+                # SCR占用6字节，包含33位时间戳和9位扩展
+                scr_byte1 = data[4]
+                scr_byte2 = data[5]
+                scr_byte3 = data[6]
+                scr_byte4 = data[7]
+                scr_byte5 = data[8]
+                scr_byte6 = data[9]
+
+                # 提取33位SCR基准值
+                scr_base = ((scr_byte1 & 0x38) << 27) | \
+                          ((scr_byte1 & 0x03) << 28) | \
+                          (scr_byte2 << 20) | \
+                          ((scr_byte3 & 0xF8) << 12) | \
+                          ((scr_byte3 & 0x03) << 13) | \
+                          (scr_byte4 << 5) | \
+                          ((scr_byte5 & 0xF8) >> 3)
+
+                # 提取9位SCR扩展值
+                scr_ext = ((scr_byte5 & 0x03) << 7) | ((scr_byte6 & 0xFE) >> 1)
+
+                # 计算时间戳 (单位: 90kHz)
+                timestamp_90k = scr_base
+
+                # 转换为毫秒
+                timestamp_ms = timestamp_90k / 90.0
+
+                return {
+                    'scr_base': scr_base,
+                    'scr_ext': scr_ext,
+                    'timestamp_90k': timestamp_90k,
+                    'timestamp_ms': timestamp_ms
+                }
+        except Exception as e:
+            if self.debug:
+                print(f"[HKcapture] 解析PS包异常: {e}")
+
+        return None
+
+    def get_current_scr(self):
+        """获取当前帧的SCR时间戳
+
+        Returns:
+            dict: SCR信息字典，如果是本地视频或无SCR则返回None
+        """
+        with self.scr_lock:
+            return self.current_scr
+
+    def get_current_pts(self):
+        """获取当前帧的PTS时间戳（用于本地视频）
+
+        Returns:
+            int: PTS时间戳（毫秒），如果是RTSP流或无PTS则返回None
+        """
+        with self.pts_lock:
+            return self.current_pts
     
     def _detect_video_file(self):
         """
@@ -482,14 +642,10 @@ class HKcapture:
                     _HK_SDK_INITIALIZED = True
                 
                 return True
-
+                
         except Exception as e:
-            if self.debug:
-                print(f"[HKcapture调试] SDK初始化异常: {e}")
-                import traceback
-                traceback.print_exc()
             return False
-
+    
     def _set_sdk_init_cfg(self):
         """设置海康威视SDK初始化依赖库路径"""
         if sys_platform == 'windows':
@@ -516,26 +672,31 @@ class HKcapture:
     def open(self):
         """
         打开摄像头连接
-        
+
         返回:
             bool: 成功返回True，失败返回False
         """
         if self.is_opened:
+            if self.debug:
+                print(f"[HKcapture] 已经打开，跳过")
             return True
-            
+
+        if self.debug:
+            print(f"[HKcapture] 开始打开视频源: {self.source}")
+            print(f"[HKcapture] is_hikvision: {self.is_hikvision}")
+            print(f"[HKcapture] is_video_file: {self.is_video_file}")
+
         if self.is_hikvision:
+            if self.debug:
+                print(f"[HKcapture] 使用海康威视SDK打开")
             return self._open_hikvision()
         else:
+            if self.debug:
+                print(f"[HKcapture] 使用RTSP/视频文件方式打开")
             return self._open_rtsp()
     
     def _open_hikvision(self):
         """打开海康威视摄像头连接（优化锁策略）"""
-        # 初始化SDK（必须在登录前完成）
-        if not self._init_hikvision_sdk():
-            if self.debug:
-                print("[HKcapture调试] SDK初始化失败")
-            return False
-
         # 登录设备（无需锁，每个通道独立登录）
         if not self._login_device():
             return False
@@ -552,49 +713,87 @@ class HKcapture:
         """打开RTSP摄像头连接或本地视频文件"""
         # 🔥 本地视频文件使用 PlayCtrl SDK
         if self.is_video_file:
+            if self.debug:
+                print(f"[HKcapture] 检测到本地视频文件，调用_open_video_file()")
             return self._open_video_file()
-        
+
         # RTSP流使用 OpenCV
+        if self.debug:
+            print(f"[HKcapture] 使用OpenCV打开RTSP流")
         try:
             self.cv_cap = cv2.VideoCapture(self.source)
             if not self.cv_cap.isOpened():
+                if self.debug:
+                    print(f"[HKcapture] OpenCV打开失败")
                 return False
-            
+
             # 获取视频属性
             self.frame_width = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             self.frame_height = int(self.cv_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             actual_fps = self.cv_cap.get(cv2.CAP_PROP_FPS)
-            
+
             # RTSP流：尝试设置帧率（通常不生效，由服务器控制）
             if self.target_fps > 0:
                 self.cv_cap.set(cv2.CAP_PROP_FPS, self.target_fps)
             # 使用配置的帧率（RTSP流的FPS通常不准确）
             self.fps = self.target_fps if self.target_fps > 0 else (int(actual_fps) or 25)
-            
+
             self.is_opened = True
+            if self.debug:
+                print(f"[HKcapture] OpenCV打开成功: {self.frame_width}x{self.frame_height} @ {self.fps}fps")
             return True
-            
+
         except Exception as e:
+            if self.debug:
+                print(f"[HKcapture] OpenCV打开异常: {e}")
             return False
     
     def _open_video_file(self):
         """打开本地视频文件（使用 PlayCtrl SDK）"""
         try:
-            # 初始化 PlayCtrl SDK（如果尚未初始化）
-            if not hasattr(self, 'playM4SDK') or self.playM4SDK is None:
+            if self.debug:
+                print(f"[HKcapture-视频文件] 开始打开本地视频文件: {self.source}")
+
+            # 初始化 PlayCtrl SDK
+            if not self.playM4SDK:
+                if self.debug:
+                    print(f"[HKcapture-视频文件] 初始化 PlayCtrl SDK")
                 self.playM4SDK = load_library(playM4dllpath)
-            
-            # 获取播放句柄
+
+            # 获取播放端口
             with _HK_SDK_LOCK:
-                ret = self.playM4SDK.PlayM4_GetPort(byref(self.PlayCtrlPort))
-                if not ret:
-                    error = self.playM4SDK.PlayM4_GetLastError(c_long(0))
+                if not self.playM4SDK.PlayM4_GetPort(byref(self.PlayCtrlPort)):
+                    if self.debug:
+                        print(f"[HKcapture-视频文件] 获取播放端口失败")
                     return False
-            
+
+            port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
+            if self.debug:
+                print(f"[HKcapture-视频文件] 获取播放端口成功: {port}")
+
+            # 使用 OpenCV 临时打开获取视频属性
+            temp_cap = cv2.VideoCapture(self.source)
+            if temp_cap.isOpened():
+                self.frame_width = int(temp_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                self.frame_height = int(temp_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                self.original_fps = temp_cap.get(cv2.CAP_PROP_FPS)
+                self.fps = int(self.original_fps) if self.original_fps > 0 else 25
+                temp_cap.release()
+                if self.debug:
+                    print(f"[HKcapture-视频文件] 视频属性: {self.frame_width}x{self.frame_height} @ {self.fps}fps")
+            else:
+                if self.debug:
+                    print(f"[HKcapture-视频文件] 无法读取视频属性")
+                self.fps = 25
+
             self.is_opened = True
+            if self.debug:
+                print(f"[HKcapture-视频文件] 本地视频文件打开成功")
             return True
-            
+
         except Exception as e:
+            if self.debug:
+                print(f"[HKcapture-视频文件] 打开本地视频文件异常: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -770,21 +969,21 @@ class HKcapture:
         import sys
         print(f"[HKcapture] _start_rtsp_capture: is_video_file={self.is_video_file}")
         sys.stdout.flush()
-        
-        # 🔥 本地视频文件使用 PlayCtrl SDK 播放
+
+        # 🔥 本地视频文件使用 PlayCtrl SDK 硬件加速播放
         if self.is_video_file:
-            print(f"[HKcapture] _start_rtsp_capture: 走本地视频文件分支")
+            print(f"[HKcapture] _start_rtsp_capture: 本地视频文件，使用PlayCtrl SDK播放")
             sys.stdout.flush()
             return self._start_video_file_capture()
-        
-        # RTSP流使用 OpenCV
-        print(f"[HKcapture] _start_rtsp_capture: 走OpenCV RTSP分支")
+
+        # RTSP流使用 OpenCV 读取线程
+        print(f"[HKcapture] _start_rtsp_capture: RTSP流，启动OpenCV读取线程")
         sys.stdout.flush()
         self.stop_thread = False
         self.capture_thread = threading.Thread(target=self._rtsp_capture_loop)
         self.capture_thread.daemon = True
         self.capture_thread.start()
-        
+
         self.is_reading = True
         return True
     
@@ -804,7 +1003,7 @@ class HKcapture:
             import yaml
             self._debug_logger = get_debug_logger()
             # 从配置文件读取fps_log开关并启用
-            config_path = "config/default_config.yaml"
+            config_path = "database/config/default_config.yaml"
             if os.path.exists(config_path):
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f)
@@ -847,10 +1046,19 @@ class HKcapture:
             sys.stdout.flush()
             
             # 设置解码回调（用于FPS记录和帧抓取）
-            # 在HWND直接渲染模式下，总是设置解码回调来记录FPS
-            print(f"[HKcapture] 设置解码回调...")
-            sys.stdout.flush()
-            self._setup_video_file_decode_callback()
+            # 只在需要帧数据时才设置解码回调，避免不必要的CPU开销
+            # 纯播放模式下跳过解码回调，让PlayCtrl SDK直接渲染，减少CPU负载
+            # HWND渲染模式需要解码回调来更新frame_sequence（用于帧ID同步）
+            if self._yuv_queue_enabled or self._render_mode:
+                if self._yuv_queue_enabled:
+                    print(f"[HKcapture] 设置解码回调（YUV队列模式）...")
+                else:
+                    print(f"[HKcapture] 设置解码回调（HWND渲染模式，用于帧ID同步）...")
+                sys.stdout.flush()
+                self._setup_video_file_decode_callback()
+            else:
+                print(f"[HKcapture] 跳过解码回调（纯播放模式，减少CPU负载）")
+                sys.stdout.flush()
             
             # 🔥 启用QSV解码（Intel Quick Sync Video）
             self._try_enable_qsv_decode()
@@ -876,7 +1084,10 @@ class HKcapture:
                 print(f"[HKcapture] 本地视频 PlayCtrl 播放已启动!")
                 print(f"[HKcapture]    - Port: {port}")
                 print(f"[HKcapture]    - HWND: {hwnd_value}")
-                print(f"[HKcapture]    - 渲染模式: HWND直接渲染")
+                if hwnd_value == 0:
+                    print(f"[HKcapture]    - 渲染模式: 纯CPU解码（无窗口渲染，通过回调获取帧）")
+                else:
+                    print(f"[HKcapture]    - 渲染模式: HWND直接渲染")
                 sys.stdout.flush()
                 self.is_reading = True
                 return True
@@ -938,194 +1149,161 @@ class HKcapture:
             print(f"[HKcapture] 设置解码回调异常: {e}")
     
     def _video_file_decode_callback(self, nPort, pBuf, nSize, pFrameInfo, nUser, nReserved2):
-        """本地视频文件解码回调（用于获取帧尺寸和YUV数据传递）
-        
-        YUV直接传递模式：解码回调直接将YUV数据送入队列，供检测线程使用
+        """本地视频文件解码回调（支持RGB和YUV格式）
+
+        根据解码输出格式自动处理
         """
         try:
             frame_info = pFrameInfo.contents
-            if frame_info.nType == 3:  # YUV数据
-                width = frame_info.nWidth
-                height = frame_info.nHeight
-                
-                # 获取channel_id（如果未设置则使用默认值）
-                channel_id = getattr(self, '_channel_id', 'channel1')
-                
-                # 第一次获取到分辨率时记录视频源信息
-                if hasattr(self, '_debug_logger') and self._debug_logger and not hasattr(self, '_video_info_logged'):
-                    resolution = f"{width}x{height}"
-                    self._debug_logger.log_video_source_info(
-                        channel_id, 
-                        self.source, 
-                        self.target_fps, 
-                        resolution
-                    )
-                    self._video_info_logged = True  # 标记已记录，避免重复
-                
-                # 更新帧尺寸
-                self.frame_width = width
-                self.frame_height = height
-                self.frame_sequence += 1
-                self.last_frame_time = time.time()
-                
-                # 记录解码帧到调试日志（用于FPS统计）
-                if hasattr(self, '_debug_logger') and self._debug_logger:
-                    self._debug_logger.record_decode_frame(channel_id)
-                    
-                    # 在HWND模式下，解码后立即渲染到HWND，所以同时记录渲染FPS
-                    if self._hwnd and self._hwnd != 0:
-                        self._debug_logger.record_render_frame(channel_id)
-                
-                # ========== YUV直接传递模式 ==========
-                # 如果启用YUV队列，按间隔发送YUV数据到队列
-                if self._yuv_queue_enabled:
-                    now = time.time()
-                    if now - self._last_yuv_send_time >= self._yuv_send_interval:
-                        self._last_yuv_send_time = now
-                        
-                        # 计算YUV数据大小（I420格式：Y + U + V = w*h + w*h/4 + w*h/4 = w*h*1.5）
-                        yuv_size = width * height * 3 // 2
-                        
-                        # 从回调缓冲区复制YUV数据
-                        yuv_data = string_at(pBuf, yuv_size)
-                        
-                        # 放入队列（非阻塞，队列满则丢弃旧数据）
-                        try:
-                            if self._yuv_queue.full():
-                                self._yuv_queue.get_nowait()  # 丢弃旧数据
-                            self._yuv_queue.put_nowait((yuv_data, width, height, now))
-                        except:
-                            pass
-                
+            width = frame_info.nWidth
+            height = frame_info.nHeight
+
+            # 提取PTS时间戳（nStamp字段，单位：毫秒）
+            pts_timestamp = frame_info.nStamp
+
+            # 更新当前PTS
+            with self.pts_lock:
+                self.current_pts = pts_timestamp
+
+            # 获取channel_id（如果未设置则使用默认值）
+            channel_id = getattr(self, '_channel_id', 'channel1')
+
+            # 第一次获取到分辨率时记录视频源信息
+            if hasattr(self, '_debug_logger') and self._debug_logger and not hasattr(self, '_video_info_logged'):
+                resolution = f"{width}x{height}"
+                self._debug_logger.log_video_source_info(
+                    channel_id,
+                    self.source,
+                    self.target_fps,
+                    resolution
+                )
+                self._video_info_logged = True
+
+            # 更新帧尺寸
+            self.frame_width = width
+            self.frame_height = height
+            self.frame_sequence += 1
+            self.last_frame_time = time.time()
+
+            # 记录解码帧到调试日志（用于FPS统计）
+            if hasattr(self, '_debug_logger') and self._debug_logger:
+                self._debug_logger.record_decode_frame(channel_id)
+
+            # 根据nType处理不同格式
+            if frame_info.nType == 2:
+                # RGB32格式（BGRA）
+                try:
+                    rgb_size = width * height * 4
+                    rgb_data = string_at(pBuf, rgb_size)
+                    rgb_array = np.frombuffer(rgb_data, dtype=np.uint8)
+                    frame_bgra = rgb_array.reshape((height, width, 4))
+                    # 统一输出BGR格式
+                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2BGR)
+
+                    if not hasattr(self, '_video_frame_debug_printed'):
+                        self._video_frame_debug_printed = True
+                        print(f"[HKcapture-视频文件-调试] 解码格式: RGB32 -> BGR")
+                        print(f"[HKcapture-视频文件-调试] BGR帧形状: {frame.shape}")
+
+                    with self.frame_lock:
+                        self.current_frame = frame
+                except Exception as e:
+                    print(f"[HKcapture-解码回调] RGB处理失败: {e}")
+
+            elif frame_info.nType == 3:
+                # YUV格式（I420）- 直接转为BGR格式（OpenCV标准）
+                try:
+                    yuv_size = width * height * 3 // 2
+                    yuv_data = string_at(pBuf, yuv_size)
+                    yuv_array = np.frombuffer(yuv_data, dtype=np.uint8)
+                    yuv_frame = yuv_array.reshape((height * 3 // 2, width))
+                    frame = cv2.cvtColor(yuv_frame, cv2.COLOR_YUV2BGR_I420)
+
+                    if not hasattr(self, '_video_frame_debug_printed'):
+                        self._video_frame_debug_printed = True
+                        print(f"[HKcapture-视频文件-调试] 解码格式: YUV I420")
+                        print(f"[HKcapture-视频文件-调试] BGR帧形状: {frame.shape}")
+                        print(f"[HKcapture-视频文件-调试] BGR帧数据类型: {frame.dtype}")
+                        print(f"[HKcapture-视频文件-调试] BGR中心像素值: {frame[height//2, width//2]}")
+
+                    with self.frame_lock:
+                        self.current_frame = frame
+                except Exception as e:
+                    print(f"[HKcapture-解码回调] YUV处理失败: {e}")
+            else:
+                # 未知格式
+                if not hasattr(self, '_video_unknown_type_warned'):
+                    self._video_unknown_type_warned = True
+                    print(f"[HKcapture-警告] 视频文件未知的解码格式 nType={frame_info.nType}")
+
         except Exception as e:
-            pass
-    
+            print(f"[HKcapture-解码回调] 异常: {e}")
+            import traceback
+            traceback.print_exc()
+
     def _rtsp_capture_loop(self):
-        """RTSP流捕获循环线程（仅用于非海康RTSP流）"""
+        """RTSP流捕获循环线程（仅用于非海康RTSP流和本地视频文件）"""
+        # 计算帧间隔（根据视频帧率）
+        frame_interval = 1.0 / self.fps if self.fps > 0 else 0.04
+
+        frame_count = 0
+        last_read_time = time.time()
+
         while not self.stop_thread and self.cv_cap and self.cv_cap.isOpened():
+            loop_start = time.time()
+
             ret, frame = self.cv_cap.read()
             if ret and frame is not None:
+                frame_count += 1
+
                 with self.frame_lock:
                     self.current_frame = frame
                     self.frame_sequence += 1  # 新帧，序列号+1
                     self.last_frame_time = time.time()
+
+                # 根据视频帧率控制读取速度
+                elapsed = time.time() - loop_start
+                sleep_time = frame_interval - elapsed
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
             else:
+                if frame_count == 0:
+                    print(f"[HKcapture] 读取第一帧失败: ret={ret}")
                 time.sleep(0.1)
-
-    def _parse_ps_packet(self, data, size):
-        """解析PS包头，提取SCR时间戳
-
-        PS包头格式:
-        - 起始码: 0x000001BA (4字节)
-        - SCR: 系统时钟参考 (6字节)
-        - 其他字段...
-
-        Args:
-            data: 字节数组
-            size: 数据大小
-
-        Returns:
-            dict: SCR信息字典，包含scr_base, scr_ext, timestamp_90k, timestamp_ms
-            None: 解析失败
-        """
-        try:
-            if size < 14:
-                return None
-
-            # 检查PS包起始码 0x000001BA
-            if data[0] == 0x00 and data[1] == 0x00 and data[2] == 0x01 and data[3] == 0xBA:
-                # 解析SCR (System Clock Reference)
-                # SCR占用6字节，包含33位时间戳和9位扩展
-                scr_byte1 = data[4]
-                scr_byte2 = data[5]
-                scr_byte3 = data[6]
-                scr_byte4 = data[7]
-                scr_byte5 = data[8]
-                scr_byte6 = data[9]
-
-                # 提取33位SCR基准值
-                scr_base = ((scr_byte1 & 0x38) << 27) | \
-                          ((scr_byte1 & 0x03) << 28) | \
-                          (scr_byte2 << 20) | \
-                          ((scr_byte3 & 0xF8) << 12) | \
-                          ((scr_byte3 & 0x03) << 13) | \
-                          (scr_byte4 << 5) | \
-                          ((scr_byte5 & 0xF8) >> 3)
-
-                # 提取9位SCR扩展值
-                scr_ext = ((scr_byte5 & 0x03) << 7) | ((scr_byte6 & 0xFE) >> 1)
-
-                # 计算时间戳 (单位: 90kHz)
-                timestamp_90k = scr_base
-
-                # 转换为毫秒
-                timestamp_ms = timestamp_90k / 90.0
-
-                return {
-                    'scr_base': scr_base,
-                    'scr_ext': scr_ext,
-                    'timestamp_90k': timestamp_90k,
-                    'timestamp_ms': timestamp_ms
-                }
-        except Exception as e:
-            if self.debug:
-                print(f"[HKcapture] 解析PS包异常: {e}")
-
-        return None
-
-    def get_current_scr(self):
-        """获取当前帧的SCR时间戳
-
-        Returns:
-            dict: SCR信息字典，如果是本地视频或无SCR则返回None
-        """
-        with self.scr_lock:
-            return self.current_scr
-
-    def get_current_pts(self):
-        """获取当前帧的PTS时间戳（用于本地视频）
-
-        Returns:
-            int: PTS时间戳（毫秒），如果是RTSP流或无PTS则返回None
-        """
-        with self.pts_lock:
-            return self.current_pts
-
+                
     def _real_data_callback(self, lPlayHandle, dwDataType, pBuffer, dwBufSize, pUser):
-        """海康威视实时数据回调函数（传统模式：帧抓取）"""
+        """海康威视实时数据回调函数（纯CPU解码模式，无渲染）"""
         if dwDataType == NET_DVR_SYSHEAD:
-            print(f"[HKcapture] 收到系统头数据，准备初始化QSV解码器...")
+            print(f"[HKcapture] 收到系统头数据，初始化纯CPU解码模式（无渲染）...")
             import sys
             sys.stdout.flush()
-            
+
             # 设置流播放模式
             self.playM4SDK.PlayM4_SetStreamOpenMode(self.PlayCtrlPort, 0)
-            
+
             # 打开码流
             if self.playM4SDK.PlayM4_OpenStream(self.PlayCtrlPort, pBuffer, dwBufSize, 1024 * 1024):
-                print(f"[HKcapture] 码流打开成功，启用QSV解码...")
+                print(f"[HKcapture] 码流打开成功，设置CPU软件解码...")
                 sys.stdout.flush()
 
-                # 启用QSV硬件解码（Intel Quick Sync Video）
-                qsv_enabled = self._try_enable_qsv_decode()
+                # 禁用硬件解码，强制使用CPU软件解码
+                port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
+                self.playM4SDK.PlayM4_SetDecodeEngine(c_long(port), 0)  # 0=软件解码
+                print(f"[HKcapture] 已设置为CPU软件解码模式")
 
-                if not qsv_enabled:
-                    print(f"[HKcapture] QSV解码启用失败！请检查Intel核显驱动")
-                    sys.stdout.flush()
-
-                # 设置解码回调（必须在Play之前）
+                # 设置解码回调（用于获取解码后的帧数据）
                 self._setup_hikvision_decode_callback()
 
                 # 开始解码播放（不渲染到窗口）
                 self.playM4SDK.PlayM4_Play(self.PlayCtrlPort, None)
-                print(f"[HKcapture] QSV解码播放已启动")
+                print(f"[HKcapture] 纯CPU解码已启动（无渲染）")
                 sys.stdout.flush()
             else:
                 print(f"[HKcapture] 码流打开失败!")
                 sys.stdout.flush()
-                
+
         elif dwDataType == NET_DVR_STREAMDATA:
-            # 解析PS包头，提取SCR时间戳
+            # 解析PS包头提取SCR时间戳
             try:
                 data = string_at(pBuffer, dwBufSize)
                 data_array = bytearray(data)
@@ -1133,6 +1311,12 @@ class HKcapture:
                 if scr_info:
                     with self.scr_lock:
                         self.current_scr = scr_info
+                        # 实时输出SCR信息（每30次输出一次，避免刷屏）
+                        if not hasattr(self, '_scr_output_counter'):
+                            self._scr_output_counter = 0
+                        self._scr_output_counter += 1
+                        if self._scr_output_counter % 30 == 0:
+                            print(f"[HKcapture] 当前SCR时间戳: {scr_info.get('timestamp_ms', 0):.2f}ms")
             except:
                 pass
 
@@ -1141,52 +1325,62 @@ class HKcapture:
     
     def _real_data_callback_hwnd(self, lPlayHandle, dwDataType, pBuffer, dwBufSize, pUser):
         """海康威视实时数据回调函数（HWND直接渲染模式）
-        
+
         数据流：
-        1. 收到系统头：初始化PlayCtrl解码器，设置HWND渲染，设置解码回调
+        1. 收到系统头：初始化PlayCtrl解码器
         2. 收到流数据：输入到PlayCtrl解码器
-        3. PlayCtrl自动解码并渲染到HWND
-        4. 解码回调获取YUV数据，送入YUV队列供检测线程使用
+        3. PlayCtrl解码后直接渲染到HWND窗口
         """
         if dwDataType == NET_DVR_SYSHEAD:
             if self.debug:
-                print(f"[HKcapture] 收到系统头数据，初始化HWND直接渲染...")
+                print(f"[HKcapture] 收到系统头数据，初始化HWND渲染模式...")
             import sys
             sys.stdout.flush()
-            
+
             # 设置流播放模式
             self.playM4SDK.PlayM4_SetStreamOpenMode(self.PlayCtrlPort, 0)
-            
+
             # 打开码流
             if self.playM4SDK.PlayM4_OpenStream(self.PlayCtrlPort, pBuffer, dwBufSize, 1024 * 1024):
-                # 启用QSV解码（Intel Quick Sync Video）
-                self._try_enable_qsv_decode()
-                
-                # 🔥 设置解码回调（用于获取YUV数据送检测线程）
-                self._setup_hikvision_decode_callback()
-                
-                # 获取HWND值
-                hwnd_value = self._hwnd if self._hwnd else 0
-                
-                # 开始播放到HWND（关键：传入窗口句柄）
-                if self.playM4SDK.PlayM4_Play(self.PlayCtrlPort, c_void_p(hwnd_value)):
-                    print(f"[HKcapture] HWND直接渲染已启动，HWND={hwnd_value}")
+                # 启用硬件解码（如果配置了）
+                port = self.PlayCtrlPort.value if hasattr(self.PlayCtrlPort, 'value') else self.PlayCtrlPort
+                if self.decode_device == 'hardware':
+                    self.playM4SDK.PlayM4_SetDecodeEngine(c_long(port), 1)  # 1=硬件解码
+                    print(f"[HKcapture] 已设置为硬件解码模式")
+                else:
+                    self.playM4SDK.PlayM4_SetDecodeEngine(c_long(port), 0)  # 0=软件解码
+                    print(f"[HKcapture] 已设置为软件解码模式")
+
+                # 不设置解码回调，让SDK直接渲染
+                # self._setup_hikvision_decode_callback()  # 注释掉
+
+                # 开始解码播放并渲染到HWND窗口
+                if self.playM4SDK.PlayM4_Play(self.PlayCtrlPort, self._hwnd):
+                    print(f"[HKcapture] HWND渲染已启动，窗口句柄={self._hwnd}")
                     sys.stdout.flush()
                 else:
                     error = self.playM4SDK.PlayM4_GetLastError(self.PlayCtrlPort)
-                    print(f"[HKcapture] HWND渲染启动失败，错误码: {error}")
+                    print(f"[HKcapture] 解码启动失败，错误码: {error}")
                     sys.stdout.flush()
             else:
                 print(f"[HKcapture] 码流打开失败")
                 sys.stdout.flush()
-                
+
         elif dwDataType == NET_DVR_STREAMDATA:
-            # 解析PS包头，提取SCR时间戳
+            # 解析PS包头提取SCR时间戳
             try:
-                data = string_at(pBuffer, min(dwBufSize, 14))
-                scr_info = self._parse_ps_packet(data, len(data))
+                data = string_at(pBuffer, dwBufSize)
+                data_array = bytearray(data)
+                scr_info = self._parse_ps_packet(data_array, dwBufSize)
                 if scr_info:
-                    self.current_scr = scr_info
+                    with self.scr_lock:
+                        self.current_scr = scr_info
+                        # 实时输出SCR信息（每30次输出一次，避免刷屏）
+                        if not hasattr(self, '_scr_output_counter_hwnd'):
+                            self._scr_output_counter_hwnd = 0
+                        self._scr_output_counter_hwnd += 1
+                        if self._scr_output_counter_hwnd % 30 == 0:
+                            print(f"[HKcapture] 当前SCR时间戳: {scr_info.get('timestamp_ms', 0):.2f}ms")
             except:
                 pass
 
@@ -1211,9 +1405,7 @@ class HKcapture:
             )
             
             if ret:
-                print(f"[HKcapture] 海康实时流解码回调已设置（YUV队列模式），Port={port}")
-                import sys
-                sys.stdout.flush()
+                print(f"[HKcapture] 海康实时流解码回调已设置（YUV队列模式）")
             else:
                 error = self.playM4SDK.PlayM4_GetLastError(c_long(port))
                 print(f"[HKcapture] 设置解码回调失败, 错误码: {error}")
@@ -1222,124 +1414,101 @@ class HKcapture:
             print(f"[HKcapture] 设置解码回调异常: {e}")
     
     def _hikvision_decode_callback(self, nPort, pBuf, nSize, pFrameInfo, nUser, nReserved2):
-        """海康威视实时流解码回调（用于获取YUV数据送检测线程）
+        """海康威视实时流解码回调（支持RGB和YUV格式）
 
-        YUV直接传递模式：解码回调直接将YUV数据送入队列，供检测线程使用
-        不阻塞解码线程，转换在检测线程完成
+        根据解码输出格式自动处理
         """
         try:
             frame_info = pFrameInfo.contents
-            if self.debug and not hasattr(self, '_decode_callback_triggered'):
-                print(f"[HKcapture-解码回调] 首次触发，nType={frame_info.nType}")
-                self._decode_callback_triggered = True
-            if frame_info.nType == 3:  # YUV数据
-                width = frame_info.nWidth
-                height = frame_info.nHeight
-                
-                # 获取channel_id（如果未设置则使用默认值）
-                channel_id = getattr(self, '_channel_id', 'channel1')
-                
-                # 初始化debug_logger（仅首次）
-                if not hasattr(self, '_debug_logger') or self._debug_logger is None:
-                    try:
-                        from utils.debug_logger import get_debug_logger
-                        import yaml
-                        import os
-                        self._debug_logger = get_debug_logger()
-                        config_path = "config/default_config.yaml"
-                        if os.path.exists(config_path):
-                            with open(config_path, 'r', encoding='utf-8') as f:
-                                config = yaml.safe_load(f)
-                                if config.get('fps_log', False):
-                                    self._debug_logger.enable(True)
-                    except:
-                        self._debug_logger = None
-                
-                # 第一次获取到分辨率时记录视频源信息
-                if hasattr(self, '_debug_logger') and self._debug_logger and not hasattr(self, '_hik_video_info_logged'):
-                    resolution = f"{width}x{height}"
-                    self._debug_logger.log_video_source_info(
-                        channel_id, 
-                        self.source, 
-                        self.target_fps, 
-                        resolution
-                    )
-                    self._hik_video_info_logged = True
-                
-                # 更新帧尺寸
-                self.frame_width = width
-                self.frame_height = height
-                self.frame_sequence += 1
-                self.last_frame_time = time.time()
-                
-                # 记录解码帧到调试日志（用于FPS统计）
-                if hasattr(self, '_debug_logger') and self._debug_logger:
-                    self._debug_logger.record_decode_frame(channel_id)
-                    
-                    # 在HWND模式下，解码后立即渲染到HWND，所以同时记录渲染FPS
-                    if self._hwnd and self._hwnd != 0:
-                        self._debug_logger.record_render_frame(channel_id)
-                
-                # ========== YUV直接传递模式 ==========
-                # 如果启用YUV队列，按间隔发送YUV数据到队列
-                if self._yuv_queue_enabled:
-                    now = time.time()
-                    if now - self._last_yuv_send_time >= self._yuv_send_interval:
-                        self._last_yuv_send_time = now
+            width = frame_info.nWidth
+            height = frame_info.nHeight
 
-                        # 计算YUV数据大小（I420格式）
-                        yuv_size = width * height * 3 // 2
+            # 获取channel_id（如果未设置则使用默认值）
+            channel_id = getattr(self, '_channel_id', 'channel1')
 
-                        # 从回调缓冲区复制YUV数据
-                        yuv_data = string_at(pBuf, yuv_size)
+            # 初始化debug_logger（仅首次）
+            if not hasattr(self, '_debug_logger') or self._debug_logger is None:
+                try:
+                    from utils.debug_logger import get_debug_logger
+                    import yaml
+                    import os
+                    self._debug_logger = get_debug_logger()
+                    config_path = "database/config/default_config.yaml"
+                    if os.path.exists(config_path):
+                        with open(config_path, 'r', encoding='utf-8') as f:
+                            config = yaml.safe_load(f)
+                            if config.get('fps_log', False):
+                                self._debug_logger.enable(True)
+                except:
+                    self._debug_logger = None
 
-                        # 获取SCR时间戳（优先使用解析的PS包SCR时间戳）
-                        scr_timestamp = None
-                        if self.current_scr and 'timestamp_ms' in self.current_scr:
-                            with self.scr_lock:
-                                scr_timestamp = self.current_scr['timestamp_ms']
+            # 第一次获取到分辨率时记录视频源信息
+            if hasattr(self, '_debug_logger') and self._debug_logger and not hasattr(self, '_hik_video_info_logged'):
+                resolution = f"{width}x{height}"
+                self._debug_logger.log_video_source_info(
+                    channel_id,
+                    self.source,
+                    self.target_fps,
+                    resolution
+                )
+                self._hik_video_info_logged = True
 
-                        # 如果没有SCR时间戳，使用frame_info.nStamp作为后备
-                        if scr_timestamp is None:
-                            scr_timestamp = frame_info.nStamp
+            # 更新帧尺寸
+            self.frame_width = width
+            self.frame_height = height
+            self.frame_sequence += 1
+            self.last_frame_time = time.time()
 
-                        # 更新last_frame_timestamp（供检测线程使用）
-                        self.last_frame_timestamp = scr_timestamp
+            # 记录解码帧到调试日志（用于FPS统计）
+            if hasattr(self, '_debug_logger') and self._debug_logger:
+                self._debug_logger.record_decode_frame(channel_id)
 
-                        # 放入队列（非阻塞，队列满则丢弃旧数据）
-                        try:
-                            if self._yuv_queue.full():
-                                self._yuv_queue.get_nowait()  # 丢弃旧数据
-                            self._yuv_queue.put_nowait((yuv_data, width, height, scr_timestamp))
-                        except:
-                            pass
+            # 根据nType处理不同格式
+            if frame_info.nType == 2:
+                # RGB32格式（BGRA）
+                try:
+                    rgb_size = width * height * 4
+                    rgb_data = string_at(pBuf, rgb_size)
+                    rgb_array = np.frombuffer(rgb_data, dtype=np.uint8)
+                    frame_bgra = rgb_array.reshape((height, width, 4))
+                    # 统一输出BGR格式
+                    frame = cv2.cvtColor(frame_bgra, cv2.COLOR_BGRA2BGR)
 
-                # ========== 更新 current_frame（供标注功能和read()使用）==========
-                # 在所有模式下都需要更新 current_frame
-                # 每隔一定时间更新一次 current_frame（避免频繁转换影响性能）
-                now = time.time()
-                if not hasattr(self, '_last_frame_update_time'):
-                    self._last_frame_update_time = 0
+                    if not hasattr(self, '_hk_frame_debug_printed'):
+                        self._hk_frame_debug_printed = True
+                        print(f"[HKcapture-调试] 解码格式: RGB32 -> BGR")
+                        print(f"[HKcapture-调试] BGR帧形状: {frame.shape}")
 
-                # 降低更新频率到每0.04秒一次（约25fps）
-                if now - self._last_frame_update_time >= 0.04:
-                    self._last_frame_update_time = now
+                    with self.frame_lock:
+                        self.current_frame = frame
+                except Exception as e:
+                    print(f"[HKcapture-解码回调] RGB处理失败: {e}")
 
-                    try:
-                        # 计算YUV数据大小（I420格式）
-                        yuv_size = width * height * 3 // 2
-                        yuv_data = string_at(pBuf, yuv_size)
+            elif frame_info.nType == 3:
+                # YUV格式（I420）- 直接转为BGR格式（OpenCV标准）
+                try:
+                    yuv_size = width * height * 3 // 2
+                    yuv_data = string_at(pBuf, yuv_size)
+                    yuv_array = np.frombuffer(yuv_data, dtype=np.uint8)
+                    yuv_frame = yuv_array.reshape((height * 3 // 2, width))
+                    frame = cv2.cvtColor(yuv_frame, cv2.COLOR_YUV2BGR_I420)
 
-                        # 转换为 BGR
-                        yuv_array = np.frombuffer(yuv_data, dtype=np.uint8)
-                        yuv_frame = yuv_array.reshape((height * 3 // 2, width))
-                        frame = cv2.cvtColor(yuv_frame, cv2.COLOR_YUV2BGR_I420)
+                    if not hasattr(self, '_hk_frame_debug_printed'):
+                        self._hk_frame_debug_printed = True
+                        print(f"[HKcapture-调试] 解码格式: YUV I420")
+                        print(f"[HKcapture-调试] BGR帧形状: {frame.shape}")
+                        print(f"[HKcapture-调试] BGR帧数据类型: {frame.dtype}")
+                        print(f"[HKcapture-调试] BGR中心像素值: {frame[height//2, width//2]}")
 
-                        # 更新 current_frame
-                        with self.frame_lock:
-                            self.current_frame = frame
-                    except Exception as frame_update_error:
-                        print(f"[HKcapture-解码回调] 更新current_frame失败: {frame_update_error}")
+                    with self.frame_lock:
+                        self.current_frame = frame
+                except Exception as e:
+                    print(f"[HKcapture-解码回调] YUV处理失败: {e}")
+            else:
+                # 未知格式
+                if not hasattr(self, '_unknown_type_warned'):
+                    self._unknown_type_warned = True
+                    print(f"[HKcapture-警告] 未知的解码格式 nType={frame_info.nType}")
 
         except Exception as e:
             print(f"[HKcapture-解码回调] 异常: {e}")
@@ -1563,10 +1732,20 @@ class HKcapture:
         # read() 已经实现了新帧检测，read_latest() 和 read() 完全相同
         return self.read()
     
+    def get_current_frame(self):
+        """
+        获取当前帧（不管是否是新帧，用于标注等功能）
+
+        返回:
+            numpy.ndarray: 当前帧图像，如果没有帧则返回None
+        """
+        with self.frame_lock:
+            return self.current_frame
+
     def get_frame_size(self):
         """
         获取视频帧尺寸
-        
+
         返回:
             tuple: (width, height)
         """
@@ -1688,11 +1867,12 @@ class HKcapture:
     def __enter__(self):
         """支持with语句"""
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """支持with语句"""
         self.release()
-        # 使用示例
+
+# 使用示例
 if __name__ == "__main__":
     import cv2
     

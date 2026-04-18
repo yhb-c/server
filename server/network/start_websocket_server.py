@@ -17,6 +17,12 @@ server_dir = current_dir.parent
 project_root = server_dir.parent
 sys.path.insert(0, str(server_dir))
 
+# 设置海康SDK环境变量
+sdk_lib_path = os.path.join(server_dir, 'lib', 'lib')
+sdk_com_path = os.path.join(sdk_lib_path, 'HCNetSDKCom')
+current_ld_path = os.environ.get('LD_LIBRARY_PATH', '')
+os.environ['LD_LIBRARY_PATH'] = f"{sdk_lib_path}:{sdk_com_path}:{current_ld_path}"
+
 from network.enhanced_ws_server import EnhancedWebSocketServer
 
 

@@ -39,8 +39,8 @@ def calculate_start_frame_id(client_frame_id, frame_id_type='pts'):
     if client_frame_id is None:
         return None
 
-    # 无论是PTS还是SCR，都加1980ms
-    start_frame_id = client_frame_id + 1980
+    # 无论是PTS还是SCR
+    start_frame_id = client_frame_id 
 
     print(f"[calculate_start_frame_id] 客户端帧ID: {client_frame_id}, 类型: {frame_id_type}, 检测起始帧ID: {start_frame_id}")
 
@@ -345,27 +345,39 @@ class DetectionTaskManager:
 
             self.logger.info(f"[{channel_id}] 视频FPS: {video_fps}, 检测FPS: {fps_limit}, 跳帧间隔: {frame_skip}")
 
-            # 获取客户端传入的帧ID，计算检测起始帧ID
-            client_frame_id = self.tasks[channel_id].get('start_frame_id', None)
-            start_frame_id = calculate_start_frame_id(client_frame_id, frame_id_type='pts')
-            frame_started = (start_frame_id is None)  # 如果没有设置起始帧ID，直接开始检测
+            # 判断是否为本地视频
+            is_video_file = hasattr(video_capture, 'is_video_file') and video_capture.is_video_file
 
-            if start_frame_id is not None:
-                self.logger.info(f"[{channel_id}] 客户端帧ID: {client_frame_id}, 检测将从帧ID {start_frame_id} 开始")
+            # 获取客户端传入的帧ID，根据视频类型设置不同的处理逻辑
+            client_frame_id = self.tasks[channel_id].get('start_frame_id', None)
+            self.logger.info(f"[{channel_id}] [调试] 从任务配置中获取的client_frame_id: {client_frame_id}")
+
+            if is_video_file:
+                # 本地视频：需要计算起始帧ID并等待到达
+                start_frame_id = calculate_start_frame_id(client_frame_id, frame_id_type='pts')
+                self.logger.info(f"[{channel_id}] [调试] 本地视频 - 计算后的start_frame_id: {start_frame_id}")
+                frame_started = (start_frame_id is None)
+                if start_frame_id is not None:
+                    self.logger.info(f"[{channel_id}] 本地视频 - 客户端帧ID: {client_frame_id}, 检测将从帧ID {start_frame_id} 开始")
+                else:
+                    self.logger.info(f"[{channel_id}] 本地视频 - 检测从头开始（未设置起始帧ID）")
             else:
-                self.logger.info(f"[{channel_id}] 检测从头开始（未设置起始帧ID）")
+                # RTSP流：直接从当前接收到的最新帧开始检测
+                start_frame_id = None
+                frame_started = True
+                self.logger.info(f"[{channel_id}] RTSP流 - 直接从当前最新帧开始检测")
 
             # 导入frame_id_manager
             from server.detection.frame_id_manager import get_local_video_frame_id
-
-            # 判断是否为本地视频
-            is_video_file = hasattr(video_capture, 'is_video_file') and video_capture.is_video_file
 
             processed_count = 0  # 已处理帧数（用于日志统计）
             read_count = 0  # 已读取帧数（用于跳帧计算）
             skipped_frame_count = 0
             last_fps_time = time.time()
             fps_counter = 0
+            last_detection_time = None  # 上次检测时间
+
+            self.logger.info(f"[{channel_id}] [调试] 跳帧间隔frame_skip: {frame_skip}, 视频FPS: {video_fps}, 检测FPS: {fps_limit}")
 
             while not stop_event.is_set():
                 try:
@@ -380,6 +392,8 @@ class DetectionTaskManager:
 
                     # 跳帧逻辑：每frame_skip帧检测一次
                     if read_count % frame_skip != 0:
+                        if read_count % 100 == 0:
+                            self.logger.info(f"[{channel_id}] [调试] 跳过帧 - read_count: {read_count}, frame_skip: {frame_skip}, 模运算结果: {read_count % frame_skip}")
                         continue  # 跳过此帧，不进行检测
 
                     # 获取当前帧ID
@@ -387,8 +401,11 @@ class DetectionTaskManager:
                         # 本地视频：使用PTS时间戳
                         current_frame_id = get_local_video_frame_id(video_capture)
                     else:
-                        # RTSP流：暂不支持帧ID
-                        current_frame_id = None
+                        # RTSP流：使用海康SDK的时间戳作为帧ID
+                        if hasattr(video_capture, 'last_frame_timestamp'):
+                            current_frame_id = video_capture.last_frame_timestamp
+                        else:
+                            current_frame_id = None
 
                     processed_count += 1
 
@@ -409,6 +426,7 @@ class DetectionTaskManager:
                         continue
 
                     # 执行检测（传入当前帧ID）
+                    detection_start_time = time.time()
                     detection_result = detection_engine.detect(
                         frame,
                         channel_id=channel_id,
@@ -426,8 +444,17 @@ class DetectionTaskManager:
                     current_time = time.time()
                     if current_time - last_fps_time >= 1.0:
                         fps = fps_counter / (current_time - last_fps_time)
+                        self.logger.info(f"[{channel_id}] [调试] 实际检测FPS: {fps:.2f}, 目标FPS: {fps_limit}")
                         fps_counter = 0
                         last_fps_time = current_time
+
+                    # 控制检测速度：动态计算sleep时间，确保严格按照目标FPS执行
+                    if is_video_file and fps_limit > 0:
+                        target_interval = 1.0 / fps_limit
+                        detection_elapsed = time.time() - detection_start_time
+                        sleep_time = target_interval - detection_elapsed
+                        if sleep_time > 0:
+                            time.sleep(sleep_time)
 
 
                 except Exception as e:

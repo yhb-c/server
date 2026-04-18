@@ -31,4 +31,4 @@ WebSocket服务：启动 /home/lqj/liquid/server/websocket/start_websocket_serve
 在远程服务器上执行启动命令
 /home/lqj/liquid/logs，生成log自动覆盖，只有四个log，client.log,server.log,api.log,websocket.log
 系统输入是录像机的延迟流或本地视频文件
-
+LD_LIBRARY_PATH环境变量

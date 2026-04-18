@@ -1,4 +1,4 @@
-channel1:
+channel2:
   boxes:
   - - 635
     - 439
@@ -260,7 +260,7 @@ channel16:
     - 824
   - *id014
   last_updated: '2026-03-25 00:00:00'
-channel2:
+channel1:
   annotation_count: 2
   areas:
     area_1:

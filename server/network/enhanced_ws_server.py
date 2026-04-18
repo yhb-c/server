@@ -340,10 +340,12 @@ class EnhancedWebSocketServer:
         """处理启动检测命令"""
         client_id = self.clients[websocket]['client_info']['id']
         channel_id = data.get('channel_id')
-        frame_id = data.get('frame_id')
+        # 支持两种帧ID类型：pts（本地视频）和scr（RTSP流/相机）
+        frame_id = data.get('pts') or data.get('scr') or data.get('frame_id')
+        frame_id_type = 'pts' if data.get('pts') else ('scr' if data.get('scr') else None)
 
         self.logger.info(f"[{client_id}] [调试] 接收到start_detection命令 - 原始data: {data}")
-        self.logger.info(f"[{client_id}] [调试] 提取的frame_id: {frame_id}, 类型: {type(frame_id)}")
+        self.logger.info(f"[{client_id}] [调试] 提取的frame_id: {frame_id}, 类型: {frame_id_type}")
 
         if not channel_id:
             self.logger.error(f"[{client_id}] 启动检测失败: 通道ID为空")

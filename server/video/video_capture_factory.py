@@ -94,56 +94,84 @@ class VideoCaptureFactory:
             self.logger.info(f"[{channel_id}] 检测到本地视频文件，使用OpenCV")
             return self._create_opencv_capture(video_source, channel_id)
         else:
-            # RTSP流，优先使用海康SDK
-            if self.system == 'linux' and prefer_hikvision and HK_CAPTURE_AVAILABLE:
-                # Linux系统优先尝试海康SDK
-                try:
-                    self.logger.info(f"[{channel_id}] 尝试使用海康SDK...")
+            # RTSP流，必须使用海康SDK
+            if not HK_CAPTURE_AVAILABLE:
+                self.logger.error(f"[{channel_id}] 海康SDK不可用，无法连接RTSP摄像机")
+                return None
 
-                    # 创建HKcapture实例
-                    hik_capture = HKcapture(
-                        source=video_source,
-                        debug=True
-                    )
+            try:
+                self.logger.info(f"[{channel_id}] 使用海康SDK连接RTSP摄像机...")
 
-                    # 启用YUV队列模式（供检测使用）
-                    hik_capture.enable_yuv_queue(enabled=True, interval=0.1)
+                # 从RTSP URL解析用户名和密码
+                import re
+                match = re.match(r'rtsp://([^:]+):([^@]+)@(.+)', video_source)
+                if match:
+                    username = match.group(1)
+                    password = match.group(2)
+                    ip_and_path = match.group(3)
 
-                    if hik_capture.open():
-                        self.logger.info(f"[{channel_id}] 海康SDK连接成功")
-
-                        if hik_capture.start_capture():
-                            self.logger.info(f"[{channel_id}] 海康SDK捕获启动成功")
-
-                            # 测试获取一帧
-                            import time
-                            start_time = time.time()
-                            test_frame = None
-                            while time.time() - start_time < 10:  # 等待最多10秒
-                                test_frame = hik_capture.get_yuv_data_nowait()
-                                if test_frame:
-                                    break
-                                time.sleep(0.1)
-
-                            if test_frame:
-                                yuv_bytes, width, height, timestamp = test_frame
-                                self.logger.info(f"[{channel_id}] 海康SDK帧获取测试成功: {width}x{height}")
-                                return hik_capture
-                            else:
-                                self.logger.warning(f"[{channel_id}] 海康SDK帧获取测试失败，回退到OpenCV")
-                                hik_capture.release()
-                        else:
-                            self.logger.warning(f"[{channel_id}] 海康SDK捕获启动失败，回退到OpenCV")
-                            hik_capture.release()
+                    # 提取IP地址
+                    ip_match = re.match(r'([^:/]+)', ip_and_path)
+                    if ip_match:
+                        ip_address = ip_match.group(1)
+                        self.logger.info(f"[{channel_id}] 解析RTSP URL - IP: {ip_address}, 用户名: {username}")
                     else:
-                        self.logger.warning(f"[{channel_id}] 海康SDK连接失败，回退到OpenCV")
+                        self.logger.error(f"[{channel_id}] 无法从RTSP URL解析IP地址")
+                        return None
+                else:
+                    self.logger.error(f"[{channel_id}] RTSP URL格式不正确，无法解析用户名和密码")
+                    return None
 
-                except Exception as e:
-                    self.logger.error(f"[{channel_id}] 海康SDK创建失败: {e}")
+                # 创建HKcapture实例
+                hik_capture = HKcapture(
+                    source=ip_address,
+                    username=username,
+                    password=password,
+                    port=8000,
+                    channel=1,
+                    debug=True
+                )
 
-            # 海康SDK失败或不可用，回退到OpenCV
-            self.logger.info(f"[{channel_id}] 使用OpenCV处理RTSP流")
-            return self._create_opencv_capture(video_source, channel_id)
+                # 启用YUV队列模式（供检测使用）
+                hik_capture.enable_yuv_queue(enabled=True, interval=0.1)
+
+                if hik_capture.open():
+                    self.logger.info(f"[{channel_id}] 海康SDK连接成功")
+
+                    if hik_capture.start_capture():
+                        self.logger.info(f"[{channel_id}] 海康SDK捕获启动成功")
+
+                        # 测试获取一帧
+                        import time
+                        start_time = time.time()
+                        test_frame = None
+                        while time.time() - start_time < 10:
+                            test_frame = hik_capture.get_yuv_data_nowait()
+                            if test_frame:
+                                break
+                            time.sleep(0.1)
+
+                        if test_frame:
+                            yuv_bytes, width, height, timestamp = test_frame
+                            self.logger.info(f"[{channel_id}] 海康SDK帧获取测试成功: {width}x{height}")
+                            return hik_capture
+                        else:
+                            self.logger.error(f"[{channel_id}] 海康SDK帧获取测试失败")
+                            hik_capture.release()
+                            return None
+                    else:
+                        self.logger.error(f"[{channel_id}] 海康SDK捕获启动失败")
+                        hik_capture.release()
+                        return None
+                else:
+                    self.logger.error(f"[{channel_id}] 海康SDK连接失败")
+                    return None
+
+            except Exception as e:
+                self.logger.error(f"[{channel_id}] 海康SDK创建失败: {e}")
+                import traceback
+                self.logger.error(traceback.format_exc())
+                return None
 
     def _is_local_file(self, video_source: str) -> bool:
         """
