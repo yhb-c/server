@@ -19,6 +19,7 @@ import logging
 import asyncio
 import threading
 import time
+from datetime import datetime
 from typing import Dict, Optional, Any
 import traceback
 
@@ -812,7 +813,7 @@ class DetectionService:
                 'type': 'status_update',
                 'status_type': status_type,
                 'channel_id': channel_id,
-                'timestamp': time.time(),
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'data': status_data
             }
 

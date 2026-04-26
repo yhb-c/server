@@ -4,24 +4,41 @@
 WebSocket服务器启动脚本
 """
 
-import asyncio
-import logging
-import signal
-import sys
 import os
+import sys
 from pathlib import Path
 
-# 添加项目路径
+# 首先设置路径
 current_dir = Path(__file__).parent
 server_dir = current_dir.parent
 project_root = server_dir.parent
-sys.path.insert(0, str(server_dir))
 
-# 设置海康SDK环境变量
+# 必须在导入任何模块之前设置海康SDK环境变量
 sdk_lib_path = os.path.join(server_dir, 'lib', 'lib')
 sdk_com_path = os.path.join(sdk_lib_path, 'HCNetSDKCom')
 current_ld_path = os.environ.get('LD_LIBRARY_PATH', '')
 os.environ['LD_LIBRARY_PATH'] = f"{sdk_lib_path}:{sdk_com_path}:{current_ld_path}"
+
+# 早期日志调试 - 写入独立的调试文件
+log_dir = project_root / 'logs'
+debug_file = log_dir / 'sdk_env_debug.log'
+with open(debug_file, 'w', encoding='utf-8') as f:
+    f.write("="*60 + "\n")
+    f.write("海康SDK环境变量设置\n")
+    f.write("="*60 + "\n")
+    f.write(f"SDK库路径: {sdk_lib_path}\n")
+    f.write(f"SDK COM路径: {sdk_com_path}\n")
+    f.write(f"SDK库路径是否存在: {os.path.exists(sdk_lib_path)}\n")
+    f.write(f"SDK COM路径是否存在: {os.path.exists(sdk_com_path)}\n")
+    f.write(f"LD_LIBRARY_PATH: {os.environ.get('LD_LIBRARY_PATH')}\n")
+    f.write("="*60 + "\n")
+
+# 添加项目路径
+sys.path.insert(0, str(server_dir))
+
+import asyncio
+import logging
+import signal
 
 from network.enhanced_ws_server import EnhancedWebSocketServer
 

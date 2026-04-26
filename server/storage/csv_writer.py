@@ -56,6 +56,7 @@ class CSVWriter:
 
         # 写入表头
         headers = [
+            '时间戳',
             '帧ID',
             '液位高度(mm)'
         ]
@@ -78,11 +79,19 @@ class CSVWriter:
 
         try:
             with self.lock:
+                # 获取当前时间戳
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
                 # 获取帧ID（本地视频为序列号，RTSP流为NVR时间戳）
                 frame_id = detection_result.get('frame_id', '')
 
+                # 调试日志：检测重复写入
+                if self.cache_buffer and self.cache_buffer[-1][1] == frame_id:
+                    print(f"[CSVWriter] 警告：检测到重复帧ID {frame_id}，通道：{self.channel_id}")
+
                 # 构建数据行
                 row = [
+                    timestamp,
                     frame_id if frame_id is not None else '',
                     round(detection_result.get('height_mm', 0), 2)
                 ]
@@ -91,7 +100,7 @@ class CSVWriter:
                 self.cache_buffer.append(row)
 
                 # 估算单行数据大小
-                row_size = sys.getsizeof(str(frame_id)) + sys.getsizeof(str(row[1])) + 2
+                row_size = sys.getsizeof(str(timestamp)) + sys.getsizeof(str(frame_id)) + sys.getsizeof(str(row[2])) + 3
                 self.cache_size += row_size
 
                 # 检查是否需要刷新

@@ -327,23 +327,9 @@ class DetectionTaskManager:
                 self.logger.error(f"[{channel_id}] 检测资源不完整")
                 return
 
-            # 从配置文件读取FPS限制
-            fps_limit = self.config_manager.system_config.get('detection', {}).get('fps', 10)
-
-            # 获取视频FPS（用于计算跳帧）
-            video_fps = 30  # 默认30fps
-            if hasattr(video_capture, 'cv_capture'):
-                video_fps = video_capture.cv_capture.get(cv2.CAP_PROP_FPS)
-            elif hasattr(video_capture, 'cap'):
-                video_fps = video_capture.cap.get(cv2.CAP_PROP_FPS)
-
-            # 计算跳帧间隔（每隔几帧检测一次）
-            if video_fps > 0 and fps_limit > 0:
-                frame_skip = int(video_fps / fps_limit)  # 30fps / 10fps = 3，每3帧检测1帧
-            else:
-                frame_skip = 1  # 不跳帧
-
-            self.logger.info(f"[{channel_id}] 视频FPS: {video_fps}, 检测FPS: {fps_limit}, 跳帧间隔: {frame_skip}")
+            # 从配置文件读取跳帧步长（手动跳帧）
+            frame_stride = self.config_manager.system_config.get('detection', {}).get('frame_stride', 2)
+            self.logger.info(f"[{channel_id}] 手动跳帧步长: {frame_stride}")
 
             # 判断是否为本地视频
             is_video_file = hasattr(video_capture, 'is_video_file') and video_capture.is_video_file
@@ -375,9 +361,11 @@ class DetectionTaskManager:
             skipped_frame_count = 0
             last_fps_time = time.time()
             fps_counter = 0
-            last_detection_time = None  # 上次检测时间
+            detection_start_time = time.time()  # 记录检测开始时间
 
-            self.logger.info(f"[{channel_id}] [调试] 跳帧间隔frame_skip: {frame_skip}, 视频FPS: {video_fps}, 检测FPS: {fps_limit}")
+            # 视频流接收帧率统计
+            stream_fps_counter = 0
+            last_stream_fps_time = time.time()
 
             while not stop_event.is_set():
                 try:
@@ -389,12 +377,24 @@ class DetectionTaskManager:
                         continue
 
                     read_count += 1
+                    stream_fps_counter += 1
 
-                    # 跳帧逻辑：每frame_skip帧检测一次
-                    if read_count % frame_skip != 0:
-                        if read_count % 100 == 0:
-                            self.logger.info(f"[{channel_id}] [调试] 跳过帧 - read_count: {read_count}, frame_skip: {frame_skip}, 模运算结果: {read_count % frame_skip}")
+                    # 每秒统计一次视频流接收帧率
+                    current_time = time.time()
+                    if current_time - last_stream_fps_time >= 1.0:
+                        stream_fps = stream_fps_counter / (current_time - last_stream_fps_time)
+                        self.logger.info(f"[{channel_id}] [视频流] 接收帧率: {stream_fps:.2f} fps")
+                        stream_fps_counter = 0
+                        last_stream_fps_time = current_time
+
+                    # 手动跳帧逻辑：每frame_stride帧检测一次
+                    if read_count % frame_stride != 0:
+                        if read_count <= 10:  # 前10帧输出调试信息
+                            self.logger.info(f"[{channel_id}] [跳帧调试] read_count={read_count}, frame_stride={frame_stride}, {read_count}%{frame_stride}={read_count % frame_stride}, 跳过此帧")
                         continue  # 跳过此帧，不进行检测
+
+                    if read_count <= 10:  # 前10帧输出调试信息
+                        self.logger.info(f"[{channel_id}] [跳帧调试] read_count={read_count}, frame_stride={frame_stride}, {read_count}%{frame_stride}={read_count % frame_stride}, 执行检测")
 
                     # 获取当前帧ID
                     if is_video_file:
@@ -406,8 +406,6 @@ class DetectionTaskManager:
                             current_frame_id = video_capture.last_frame_timestamp
                         else:
                             current_frame_id = None
-
-                    processed_count += 1
 
                     # 如果设置了起始帧ID，检查是否到达起始帧
                     if not frame_started and current_frame_id is not None:
@@ -425,8 +423,9 @@ class DetectionTaskManager:
                         skipped_frame_count += 1
                         continue
 
-                    # 执行检测（传入当前帧ID）
-                    detection_start_time = time.time()
+                    processed_count += 1
+
+                    # 执行检测（不传入vid_stride，使用手动跳帧）
                     detection_result = detection_engine.detect(
                         frame,
                         channel_id=channel_id,
@@ -440,21 +439,15 @@ class DetectionTaskManager:
 
                     fps_counter += 1
 
-                    # 计算FPS（仅统计，不输出日志）
+                    # 每秒统计一次检测帧率
                     current_time = time.time()
                     if current_time - last_fps_time >= 1.0:
-                        fps = fps_counter / (current_time - last_fps_time)
-                        self.logger.info(f"[{channel_id}] [调试] 实际检测FPS: {fps:.2f}, 目标FPS: {fps_limit}")
+                        actual_fps = fps_counter / (current_time - last_fps_time)
+                        elapsed_total = current_time - detection_start_time
+                        avg_fps = processed_count / elapsed_total if elapsed_total > 0 else 0
+                        self.logger.info(f"[{channel_id}] 检测帧率 - 当前: {actual_fps:.2f} fps, 平均: {avg_fps:.2f} fps, frame_stride: {frame_stride}, 已读取: {read_count} 帧, 已检测: {processed_count} 帧")
                         fps_counter = 0
                         last_fps_time = current_time
-
-                    # 控制检测速度：动态计算sleep时间，确保严格按照目标FPS执行
-                    if is_video_file and fps_limit > 0:
-                        target_interval = 1.0 / fps_limit
-                        detection_elapsed = time.time() - detection_start_time
-                        sleep_time = target_interval - detection_elapsed
-                        if sleep_time > 0:
-                            time.sleep(sleep_time)
 
 
                 except Exception as e:

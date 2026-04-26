@@ -1,0 +1,1290 @@
+{
+  "1.8视频1_区域1_000001 (2).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1030,
+      "height": 1054
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 0,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 614,
+        "height_px": 0
+      }
+    }
+  },
+  "1.8视频1_区域1_000001 (3).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1166,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 0,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 614,
+        "height_px": 0
+      }
+    }
+  },
+  "1.8视频1_区域1_000001.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1080,
+      "height": 1056
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 0,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 614,
+        "height_px": 0
+      }
+    }
+  },
+  "1.8视频1_区域1_000002 (2).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1030,
+      "height": 1054
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 0,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 614,
+        "height_px": 0
+      }
+    }
+  },
+  "1.8视频1_区域1_000002 (3).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1166,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 0,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 614,
+        "height_px": 0
+      }
+    }
+  },
+  "1.8视频1_区域1_000002.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1080,
+      "height": 1056
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 8.49,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 437,
+        "height_px": 177
+      }
+    }
+  },
+  "1.8视频1_区域1_000003 (2).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1030,
+      "height": 1054
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 8.49,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 437,
+        "height_px": 177
+      }
+    }
+  },
+  "1.8视频1_区域1_000003 (3).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1166,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 11.35,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 377,
+        "height_px": 237
+      }
+    }
+  },
+  "1.8视频1_区域1_000003.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1080,
+      "height": 1056
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 14.19,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 318,
+        "height_px": 296
+      }
+    }
+  },
+  "1.8视频1_区域1_000004 (2).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1207,
+      "height": 1067
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 14.19,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 318,
+        "height_px": 296
+      }
+    }
+  },
+  "1.8视频1_区域1_000004 (3).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 860,
+      "height": 963
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 15.9,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 282,
+        "height_px": 332
+      }
+    }
+  },
+  "1.8视频1_区域1_000004.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.49,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 270,
+        "height_px": 344
+      }
+    }
+  },
+  "1.8视频1_区域1_000005 (2).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1207,
+      "height": 1067
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.49,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 270,
+        "height_px": 344
+      }
+    }
+  },
+  "1.8视频1_区域1_000005 (3).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 860,
+      "height": 963
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.49,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 270,
+        "height_px": 344
+      }
+    }
+  },
+  "1.8视频1_区域1_000005.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.49,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 270,
+        "height_px": 344
+      }
+    }
+  },
+  "1.8视频1_区域1_000006 (2).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1207,
+      "height": 1067
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.49,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 270,
+        "height_px": 344
+      }
+    }
+  },
+  "1.8视频1_区域1_000006 (3).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 860,
+      "height": 963
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.49,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 270,
+        "height_px": 344
+      }
+    }
+  },
+  "1.8视频1_区域1_000006.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.49,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 270,
+        "height_px": 344
+      }
+    }
+  },
+  "1.8视频1_区域1_000007.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1166,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 17.42,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 250,
+        "height_px": 364
+      }
+    }
+  },
+  "1.8视频1_区域1_000008.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1166,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 17.88,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 241,
+        "height_px": 373
+      }
+    }
+  },
+  "1.8视频1_区域1_000009.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1166,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 18.1,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 236,
+        "height_px": 378
+      }
+    }
+  },
+  "1.8视频1_区域1_000010.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1207,
+      "height": 1067
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.8,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 263,
+        "height_px": 351
+      }
+    }
+  },
+  "1.8视频1_区域1_000011.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1207,
+      "height": 1067
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.8,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 263,
+        "height_px": 351
+      }
+    }
+  },
+  "1.8视频1_区域1_000012.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1207,
+      "height": 1067
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.8,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 263,
+        "height_px": 351
+      }
+    }
+  },
+  "1.8视频1_区域1_000022 (2).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1207,
+      "height": 1067
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.8,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 263,
+        "height_px": 351
+      }
+    }
+  },
+  "1.8视频1_区域1_000022 (3).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1207,
+      "height": 1067
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.8,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 263,
+        "height_px": 351
+      }
+    }
+  },
+  "1.8视频1_区域1_000022.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1080,
+      "height": 1056
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.8,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 263,
+        "height_px": 351
+      }
+    }
+  },
+  "1.8视频1_区域1_000023 (2).jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1207,
+      "height": 1067
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.15,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 277,
+        "height_px": 337
+      }
+    }
+  },
+  "1.8视频1_区域1_000023.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1080,
+      "height": 1056
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 15.83,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 284,
+        "height_px": 330
+      }
+    }
+  },
+  "1.8视频1_区域1_000024.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1080,
+      "height": 1056
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 15.83,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 284,
+        "height_px": 330
+      }
+    }
+  },
+  "1.8视频1_区域1_000049.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1030,
+      "height": 1054
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 15.83,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 284,
+        "height_px": 330
+      }
+    }
+  },
+  "1.8视频1_区域1_000050.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1030,
+      "height": 1054
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 15.83,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 284,
+        "height_px": 330
+      }
+    }
+  },
+  "1.8视频1_区域1_000051.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1030,
+      "height": 1054
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 15.83,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 284,
+        "height_px": 330
+      }
+    }
+  },
+  "1.8视频1_区域1_000052.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 13.37,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 335,
+        "height_px": 279
+      }
+    }
+  },
+  "1.8视频1_区域1_000053.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 13.0,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 343,
+        "height_px": 271
+      }
+    }
+  },
+  "1.8视频1_区域1_000054.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.55,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 352,
+        "height_px": 262
+      }
+    }
+  },
+  "1.8视频1_区域1_000064.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.55,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 352,
+        "height_px": 262
+      }
+    }
+  },
+  "1.8视频1_区域1_000065.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.55,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 352,
+        "height_px": 262
+      }
+    }
+  },
+  "1.8视频1_区域1_000066.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 10.92,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 386,
+        "height_px": 228
+      }
+    }
+  },
+  "1.8视频1_区域1_000067.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 716,
+      "height": 1057
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 10.92,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 386,
+        "height_px": 228
+      }
+    }
+  },
+  "1.8视频1_区域1_000068.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 716,
+      "height": 1057
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 9.94,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 407,
+        "height_px": 207
+      }
+    }
+  },
+  "1.8视频1_区域1_000069.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 716,
+      "height": 1057
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 9.94,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 407,
+        "height_px": 207
+      }
+    }
+  },
+  "1.8视频1_区域1_000070.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1030,
+      "height": 1054
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 9.53,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 415,
+        "height_px": 199
+      }
+    }
+  },
+  "1.8视频1_区域1_000071.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1030,
+      "height": 1054
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 9.53,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 415,
+        "height_px": 199
+      }
+    }
+  },
+  "1.8视频1_区域1_000072.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 1030,
+      "height": 1054
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 9.53,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 415,
+        "height_px": 199
+      }
+    }
+  },
+  "1.8视频1_区域1_000079.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 9.53,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 415,
+        "height_px": 199
+      }
+    }
+  },
+  "1.8视频1_区域1_000080.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 10.96,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 385,
+        "height_px": 229
+      }
+    }
+  },
+  "1.8视频1_区域1_000081.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 11.8,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 368,
+        "height_px": 246
+      }
+    }
+  },
+  "1.8视频1_区域1_000092.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.21,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 359,
+        "height_px": 255
+      }
+    }
+  },
+  "1.8视频1_区域1_000096.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 825,
+      "height": 1069
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.21,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 359,
+        "height_px": 255
+      }
+    }
+  },
+  "1.8视频1_区域1_000103.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 860,
+      "height": 963
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.46,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 354,
+        "height_px": 260
+      }
+    }
+  },
+  "1.8视频1_区域1_000104.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 860,
+      "height": 963
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.46,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 354,
+        "height_px": 260
+      }
+    }
+  },
+  "1.8视频1_区域1_000105.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 860,
+      "height": 963
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.46,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 354,
+        "height_px": 260
+      }
+    }
+  },
+  "1.8视频1_区域1_000115.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 716,
+      "height": 1057
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.46,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 354,
+        "height_px": 260
+      }
+    }
+  },
+  "1.8视频1_区域1_000116.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 716,
+      "height": 1057
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.46,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 354,
+        "height_px": 260
+      }
+    }
+  },
+  "1.8视频1_区域1_000117.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 716,
+      "height": 1057
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.46,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 354,
+        "height_px": 260
+      }
+    }
+  },
+  "1.8视频1_区域1_000142.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 860,
+      "height": 963
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.46,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 354,
+        "height_px": 260
+      }
+    }
+  },
+  "Video_ROI1_20250825_163323.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 390,
+      "height": 390
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.46,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 354,
+        "height_px": 260
+      }
+    }
+  },
+  "Video_ROI1_20250825_163323_enhance.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 390,
+      "height": 390
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.46,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 354,
+        "height_px": 260
+      }
+    }
+  },
+  "Video_ROI1_20250825_163324.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 390,
+      "height": 390
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 12.46,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 354,
+        "height_px": 260
+      }
+    }
+  },
+  "Video_ROI1_20250829_131014.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 660,
+      "height": 660
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.18,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 276,
+        "height_px": 338
+      }
+    }
+  },
+  "Video_ROI1_20250829_131014_enhance.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 660,
+      "height": 660
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.56,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 268,
+        "height_px": 346
+      }
+    }
+  },
+  "Video_ROI1_20250829_131021.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 660,
+      "height": 660
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 16.61,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 267,
+        "height_px": 347
+      }
+    }
+  },
+  "Video_ROI1_20250901_120152 - 副本.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 456,
+      "height": 456
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 18.1,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 236,
+        "height_px": 378
+      }
+    }
+  },
+  "Video_ROI1_20250901_120152_enhance - 副本.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 456,
+      "height": 456
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 18.84,
+        "is_full": false,
+        "error_flag": null,
+        "liquid_y": 221,
+        "height_px": 393
+      }
+    }
+  },
+  "Video_ROI1_20250901_120153 - 副本.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 456,
+      "height": 456
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 19.42,
+        "is_full": true,
+        "error_flag": null,
+        "liquid_y": 209,
+        "height_px": 405
+      }
+    }
+  },
+  "Video_ROI1_20250917_153347.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250917_153347_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_192747_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_192753.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_192845.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_192845_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_192846.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_193004_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_195419_enhance.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 340,
+      "height": 340
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 19.42,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 209,
+        "height_px": 405
+      }
+    }
+  },
+  "Video_ROI1_20250925_195437.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 340,
+      "height": 340
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 19.42,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 209,
+        "height_px": 405
+      }
+    }
+  },
+  "Video_ROI1_20250925_195437_enhance.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 340,
+      "height": 340
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 19.42,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 209,
+        "height_px": 405
+      }
+    }
+  },
+  "Video_ROI1_20250925_195752.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 388,
+      "height": 388
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 19.83,
+        "is_full": true,
+        "error_flag": null,
+        "liquid_y": 200,
+        "height_px": 414
+      }
+    }
+  },
+  "Video_ROI1_20250925_195752_enhance.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 388,
+      "height": 388
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 19.93,
+        "is_full": true,
+        "error_flag": null,
+        "liquid_y": 198,
+        "height_px": 416
+      }
+    }
+  },
+  "Video_ROI1_20250925_201715.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_201716_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_201717.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_201839.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_201839_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_201842.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI1_20250925_202328_enhance.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 242,
+      "height": 242
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 19.93,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 198,
+        "height_px": 416
+      }
+    }
+  },
+  "Video_ROI1_20250925_202329.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 242,
+      "height": 242
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 19.93,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 198,
+        "height_px": 416
+      }
+    }
+  },
+  "Video_ROI1_20250925_202329_enhance.jpg": {
+    "success": true,
+    "image_size": {
+      "width": 242,
+      "height": 242
+    },
+    "detections": {
+      "area_1": {
+        "height_mm": 19.93,
+        "is_full": false,
+        "error_flag": "detect_zero",
+        "liquid_y": 198,
+        "height_px": 416
+      }
+    }
+  },
+  "Video_ROI3_20250925_210812.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI3_20250925_210812_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI3_20250925_210824_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI3_20250925_210910.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI3_20250925_210910_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "Video_ROI3_20250925_210919.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "train_2_00238_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "train_2_00239.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "train_2_00244_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "train_2_00646_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "train_2_00675.jpg": {
+    "success": false,
+    "error": "检测失败"
+  },
+  "train_2_00675_enhance.jpg": {
+    "success": false,
+    "error": "检测失败"
+  }
+}
