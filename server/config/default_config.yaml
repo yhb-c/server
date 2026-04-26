@@ -1,7 +1,7 @@
 channel1:
   name: 通道1
   address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
-  file_path: C:/Users/admin/Desktop/3.mp4
+  file_path: '1111111'
   general:
     task_id: '1'
     task_name: '1'
