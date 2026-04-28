@@ -1,0 +1,18 @@
+[Unit]
+Description=Liquid Detection API Service
+After=network.target
+
+[Service]
+Type=simple
+User=lqj
+Group=lqj
+WorkingDirectory=/home/lqj/liquid/server/network/api
+Environment="LD_LIBRARY_PATH=/home/lqj/liquid/server/lib/lib:/home/lqj/liquid/server/lib/lib/HCNetSDKCom"
+ExecStart=/home/lqj/liquid/server/network/api/liquid-api
+StandardOutput=append:/home/lqj/liquid/logs/api.log
+StandardError=append:/home/lqj/liquid/logs/api.log
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

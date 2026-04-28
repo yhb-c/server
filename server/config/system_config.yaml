@@ -5,6 +5,7 @@ detection:
   frame_stride: 2
   kalman_enabled: true
   local_video_loop: false
+  local_video_fps_control: true
 logging:
   console_enabled: true
   file_enabled: true

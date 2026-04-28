@@ -27,22 +27,29 @@ def calculate_start_frame_id(client_frame_id, frame_id_type='pts'):
     """
     计算检测起始帧ID
 
-    从客户端接收的帧ID基础上加1980ms，作为检测起始帧ID
-
     Args:
         client_frame_id: 客户端传入的帧ID
         frame_id_type: 帧ID类型，'pts'或'scr'
 
     Returns:
-        int: 检测起始帧ID（client_frame_id + 1980）
+        int: 检测起始帧ID
+            - SCR类型：直接使用客户端帧ID
+            - PTS类型：客户端帧ID + 198
     """
     if client_frame_id is None:
         return None
 
-    # 无论是PTS还是SCR
-    start_frame_id = client_frame_id 
+    # 根据帧ID类型计算起始帧ID
+    if frame_id_type == 'scr':
+        # SCR类型：直接使用客户端帧ID
+        start_frame_id = client_frame_id
+    else:
+        # PTS类型：客户端帧ID + 198
+        start_frame_id = client_frame_id + 198
 
-    print(f"[calculate_start_frame_id] 客户端帧ID: {client_frame_id}, 类型: {frame_id_type}, 检测起始帧ID: {start_frame_id}")
+    import logging
+    websocket_logger = logging.getLogger('websocket')
+    websocket_logger.info(f"[起始帧计算] 客户端帧ID: {client_frame_id}, 类型: {frame_id_type}, 服务端检测起始帧ID: {start_frame_id}")
 
     return start_frame_id
 
@@ -109,8 +116,6 @@ class DetectionTaskManager:
 
         except Exception as e:
             self.logger.error(f"加载模型失败 {channel_id}: {e}")
-            import traceback
-            self.logger.error(f"[调试] 异常堆栈:\n{traceback.format_exc()}")
             return False
     
     def configure_detection(self, channel_id: str, detection_config: dict) -> bool:
@@ -196,19 +201,18 @@ class DetectionTaskManager:
             self.logger.error(traceback.format_exc())
             return False
 
-    def start_task(self, channel_id: str, frame_id: int = None) -> bool:
+    def start_task(self, channel_id: str, frame_id: int = None, frame_id_type: str = None) -> bool:
         """启动检测任务
 
         Args:
             channel_id: 通道ID
             frame_id: 起始帧ID（可选，None表示从头开始）
+            frame_id_type: 帧ID类型（'pts'或'scr'，可选）
 
         Returns:
             bool: 启动是否成功
         """
         try:
-            self.logger.info(f"[调试] start_task被调用 - channel_id: {channel_id}, frame_id: {frame_id}, 类型: {type(frame_id)}")
-
             if channel_id not in self.tasks:
                 self.logger.error(f"任务不存在: {channel_id}")
                 return False
@@ -250,12 +254,10 @@ class DetectionTaskManager:
                 self.logger.error(f"视频捕获创建失败: {channel_id}")
                 return False
 
-            # 如果指定了frame_id，记录起始帧ID（在检测循环中跳过之前的帧）
+            # 如果指定了frame_id，记录起始帧ID和类型（在检测循环中跳过之前的帧）
             if frame_id is not None:
                 self.tasks[channel_id]['start_frame_id'] = frame_id
-                self.logger.info(f"[调试] 设置起始帧ID到tasks字典: {frame_id} - 通道: {channel_id}")
-            else:
-                self.logger.info(f"[调试] frame_id为None，不设置起始帧ID - 通道: {channel_id}")
+                self.tasks[channel_id]['frame_id_type'] = frame_id_type or 'pts'  # 默认为pts
 
             self.video_captures[channel_id] = video_capture
             
@@ -334,24 +336,48 @@ class DetectionTaskManager:
             # 判断是否为本地视频
             is_video_file = hasattr(video_capture, 'is_video_file') and video_capture.is_video_file
 
+            # 获取本地视频的FPS，用于帧率控制
+            video_fps = None
+            fps_control_enabled = False
+            if is_video_file:
+                fps_control_enabled = self.config_manager.system_config.get('detection', {}).get('local_video_fps_control', True)
+                if fps_control_enabled and hasattr(video_capture, 'cv_capture'):
+                    video_fps = video_capture.cv_capture.get(cv2.CAP_PROP_FPS)
+                    if video_fps and video_fps > 0:
+                        frame_interval = 1.0 / video_fps
+                        self.logger.info(f"[{channel_id}] 本地视频FPS控制已启用: {video_fps:.2f} fps, 帧间隔: {frame_interval*1000:.2f}ms")
+                    else:
+                        fps_control_enabled = False
+                        self.logger.warning(f"[{channel_id}] 无法获取视频FPS，禁用帧率控制")
+
             # 获取客户端传入的帧ID，根据视频类型设置不同的处理逻辑
             client_frame_id = self.tasks[channel_id].get('start_frame_id', None)
-            self.logger.info(f"[{channel_id}] [调试] 从任务配置中获取的client_frame_id: {client_frame_id}")
+            client_frame_id_type = self.tasks[channel_id].get('frame_id_type', 'pts')
 
             if is_video_file:
                 # 本地视频：需要计算起始帧ID并等待到达
-                start_frame_id = calculate_start_frame_id(client_frame_id, frame_id_type='pts')
-                self.logger.info(f"[{channel_id}] [调试] 本地视频 - 计算后的start_frame_id: {start_frame_id}")
+                start_frame_id = calculate_start_frame_id(client_frame_id, frame_id_type=client_frame_id_type)
                 frame_started = (start_frame_id is None)
                 if start_frame_id is not None:
-                    self.logger.info(f"[{channel_id}] 本地视频 - 客户端帧ID: {client_frame_id}, 检测将从帧ID {start_frame_id} 开始")
+                    self.logger.info(f"[{channel_id}] 本地视频 - 客户端帧ID: {client_frame_id} ({client_frame_id_type}), 检测将从帧ID {start_frame_id} 开始")
                 else:
                     self.logger.info(f"[{channel_id}] 本地视频 - 检测从头开始（未设置起始帧ID）")
             else:
-                # RTSP流：直接从当前接收到的最新帧开始检测
-                start_frame_id = None
-                frame_started = True
-                self.logger.info(f"[{channel_id}] RTSP流 - 直接从当前最新帧开始检测")
+                # RTSP流：根据帧ID类型处理
+                if client_frame_id_type == 'scr' and client_frame_id is not None:
+                    # SCR类型：尝试等待匹配指定帧ID，超时则从最新帧开始
+                    start_frame_id = calculate_start_frame_id(client_frame_id, frame_id_type=client_frame_id_type)
+                    frame_started = False  # 先尝试等待匹配
+                    websocket_logger = logging.getLogger('websocket')
+                    websocket_logger.info(f"[{channel_id}] RTSP流(SCR) - 客户端帧ID: {client_frame_id}, 尝试等待匹配帧ID: {start_frame_id}，超时1秒后从最新帧开始")
+                    self.logger.info(f"[{channel_id}] RTSP流(SCR) - 尝试等待匹配帧ID: {start_frame_id}")
+                else:
+                    # 其他情况：直接从当前接收到的最新帧开始检测
+                    start_frame_id = None
+                    frame_started = True
+                    websocket_logger = logging.getLogger('websocket')
+                    websocket_logger.info(f"[{channel_id}] RTSP流 - 直接从当前最新帧开始检测")
+                    self.logger.info(f"[{channel_id}] RTSP流 - 直接从当前最新帧开始检测")
 
             # 导入frame_id_manager
             from server.detection.frame_id_manager import get_local_video_frame_id
@@ -367,34 +393,64 @@ class DetectionTaskManager:
             stream_fps_counter = 0
             last_stream_fps_time = time.time()
 
+            # 本地视频帧率控制
+            last_frame_time = time.time()
+
+            # 帧率统计（用于调试）
+            decode_fps_counter = 0
+            last_decode_fps_time = time.time()
+
+            # SCR超时控制：如果1秒内找不到匹配帧，则从最新帧开始
+            scr_wait_timeout = 1.0
+            scr_wait_start_time = time.time() if (not is_video_file and not frame_started) else None
+
             while not stop_event.is_set():
                 try:
                     # 获取视频帧
                     ret, frame = video_capture.read()
 
                     if not ret or frame is None:
+                        # 检查是否为本地视频播放完毕
+                        if is_video_file and hasattr(video_capture, '_video_ended') and video_capture._video_ended:
+                            self.logger.info(f"[{channel_id}] 本地视频播放完毕，退出检测循环")
+                            break
                         time.sleep(0.01)  # 没有新帧，短暂等待
                         continue
 
                     read_count += 1
-                    stream_fps_counter += 1
+                    decode_fps_counter += 1
 
-                    # 每秒统计一次视频流接收帧率
+                    # 本地视频帧率控制：按照原始FPS进行解码
+                    if fps_control_enabled and video_fps:
+                        current_time = time.time()
+                        elapsed = current_time - last_frame_time
+                        expected_interval = frame_interval
+
+                        if elapsed < expected_interval:
+                            sleep_time = expected_interval - elapsed
+                            time.sleep(sleep_time)
+
+                        # 前10帧输出详细调试信息
+                        if read_count <= 10:
+                            actual_elapsed = time.time() - last_frame_time
+                            websocket_logger = logging.getLogger('websocket')
+                            websocket_logger.info(f"[{channel_id}] [帧率控制] 帧{read_count}: 期望间隔={expected_interval*1000:.2f}ms, 实际间隔={actual_elapsed*1000:.2f}ms, sleep={sleep_time*1000:.2f}ms")
+
+                        last_frame_time = time.time()
+
+                    # 每5秒统计一次解码帧率
                     current_time = time.time()
-                    if current_time - last_stream_fps_time >= 1.0:
-                        stream_fps = stream_fps_counter / (current_time - last_stream_fps_time)
-                        self.logger.info(f"[{channel_id}] [视频流] 接收帧率: {stream_fps:.2f} fps")
-                        stream_fps_counter = 0
-                        last_stream_fps_time = current_time
+                    if current_time - last_decode_fps_time >= 5.0:
+                        decode_fps = decode_fps_counter / (current_time - last_decode_fps_time)
+                        if video_fps is not None:
+                            websocket_logger = logging.getLogger('websocket')
+                            websocket_logger.info(f"[{channel_id}] [解码帧率] 实际解码: {decode_fps:.2f} fps, 目标FPS: {video_fps:.2f} fps, FPS控制: {'启用' if fps_control_enabled else '禁用'}")
+                        decode_fps_counter = 0
+                        last_decode_fps_time = current_time
 
                     # 手动跳帧逻辑：每frame_stride帧检测一次
                     if read_count % frame_stride != 0:
-                        if read_count <= 10:  # 前10帧输出调试信息
-                            self.logger.info(f"[{channel_id}] [跳帧调试] read_count={read_count}, frame_stride={frame_stride}, {read_count}%{frame_stride}={read_count % frame_stride}, 跳过此帧")
                         continue  # 跳过此帧，不进行检测
-
-                    if read_count <= 10:  # 前10帧输出调试信息
-                        self.logger.info(f"[{channel_id}] [跳帧调试] read_count={read_count}, frame_stride={frame_stride}, {read_count}%{frame_stride}={read_count % frame_stride}, 执行检测")
 
                     # 获取当前帧ID
                     if is_video_file:
@@ -409,8 +465,21 @@ class DetectionTaskManager:
 
                     # 如果设置了起始帧ID，检查是否到达起始帧
                     if not frame_started and current_frame_id is not None:
+                        # 检查SCR超时
+                        if not is_video_file and scr_wait_start_time is not None:
+                            elapsed_wait_time = time.time() - scr_wait_start_time
+                            if elapsed_wait_time > scr_wait_timeout:
+                                # 超时，从当前最新帧开始检测
+                                frame_started = True
+                                websocket_logger = logging.getLogger('websocket')
+                                websocket_logger.info(f"[{channel_id}] RTSP流(SCR) - 等待超时({elapsed_wait_time:.1f}秒)，未找到匹配帧ID {start_frame_id}，从当前帧 {current_frame_id} 开始检测")
+                                self.logger.info(f"[{channel_id}] SCR等待超时，从当前帧开始检测: {current_frame_id}")
+                                continue
+
                         if current_frame_id >= start_frame_id:
                             frame_started = True
+                            websocket_logger = logging.getLogger('websocket')
+                            websocket_logger.info(f"[{channel_id}] 匹配到起始帧ID: {current_frame_id} (>= {start_frame_id})，开始检测，已跳过 {skipped_frame_count} 帧")
                             self.logger.info(f"[{channel_id}] 到达起始帧ID: {current_frame_id} (>= {start_frame_id})，开始检测")
                             self.logger.info(f"[{channel_id}] 已跳过 {skipped_frame_count} 帧")
                         else:
@@ -439,13 +508,14 @@ class DetectionTaskManager:
 
                     fps_counter += 1
 
-                    # 每秒统计一次检测帧率
+                    # 每10秒统计一次检测帧率，输出到websocket.log
                     current_time = time.time()
-                    if current_time - last_fps_time >= 1.0:
+                    if current_time - last_fps_time >= 10.0:
                         actual_fps = fps_counter / (current_time - last_fps_time)
                         elapsed_total = current_time - detection_start_time
                         avg_fps = processed_count / elapsed_total if elapsed_total > 0 else 0
-                        self.logger.info(f"[{channel_id}] 检测帧率 - 当前: {actual_fps:.2f} fps, 平均: {avg_fps:.2f} fps, frame_stride: {frame_stride}, 已读取: {read_count} 帧, 已检测: {processed_count} 帧")
+                        websocket_logger = logging.getLogger('websocket')
+                        websocket_logger.info(f"[{channel_id}] 检测帧率 - 当前: {actual_fps:.2f} fps, 平均: {avg_fps:.2f} fps, frame_stride: {frame_stride}, 已读取: {read_count} 帧, 已检测: {processed_count} 帧")
                         fps_counter = 0
                         last_fps_time = current_time
 

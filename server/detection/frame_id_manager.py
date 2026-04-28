@@ -21,10 +21,7 @@ def get_local_video_frame_id(capture_source):
     Returns:
         int: PTS时间戳（毫秒），如果无法获取则返回None
     """
-    print(f"[frame_id_manager] 获取本地视频帧ID（PTS）")
-
     if not capture_source:
-        print(f"[frame_id_manager] capture_source为None")
         return None
 
     # 方法1：从capture_source获取PTS（如果支持）
@@ -32,7 +29,6 @@ def get_local_video_frame_id(capture_source):
         pts_ms = capture_source.get_current_pts()
         if pts_ms is not None:
             frame_id = int(pts_ms)
-            print(f"[frame_id_manager] 本地视频 - 使用get_current_pts(): {frame_id}ms")
             return frame_id
 
     # 方法2：如果capture_source是cv2.VideoCapture，直接获取PTS
@@ -41,10 +37,9 @@ def get_local_video_frame_id(capture_source):
             pts_ms = capture_source.get(cv2.CAP_PROP_POS_MSEC)
             if pts_ms is not None and pts_ms >= 0:
                 frame_id = int(pts_ms)
-                print(f"[frame_id_manager] 本地视频 - 使用cv2.VideoCapture的PTS: {frame_id}ms")
                 return frame_id
-        except Exception as e:
-            print(f"[frame_id_manager] 获取PTS失败: {e}")
+        except Exception:
+            pass
 
     # 方法3：从HKcapture的cap属性获取PTS
     if hasattr(capture_source, 'cap') and isinstance(capture_source.cap, cv2.VideoCapture):
@@ -52,12 +47,10 @@ def get_local_video_frame_id(capture_source):
             pts_ms = capture_source.cap.get(cv2.CAP_PROP_POS_MSEC)
             if pts_ms is not None and pts_ms >= 0:
                 frame_id = int(pts_ms)
-                print(f"[frame_id_manager] 本地视频 - 使用HKcapture.cap的PTS: {frame_id}ms")
                 return frame_id
-        except Exception as e:
-            print(f"[frame_id_manager] 从HKcapture.cap获取PTS失败: {e}")
+        except Exception:
+            pass
 
-    print(f"[frame_id_manager] 无法获取本地视频的PTS")
     return None
 
 
@@ -72,7 +65,6 @@ def get_rtsp_frame_id(capture_source, context):
     Returns:
         None: RTSP流暂不支持帧ID
     """
-    print(f"[frame_id_manager] RTSP流暂不支持帧ID")
     return None
 
 
@@ -87,10 +79,7 @@ def get_frame_id(capture_source, context):
     Returns:
         int: 当前帧ID，如果无法获取则返回None
     """
-    print(f"[frame_id_manager] 开始获取帧ID")
-
     if not capture_source or not context:
-        print(f"[frame_id_manager] capture_source或context为None，无法获取帧ID")
         return None
 
     # 检查是否为本地视频文件

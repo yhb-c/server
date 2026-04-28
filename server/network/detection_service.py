@@ -306,20 +306,19 @@ class DetectionService:
             
             return False
     
-    def start_detection(self, channel_id: str, frame_id: Optional[int] = None) -> bool:
+    def start_detection(self, channel_id: str, frame_id: Optional[int] = None, frame_id_type: Optional[str] = None) -> bool:
         """
         开始检测
 
         Args:
             channel_id: 通道ID
             frame_id: 起始帧ID（可选，None表示从头开始）
+            frame_id_type: 帧ID类型（'pts'或'scr'，可选）
 
         Returns:
             bool: 启动是否成功
         """
         try:
-            self.logger.info(f"[调试] start_detection被调用 - channel_id: {channel_id}, frame_id: {frame_id}, 类型: {type(frame_id)}")
-
             if channel_id not in self.channel_status:
                 self.logger.error(f"通道不存在: {channel_id}")
                 return False
@@ -404,12 +403,11 @@ class DetectionService:
 
             # 记录帧ID信息
             if frame_id is not None:
-                self.logger.info(f"启动检测 - 通道: {channel_id}, 从帧ID: {frame_id} 开始")
+                self.logger.info(f"启动检测 - 通道: {channel_id}, 从帧ID: {frame_id} ({frame_id_type}) 开始")
             else:
                 self.logger.info(f"启动检测 - 通道: {channel_id}, 从头开始")
 
-            self.logger.info(f"[调试] 调用task_manager.start_task，传入frame_id: {frame_id}")
-            success = self.task_manager.start_task(channel_id, frame_id)
+            success = self.task_manager.start_task(channel_id, frame_id, frame_id_type)
 
             if success:
                 self.channel_status[channel_id].update({
@@ -694,11 +692,6 @@ class DetectionService:
             frame_id = detection_result.get('frame_id')
             liquid_line_positions = detection_result.get('liquid_line_positions', {})
 
-            # 调试日志：检查液位数据
-            if frame_id is not None and frame_id % 30 == 0:  # 每30帧记录一次
-                self.logger.info(f"[{channel_id}] 帧{frame_id} - liquid_line_positions: {liquid_line_positions}")
-                self.logger.info(f"[{channel_id}] 帧{frame_id} - liquid_line_positions为空: {len(liquid_line_positions) == 0}")
-
             # 构建简化的推送数据（只包含帧ID和液位高度）
             roi_data = {}
             for roi_id, position_data in liquid_line_positions.items():
@@ -713,10 +706,6 @@ class DetectionService:
                 'frame_id': frame_id,
                 'roi_data': roi_data
             }
-
-            # 调试日志：检查推送数据
-            if frame_id is not None and frame_id % 30 == 0:
-                self.logger.info(f"[{channel_id}] 帧{frame_id} - 推送数据: {push_data}")
 
             # 通过WebSocket推送结果
             self._send_detection_result(channel_id, push_data)
@@ -738,13 +727,6 @@ class DetectionService:
 
             liquid_line_positions = detection_result.get('liquid_line_positions', {})
             frame_id = detection_result.get('frame_id')
-
-            # 调试日志：记录保存CSV的调用
-            self.logger.debug(f"[{channel_id}] _save_to_csv被调用 - frame_id: {frame_id}, ROI数量: {len(liquid_line_positions)}")
-
-            # 调试日志：记录liquid_line_positions的所有键
-            if liquid_line_positions:
-                self.logger.debug(f"[{channel_id}] liquid_line_positions的键: {list(liquid_line_positions.keys())}")
 
             if liquid_line_positions:
                 for position_key, position_data in liquid_line_positions.items():

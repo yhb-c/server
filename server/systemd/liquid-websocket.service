@@ -1,0 +1,18 @@
+[Unit]
+Description=Liquid Detection WebSocket Service
+After=network.target
+
+[Service]
+Type=simple
+User=lqj
+Group=lqj
+WorkingDirectory=/home/lqj/liquid/server/network
+Environment="LD_LIBRARY_PATH=/home/lqj/liquid/server/lib/lib:/home/lqj/liquid/server/lib/lib/HCNetSDKCom"
+ExecStart=/home/lqj/anaconda3/envs/liquid/bin/python start_websocket_server.py
+StandardOutput=append:/home/lqj/liquid/logs/websocket.log
+StandardError=append:/home/lqj/liquid/logs/websocket.log
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

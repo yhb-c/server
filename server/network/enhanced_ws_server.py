@@ -344,8 +344,14 @@ class EnhancedWebSocketServer:
         frame_id = data.get('pts') or data.get('scr') or data.get('frame_id')
         frame_id_type = 'pts' if data.get('pts') else ('scr' if data.get('scr') else None)
 
-        self.logger.info(f"[{client_id}] [调试] 接收到start_detection命令 - 原始data: {data}")
-        self.logger.info(f"[{client_id}] [调试] 提取的frame_id: {frame_id}, 类型: {frame_id_type}")
+        # 如果frame_id_type为None，根据frame_id格式自动判断
+        if frame_id_type is None and frame_id is not None:
+            # 判断是否为浮点数（有小数点）
+            if isinstance(frame_id, float) or (isinstance(frame_id, str) and '.' in frame_id):
+                frame_id_type = 'scr'
+            else:
+                frame_id_type = 'pts'
+            self.logger.info(f"[{client_id}] 自动识别帧ID类型: {frame_id_type} (frame_id={frame_id})")
 
         if not channel_id:
             self.logger.error(f"[{client_id}] 启动检测失败: 通道ID为空")
@@ -357,12 +363,11 @@ class EnhancedWebSocketServer:
 
         # 记录帧ID信息
         if frame_id is not None:
-            self.logger.info(f"[{client_id}] 启动检测 - 通道: {channel_id}, 从帧ID: {frame_id} 开始")
+            self.logger.info(f"[{client_id}] 启动检测 - 通道: {channel_id}, 从帧ID: {frame_id} ({frame_id_type}) 开始")
         else:
             self.logger.info(f"[{client_id}] 启动检测 - 通道: {channel_id}, 从头开始")
 
-        self.logger.info(f"[{client_id}] [调试] 调用detection_service.start_detection，传入frame_id: {frame_id}")
-        success = self.detection_service.start_detection(channel_id, frame_id)
+        success = self.detection_service.start_detection(channel_id, frame_id, frame_id_type)
 
         await websocket.send(json.dumps({
             'type': 'command_response',

@@ -87,10 +87,6 @@ class CSVWriter:
                 # 获取帧ID（本地视频为序列号，RTSP流为NVR时间戳）
                 frame_id = detection_result.get('frame_id', '')
 
-                # 调试日志：检测重复写入
-                if self.cache_buffer and self.cache_buffer[-1][1] == frame_id:
-                    self.logger.warning(f"[CSVWriter] 检测到重复帧ID {frame_id}，通道：{self.channel_id}")
-
                 # 构建数据行
                 row = [
                     timestamp,

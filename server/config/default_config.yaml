@@ -6,7 +6,7 @@ gpu_decode: false
 kalman_result_compilation: release
 save_result_compilation: release
 camera_position_compilation: release
-camera_position_debug: false
+camera_position_debug: true
 address_list: ''
 annotation_debug: false
 batch_processing_enabled: false
@@ -14,16 +14,28 @@ channel1:
   name: 通道1
   address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
   file_path: ''
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: C:\Users\admin\Desktop\server\database\mission_result\1_1
 channel1_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/1.engine
 channel2:
   name: 通道2
   address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
   file_path: ''
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: C:\Users\admin\Desktop\server\database\mission_result\1_1
 channel2_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/2.engine
 channel3:
   name: 通道3
   address: rtsp://admin:cei345678@192.168.0.27:8000/stream1
   file_path: ''
+  general:
+    task_id: '1'
+    task_name: '1'
+    save_liquid_data_path: C:\Users\admin\Desktop\server\database\mission_result\1_1
 channel3_model_path: /home/lqj/liquid/server/database/model/detection_model/bestmodel/3.engine
 channel4:
   name: 通道4
