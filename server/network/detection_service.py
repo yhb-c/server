@@ -739,6 +739,13 @@ class DetectionService:
             liquid_line_positions = detection_result.get('liquid_line_positions', {})
             frame_id = detection_result.get('frame_id')
 
+            # 调试日志：记录保存CSV的调用
+            self.logger.debug(f"[{channel_id}] _save_to_csv被调用 - frame_id: {frame_id}, ROI数量: {len(liquid_line_positions)}")
+
+            # 调试日志：记录liquid_line_positions的所有键
+            if liquid_line_positions:
+                self.logger.debug(f"[{channel_id}] liquid_line_positions的键: {list(liquid_line_positions.keys())}")
+
             if liquid_line_positions:
                 for position_key, position_data in liquid_line_positions.items():
                     if isinstance(position_data, dict):

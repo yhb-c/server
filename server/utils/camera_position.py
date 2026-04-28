@@ -813,14 +813,18 @@ if __name__ == "__main__":
     import time
     from PIL import Image, ImageDraw, ImageFont
     
-    # 添加项目根目录到路径
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # Linux系统使用OpenCV直接连接RTSP流
+    # 不依赖海康SDK
     
-    from handlers.videopage.HK_SDK.HKcapture import HKcapture
-    
+    # 配置日志输出到控制台
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
     # 开启调试
     _camera_debug = True
-    
+
     # RTSP配置
     RTSP_URL = "rtsp://admin:cei345678@192.168.8.127:8000/stream1"
     
@@ -900,23 +904,19 @@ if __name__ == "__main__":
     _camera_logger.info("相机姿态检测独立调试启动")
     _camera_logger.info(f"RTSP: {RTSP_URL}")
     _camera_logger.info("=" * 50)
-    
-    # 使用HKcapture连接
-    cap = HKcapture(source=RTSP_URL, debug=False)
-    
-    if not cap.open():
+
+    # 使用OpenCV连接RTSP流
+    cap = cv2.VideoCapture(RTSP_URL)
+
+    if not cap.isOpened():
         _camera_logger.error("连接失败")
         exit(1)
-    
-    if not cap.start_capture():
-        _camera_logger.error("启动捕获失败")
-        cap.release()
-        exit(1)
-    
+
     _camera_logger.info("连接成功，等待数据流...")
     time.sleep(2)
-    
-    width, height = cap.get_frame_size()
+
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     _camera_logger.info(f"分辨率: {width}x{height}")
     
     # 创建窗口并绑定鼠标回调
@@ -948,7 +948,8 @@ if __name__ == "__main__":
         while True:
             ret, frame = cap.read()
             if not ret or frame is None:
-                time.sleep(0.01)
+                _camera_logger.warning("读取帧失败")
+                time.sleep(0.1)
                 continue
             
             frame_count += 1

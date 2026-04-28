@@ -8,6 +8,7 @@ import csv
 import time
 import sys
 import threading
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -29,6 +30,7 @@ class CSVWriter:
         self.channel_id = channel_id
         self.csv_file = None
         self.csv_writer = None
+        self.logger = logging.getLogger(__name__)
 
         # 缓存配置
         self.flush_interval = flush_interval
@@ -87,7 +89,7 @@ class CSVWriter:
 
                 # 调试日志：检测重复写入
                 if self.cache_buffer and self.cache_buffer[-1][1] == frame_id:
-                    print(f"[CSVWriter] 警告：检测到重复帧ID {frame_id}，通道：{self.channel_id}")
+                    self.logger.warning(f"[CSVWriter] 检测到重复帧ID {frame_id}，通道：{self.channel_id}")
 
                 # 构建数据行
                 row = [
