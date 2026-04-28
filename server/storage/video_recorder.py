@@ -14,16 +14,11 @@ sys.path.insert(0, str(project_root))
 # 导入日志工具
 from server.utils.logger import get_logger
 
-# 导入HKcapture类 - 使用服务端的海康SDK
+# 导入HKcapture类（从项目根目录的2.py）
 try:
-    # 服务端使用自己的海康SDK模块
-    from video.hik_capture import HikSDK, PlayM4SDK
-    HKcapture = None  # 服务端暂时不使用HKcapture类
+    from HKcapture import HKcapture
 except ImportError as e:
-    logger = get_logger('server')
-    logger.error(f"导入海康SDK失败: {e}")
-    HikSDK = None
-    PlayM4SDK = None
+    print(f"警告: 无法导入HKcapture类: {e}")
     HKcapture = None
 
 class VideoRecorder:
